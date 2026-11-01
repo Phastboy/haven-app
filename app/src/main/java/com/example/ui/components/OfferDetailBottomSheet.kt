@@ -170,22 +170,14 @@ fun OfferDetailBottomSheet(
           )
         }
 
-        // Favorite Toggle
-        IconButton(
-          onClick = { onToggleFavorite(offer.id) },
-          modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(HavenColors.SurfaceContainer)
-            .border(1.dp, HavenColors.BorderSubtle, CircleShape)
-        ) {
-          Icon(
-            imageVector = if (offer.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = "Toggle favorite",
-            tint = HavenColors.TextPrimary,
-            modifier = Modifier.size(20.dp)
-          )
-        }
+        // Reusable Favorite Toggle Button
+        HavenSaveButton(
+          isSaved = offer.isFavorite,
+          onToggle = { onToggleFavorite(offer.id) },
+          size = 38.dp,
+          iconSize = 18.dp,
+          testTag = "detail_favorite_button"
+        )
       }
 
       // Creator Info Card

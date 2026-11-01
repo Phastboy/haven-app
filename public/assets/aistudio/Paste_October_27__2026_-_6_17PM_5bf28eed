@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Haven Android Child Screens: New Offer Form & Your Offer (Owner View)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        haven: {
+          bg: '#FFFFFF',
+          surface: '#FAFAFA',
+          container: '#F3F4F6',
+          border: '#E5E7EB',
+          borderDark: '#D1D5DB',
+          textPrimary: '#111827',
+          textSecondary: '#6B7280',
+          textTertiary: '#9CA3AF',
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  body {
+    background-color: #F8F9FA;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #111827;
+    -webkit-font-smoothing: antialiased;
+  }
+  .android-frame {
+    width: 390px;
+    height: 844px;
+    background: #FFFFFF;
+    position: relative;
+    border-radius: 40px;
+    box-shadow: 0 16px 40px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.06);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>
+</head>
+<body class="p-6 md:p-12 min-h-screen text-haven-textPrimary">
+
+  <!-- Spec Header Banner -->
+  <div class="max-w-[1720px] mx-auto mb-10 pb-6 border-b border-haven-border">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 text-white text-xs font-semibold uppercase tracking-wider mb-3">
+      Haven Native Android Specifications · Child Screens (390×844)
+    </div>
+    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-haven-textPrimary mb-3">
+      Child Screen Architecture: Offer Management &amp; Form Flows
+    </h1>
+    <p class="text-base text-haven-textSecondary max-w-4xl leading-relaxed">
+      Adheres strictly to the Haven monastic greyscale design system: 24px Android status bar, back-only top app bar, 25px semibold in-content headers, zero accent colors, 48px minimum touch targets, 1px complete borders, and responsive form/owner lifecycle states.
+    </p>
+  </div>
+
+  <!-- SECTION 1: NEW OFFER / EDIT OFFER -->
+  <div class="max-w-[1720px] mx-auto mb-16">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-haven-textPrimary">1. "New offer" &amp; Form States (<span class="font-mono text-sm font-normal text-haven-textSecondary">/profile/offers/new</span>)</h2>
+        <p class="text-sm text-haven-textSecondary mt-1">Back-only top bar, title in content, 6-line description, photo attachment preview, error banner, and keyboard elevation</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 bg-haven-container rounded text-haven-textSecondary">3 Frames · 390×844</span>
+    </div>
+
+    <!-- Frames Row -->
+    <div class="flex flex-wrap lg:flex-nowrap gap-8 overflow-x-auto pb-6 items-start">
+      
+      <!-- Frame 01: Completed Sample Form with Chosen Photo -->
+      <div class="flex flex-col items-center">
+        <span class="text-xs font-medium text-haven-textSecondary mb-2 font-mono">Frame 01 · Filled Form (With Chosen Photo)</span>
+        <div class="android-frame">
+          <!-- Status Bar (24px) -->
+          <div class="h-6 px-6 pt-1 flex justify-between items-center text-xs font-semibold text-haven-textPrimary select-none z-20">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25A9.957 9.957 0 0 1 2 12C2 6.48 6.48 2 12 2s10 4.48 10 10c0 2.32-.79 4.45-2.11 6.16l-.62-.62C20.35 16.03 21 14.1 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+              <div class="w-5 h-2.5 border border-haven-textPrimary rounded-sm p-0.5 flex items-center">
+                <div class="h-full w-full bg-haven-textPrimary rounded-2xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back-Only Top Bar (48px) -->
+          <div class="h-12 px-4 flex items-center border-b border-transparent z-10">
+            <button class="w-12 h-12 -ml-2 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-full transition-colors" aria-label="Go back">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Scrollable Content Area -->
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
+            <!-- Title in Content -->
+            <h1 class="text-[25px] font-semibold text-haven-textPrimary leading-tight mt-1 mb-1">New offer</h1>
+            <p class="text-base text-haven-textSecondary mb-6">Create a new offer to list on Haven.</p>
+
+            <form class="space-y-5" onsubmit="event.preventDefault();">
+              <!-- Field: Title -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Title</label>
+                <input type="text" value="Hand-woven Aso Oke fabric, 6 yards" class="w-full h-12 px-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base focus:outline-none focus:border-haven-textPrimary" />
+                <p class="text-xs text-haven-textSecondary mt-1.5">3 to 50 characters.</p>
+              </div>
+
+              <!-- Field: Description (6 lines) -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Description</label>
+                <textarea rows="6" class="w-full p-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base leading-relaxed resize-none focus:outline-none focus:border-haven-textPrimary">Narrow-loom Aso Oke in indigo with gold thread, six yards, enough for a full wedding outfit. Made to order in about two weeks.</textarea>
+                <p class="text-xs text-haven-textSecondary mt-1.5">10 to 2,000 characters.</p>
+              </div>
+
+              <!-- Field Row: Currency & Price -->
+              <div>
+                <div class="flex gap-3">
+                  <div class="w-[140px] flex-shrink-0">
+                    <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Currency</label>
+                    <div class="relative">
+                      <select class="w-full h-12 px-3.5 pr-8 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base appearance-none focus:outline-none focus:border-haven-textPrimary">
+                        <option selected>NGN</option>
+                        <option>USD</option>
+                        <option>EUR</option>
+                        <option>GBP</option>
+                      </select>
+                      <svg class="w-4 h-4 absolute right-3 top-4 pointer-events-none text-haven-textSecondary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Price</label>
+                    <input type="number" value="45000" placeholder="0" class="w-full h-12 px-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base focus:outline-none focus:border-haven-textPrimary" />
+                  </div>
+                </div>
+                <p class="text-xs text-haven-textSecondary mt-1.5">Enter 0 for a free offer.</p>
+              </div>
+
+              <!-- Field: Cover Photo (Chosen State: 96x72 Preview + Remove button) -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Cover photo (optional)</label>
+                <div class="flex items-center gap-4 p-3 bg-haven-surface rounded-xl border border-haven-border">
+                  <img src="https://lh3.googleusercontent.com/aida/AEtjO1XPeKhs-jdQJzrx4DgSpBY5d2U7viS72LSoBderGt3o3yQ4kNfJlUSu1sF5HpcX3VkfKpj2YzZmIA9mPyU6xPv8K2Lc3NaZGOiNxwpKUw-AMr8LiAL7h98SG0f_UTJ9BgHthDunh92Q_tGYi1v6tJb4mtZz0L8tK23Fb7opxbKsfUSw_iBkPZNZHv6ecFwG9wW5PLfWzYU_Cd0JMw-g9mCIGBQkS0aM7wSs2s-J9u219OEL1ukWYWw2mvij" alt="Fabric preview" class="w-[96px] h-[72px] object-cover rounded-lg flex-shrink-0 border border-haven-border" />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-haven-textPrimary truncate">aso-oke-indigo.jpg</div>
+                    <div class="text-xs text-haven-textSecondary mb-2">2.4 MB · Ready to publish</div>
+                    <button type="button" class="text-xs font-semibold text-haven-textPrimary underline underline-offset-2 hover:opacity-75">Remove</button>
+                  </div>
+                </div>
+                <p class="text-xs text-haven-textSecondary mt-1.5">JPEG, PNG or WebP up to 5 MB. Offers without a photo stay private to you.</p>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="pt-4 space-y-2">
+                <button type="button" class="w-full h-[52px] bg-haven-textPrimary text-white text-base font-semibold rounded-lg flex items-center justify-center hover:bg-black transition-colors">
+                  Create offer
+                </button>
+                <button type="button" class="w-full h-12 text-haven-textPrimary text-base font-medium flex items-center justify-center hover:bg-haven-surface rounded-lg transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Gesture Area (24px) -->
+          <div class="h-6 flex items-center justify-center z-20 bg-white">
+            <div class="w-18 h-1 bg-haven-textPrimary rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame 02: Empty Form with Dashed Photo Box & Active Keyboard -->
+      <div class="flex flex-col items-center">
+        <span class="text-xs font-medium text-haven-textSecondary mb-2 font-mono">Frame 02 · Empty Form + Keyboard Elevation</span>
+        <div class="android-frame">
+          <!-- Status Bar -->
+          <div class="h-6 px-6 pt-1 flex justify-between items-center text-xs font-semibold text-haven-textPrimary z-20">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25A9.957 9.957 0 0 1 2 12C2 6.48 6.48 2 12 2s10 4.48 10 10c0 2.32-.79 4.45-2.11 6.16l-.62-.62C20.35 16.03 21 14.1 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+              <div class="w-5 h-2.5 border border-haven-textPrimary rounded-sm p-0.5 flex items-center">
+                <div class="h-full w-full bg-haven-textPrimary rounded-2xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back Top Bar -->
+          <div class="h-12 px-4 flex items-center z-10">
+            <button class="w-12 h-12 -ml-2 flex items-center justify-center text-haven-textPrimary rounded-full">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+
+          <!-- Scrollable Middle Section with Form Focused -->
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-2">
+            <h1 class="text-[25px] font-semibold text-haven-textPrimary leading-tight mt-1 mb-1">New offer</h1>
+            <p class="text-base text-haven-textSecondary mb-5">Create a new offer to list on Haven.</p>
+
+            <div class="space-y-4">
+              <!-- Field: Title (Focused with blinking cursor) -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Title</label>
+                <div class="w-full h-12 px-3.5 rounded-lg border-2 border-haven-textPrimary bg-white flex items-center text-base text-haven-textPrimary">
+                  <span>Ceramic coffee|</span>
+                </div>
+                <p class="text-xs text-haven-textSecondary mt-1.5">3 to 50 characters.</p>
+              </div>
+
+              <!-- Field: Description -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Description</label>
+                <div class="w-full h-24 p-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textTertiary text-base">
+                  Describe what you provide, timing, and conditions...
+                </div>
+                <p class="text-xs text-haven-textSecondary mt-1.5">10 to 2,000 characters.</p>
+              </div>
+
+              <!-- Cover photo (optional) Dashed Box State -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Cover photo (optional)</label>
+                <div class="border-2 border-dashed border-haven-borderDark rounded-xl p-5 text-center flex flex-col items-center justify-center bg-haven-surface">
+                  <button type="button" class="h-12 px-5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-sm font-medium hover:bg-neutral-50 mb-2">
+                    Choose a photo
+                  </button>
+                  <p class="text-xs text-haven-textSecondary max-w-xs leading-normal">
+                    JPEG, PNG or WebP up to 5 MB. Offers without a photo stay private to you.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Native Android Keyboard Elevation (280px) -->
+          <div class="bg-[#ECEFF1] border-t border-[#CFD8DC] select-none z-30">
+            <!-- Suggestions Bar -->
+            <div class="h-11 border-b border-[#CFD8DC] flex items-center justify-around px-2 text-sm text-[#37474F] font-medium bg-[#F5F7F8]">
+              <span class="hover:text-black">mug</span>
+              <div class="h-4 w-px bg-[#CFD8DC]"></div>
+              <span class="text-haven-textPrimary font-semibold">cup</span>
+              <div class="h-4 w-px bg-[#CFD8DC]"></div>
+              <span class="hover:text-black">pottery</span>
+            </div>
+            <!-- Android Key Grid -->
+            <div class="p-1.5 space-y-1.5 text-haven-textPrimary">
+              <div class="flex justify-center gap-1">
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">q</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">w</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">e</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">r</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">t</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">y</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">u</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">i</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">o</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">p</span>
+              </div>
+              <div class="flex justify-center gap-1">
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">a</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">s</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">d</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">f</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">g</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">h</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">j</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">k</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">l</span>
+              </div>
+              <div class="flex justify-center gap-1">
+                <span class="h-10 w-[44px] bg-[#CFD8DC] rounded flex items-center justify-center text-base shadow-sm">⇧</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">z</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">x</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">c</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">v</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">b</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">n</span>
+                <span class="h-10 w-[34px] bg-white rounded flex items-center justify-center text-base shadow-sm">m</span>
+                <span class="h-10 w-[44px] bg-[#CFD8DC] rounded flex items-center justify-center text-base shadow-sm">⌫</span>
+              </div>
+              <div class="flex justify-center gap-1.5 pt-0.5">
+                <span class="h-10 w-12 bg-[#CFD8DC] rounded flex items-center justify-center text-xs font-medium">?123</span>
+                <span class="h-10 flex-1 bg-white rounded flex items-center justify-center text-xs text-haven-textSecondary shadow-sm">English</span>
+                <span class="h-10 w-10 bg-white rounded flex items-center justify-center text-sm shadow-sm">.</span>
+                <span class="h-10 w-12 bg-haven-textPrimary text-white rounded flex items-center justify-center text-sm font-semibold shadow-sm">↵</span>
+              </div>
+            </div>
+            <!-- Gesture bar -->
+            <div class="h-5 flex items-center justify-center bg-[#ECEFF1]">
+              <div class="w-18 h-1 bg-haven-textSecondary rounded-full opacity-60"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame 03: Validation Error State (Banner Above Form) -->
+      <div class="flex flex-col items-center">
+        <span class="text-xs font-medium text-haven-textSecondary mb-2 font-mono">Frame 03 · Error Banner Validation State</span>
+        <div class="android-frame">
+          <!-- Status Bar -->
+          <div class="h-6 px-6 pt-1 flex justify-between items-center text-xs font-semibold text-haven-textPrimary z-20">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25A9.957 9.957 0 0 1 2 12C2 6.48 6.48 2 12 2s10 4.48 10 10c0 2.32-.79 4.45-2.11 6.16l-.62-.62C20.35 16.03 21 14.1 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+              <div class="w-5 h-2.5 border border-haven-textPrimary rounded-sm p-0.5 flex items-center">
+                <div class="h-full w-full bg-haven-textPrimary rounded-2xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back Top Bar -->
+          <div class="h-12 px-4 flex items-center z-10">
+            <button class="w-12 h-12 -ml-2 flex items-center justify-center text-haven-textPrimary rounded-full">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+
+          <!-- Scrollable Content with Error Banner -->
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-6">
+            <h1 class="text-[25px] font-semibold text-haven-textPrimary leading-tight mt-1 mb-1">New offer</h1>
+            <p class="text-base text-haven-textSecondary mb-4">Create a new offer to list on Haven.</p>
+
+            <!-- Specification Required Error Banner (Zero Red, Strict Greyscale + Alert Icon) -->
+            <div class="mb-5 p-3.5 rounded-lg border-2 border-haven-textPrimary bg-haven-surface flex items-start gap-2.5">
+              <svg class="w-5 h-5 text-haven-textPrimary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div class="text-sm font-medium text-haven-textPrimary leading-snug">
+                Currency is required when price is greater than zero.
+              </div>
+            </div>
+
+            <form class="space-y-4" onsubmit="event.preventDefault();">
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Title</label>
+                <input type="text" value="Vintage brass lamp" class="w-full h-12 px-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Description</label>
+                <textarea rows="4" class="w-full p-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base resize-none">Solid brass desk lamp from the 1950s. Cleaned and tested with original wiring intact.</textarea>
+              </div>
+
+              <!-- Field Row with Error Highlight on Currency (Near-black border) -->
+              <div>
+                <div class="flex gap-3">
+                  <div class="w-[140px] flex-shrink-0">
+                    <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Currency</label>
+                    <div class="relative">
+                      <select class="w-full h-12 px-3.5 pr-8 rounded-lg border-2 border-haven-textPrimary bg-white text-haven-textTertiary text-base appearance-none">
+                        <option selected>Select...</option>
+                        <option>NGN</option>
+                        <option>USD</option>
+                        <option>EUR</option>
+                      </select>
+                      <svg class="w-4 h-4 absolute right-3 top-4 pointer-events-none text-haven-textSecondary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Price</label>
+                    <input type="number" value="38000" class="w-full h-12 px-3.5 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-base" />
+                  </div>
+                </div>
+                <p class="text-xs text-haven-textPrimary font-medium mt-1.5 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Select a currency for 38,000.
+                </p>
+              </div>
+
+              <!-- Photo Area -->
+              <div>
+                <label class="block text-sm font-medium text-haven-textPrimary mb-1.5">Cover photo (optional)</label>
+                <div class="border border-dashed border-haven-borderDark rounded-xl p-4 text-center bg-haven-surface">
+                  <button type="button" class="h-10 px-4 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-sm font-medium mb-1">
+                    Choose a photo
+                  </button>
+                  <p class="text-xs text-haven-textSecondary">JPEG, PNG or WebP up to 5 MB.</p>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="pt-2 space-y-2">
+                <button type="button" class="w-full h-[52px] bg-haven-textPrimary text-white text-base font-semibold rounded-lg flex items-center justify-center">
+                  Create offer
+                </button>
+                <button type="button" class="w-full h-11 text-haven-textPrimary text-base font-medium flex items-center justify-center">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="h-6 flex items-center justify-center z-20 bg-white">
+            <div class="w-18 h-1 bg-haven-textPrimary rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- SECTION 2: YOUR OFFER (OWNER's PAGE) -->
+  <div class="max-w-[1720px] mx-auto mb-16">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-haven-textPrimary">2. "Your offer" Owner Screen (<span class="font-mono text-sm font-normal text-haven-textSecondary">/profile/offers/{id}</span>)</h2>
+        <p class="text-sm text-haven-textSecondary mt-1">Management view with 3 action buttons, reorderable photo manager (Cover pill, Up/Down, Remove), and Inquiries message list</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 bg-haven-container rounded text-haven-textSecondary">2 Frames · 390×844</span>
+    </div>
+
+    <!-- Frames Row -->
+    <div class="flex flex-wrap lg:flex-nowrap gap-8 overflow-x-auto pb-6 items-start">
+
+      <!-- Frame 04: Public State with Photos & Inquiries -->
+      <div class="flex flex-col items-center">
+        <span class="text-xs font-medium text-haven-textSecondary mb-2 font-mono">Frame 04 · "Your offer" (Public · 3 Photos · 3 Inquiries)</span>
+        <div class="android-frame">
+          <!-- Status Bar -->
+          <div class="h-6 px-6 pt-1 flex justify-between items-center text-xs font-semibold text-haven-textPrimary z-20">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25A9.957 9.957 0 0 1 2 12C2 6.48 6.48 2 12 2s10 4.48 10 10c0 2.32-.79 4.45-2.11 6.16l-.62-.62C20.35 16.03 21 14.1 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+              <div class="w-5 h-2.5 border border-haven-textPrimary rounded-sm p-0.5 flex items-center">
+                <div class="h-full w-full bg-haven-textPrimary rounded-2xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back Top Bar -->
+          <div class="h-12 px-4 flex items-center z-10 border-b border-transparent">
+            <button class="w-12 h-12 -ml-2 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-full transition-colors" aria-label="Back">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+
+          <!-- Scrollable Owner Content -->
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 space-y-6">
+            
+            <!-- Header Block -->
+            <div>
+              <h1 class="text-[25px] font-semibold text-haven-textPrimary leading-tight mb-1">
+                Hand-woven Aso Oke fabric, 6 yards
+              </h1>
+              <div class="text-[20px] font-semibold text-haven-textPrimary mb-2">
+                45,000 NGN
+              </div>
+              <!-- Status line with near-black dot -->
+              <div class="flex items-center gap-2 text-sm font-medium text-haven-textPrimary mb-3">
+                <span class="w-2 h-2 rounded-full bg-haven-textPrimary"></span>
+                <span>Public</span>
+              </div>
+              <p class="text-base text-haven-textPrimary leading-relaxed">
+                Narrow-loom Aso Oke in indigo with gold thread, six yards, enough for a full wedding outfit. Made to order in about two weeks.
+              </p>
+            </div>
+
+            <!-- Three Full-Width 48px Buttons -->
+            <div class="space-y-2.5">
+              <button class="w-full h-12 bg-haven-textPrimary text-white text-base font-semibold rounded-lg flex items-center justify-center hover:bg-black transition-colors">
+                Edit offer
+              </button>
+              <button class="w-full h-12 bg-white border border-haven-borderDark text-haven-textPrimary text-base font-semibold rounded-lg flex items-center justify-center hover:bg-haven-surface transition-colors">
+                View public page
+              </button>
+              <button class="w-full h-12 bg-white border border-haven-borderDark text-haven-textPrimary text-base font-semibold rounded-lg flex items-center justify-center hover:bg-haven-surface transition-colors">
+                Delete offer
+              </button>
+            </div>
+
+            <div class="border-t border-haven-border pt-2"></div>
+
+            <!-- Photos Section -->
+            <div>
+              <div class="flex items-baseline justify-between mb-3">
+                <h2 class="text-[20px] font-semibold text-haven-textPrimary">Photos</h2>
+                <span class="text-sm text-haven-textSecondary font-medium">3 of 5 photos.</span>
+              </div>
+
+              <!-- Reorderable Photo Rows -->
+              <div class="space-y-3 mb-4">
+                
+                <!-- Photo Row 1: Cover Photo -->
+                <div class="flex items-center gap-3 p-2.5 rounded-xl border border-haven-border bg-white">
+                  <img src="https://lh3.googleusercontent.com/aida/AEtjO1XPeKhs-jdQJzrx4DgSpBY5d2U7viS72LSoBderGt3o3yQ4kNfJlUSu1sF5HpcX3VkfKpj2YzZmIA9mPyU6xPv8K2Lc3NaZGOiNxwpKUw-AMr8LiAL7h98SG0f_UTJ9BgHthDunh92Q_tGYi1v6tJb4mtZz0L8tK23Fb7opxbKsfUSw_iBkPZNZHv6ecFwG9wW5PLfWzYU_Cd0JMw-g9mCIGBQkS0aM7wSs2s-J9u219OEL1ukWYWw2mvij" alt="Cover" class="w-[96px] h-[72px] object-cover rounded-lg flex-shrink-0 border border-haven-border" />
+                  <div class="flex-1 min-w-0">
+                    <span class="inline-block px-2.5 py-0.5 rounded-full bg-haven-textPrimary text-white text-xs font-semibold mb-2">
+                      Cover photo
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <!-- 48px touch targets for Up / Down buttons -->
+                      <button disabled class="w-10 h-10 flex items-center justify-center text-haven-textTertiary rounded-lg cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+                      </button>
+                      <button class="w-10 h-10 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                      </button>
+                      <button class="h-9 px-2.5 rounded-lg border border-haven-borderDark text-haven-textPrimary text-xs font-semibold hover:bg-haven-surface ml-auto">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Photo Row 2 -->
+                <div class="flex items-center gap-3 p-2.5 rounded-xl border border-haven-border bg-white">
+                  <img src="https://lh3.googleusercontent.com/aida/AEtjO1XLWYt0F5VxrDL3wJOuaKKtLlZF8H2ww3K9lH2Nd8Q_ddYjIsrpKGHx3hwN_X5FRNr2F5cqjYyAbsSJ-Kc9czVqk4VVj5al8XpSc7xFqQyKl8ON114p3dmJ2VRveIJ4QEWWBzoI1Lo90cPVs866Nevur3CIUEEt_WBvKoeb-mbwE8bQtmd5wSgXw9_CtR98QdcGo8yhPCjSl6Vm5ATqygFAVUMGqoW2POFosyBTmbgXNXsV9wact1rsMVFN" alt="Photo 2" class="w-[96px] h-[72px] object-cover rounded-lg flex-shrink-0 border border-haven-border" />
+                  <div class="flex-1 min-w-0">
+                    <span class="inline-block px-2.5 py-0.5 rounded-full bg-haven-container text-haven-textSecondary text-xs font-semibold mb-2">
+                      Photo 2
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button class="w-10 h-10 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+                      </button>
+                      <button class="w-10 h-10 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                      </button>
+                      <button class="h-9 px-2.5 rounded-lg border border-haven-borderDark text-haven-textPrimary text-xs font-semibold hover:bg-haven-surface ml-auto">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Photo Row 3 -->
+                <div class="flex items-center gap-3 p-2.5 rounded-xl border border-haven-border bg-white">
+                  <img src="https://lh3.googleusercontent.com/aida/AEtjO1WsTEroDCJvKwpyC1Q2rOipT83ueZAPxkcTjLNubMajFh3hNXWbMPcf3bMyL4RRJ72lxtLsP0Zfp7sCwbvoqskWFHuhOokHNpOspfIM12_Ue9qkiSYAuEV_Z1Iy2wEdjHkWBL6rRNOArh50ac35cDMIAg7RnY_aRu1AXwXYy_VgFfxJemsP_3EPNYWhjcJ09Jug16Oioa9UYgjKfejgu0tItnsJSCn7TjV4MeUogetNGe8AmN-8amOugXw" alt="Photo 3" class="w-[96px] h-[72px] object-cover rounded-lg flex-shrink-0 border border-haven-border" />
+                  <div class="flex-1 min-w-0">
+                    <span class="inline-block px-2.5 py-0.5 rounded-full bg-haven-container text-haven-textSecondary text-xs font-semibold mb-2">
+                      Photo 3
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button class="w-10 h-10 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+                      </button>
+                      <button disabled class="w-10 h-10 flex items-center justify-center text-haven-textTertiary rounded-lg cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                      </button>
+                      <button class="h-9 px-2.5 rounded-lg border border-haven-borderDark text-haven-textPrimary text-xs font-semibold hover:bg-haven-surface ml-auto">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Add a Photo Dashed Box -->
+              <div class="border-2 border-dashed border-haven-borderDark rounded-xl p-4 text-center bg-haven-surface space-y-2">
+                <div class="text-sm font-semibold text-haven-textPrimary">Add a photo</div>
+                <div class="flex justify-center gap-2">
+                  <button class="h-10 px-4 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-xs font-semibold">
+                    Choose a photo
+                  </button>
+                  <button class="h-10 px-4 rounded-lg bg-haven-textPrimary text-white text-xs font-semibold">
+                    Upload photo
+                  </button>
+                </div>
+                <p class="text-xs text-haven-textSecondary leading-normal pt-1">
+                  JPEG, PNG or WebP up to 5 MB. Keep the subject near the centre, since the cover is cropped to a square on cards.
+                </p>
+              </div>
+            </div>
+
+            <div class="border-t border-haven-border pt-2"></div>
+
+            <!-- Inquiries Section -->
+            <div>
+              <h2 class="text-[20px] font-semibold text-haven-textPrimary mb-3">Inquiries</h2>
+              <div class="rounded-xl border border-haven-border overflow-hidden bg-white divide-y divide-haven-border">
+                
+                <!-- Inquiry 1: Kofi Mensah -->
+                <div class="p-3.5 flex items-center gap-3 hover:bg-haven-surface transition-colors cursor-pointer">
+                  <div class="w-10 h-10 rounded-full bg-haven-container flex items-center justify-center text-haven-textPrimary font-semibold text-sm flex-shrink-0">
+                    K
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-haven-textPrimary truncate">Kofi Mensah</div>
+                    <div class="text-xs text-haven-textSecondary">4 messages · Oct 25, 09:02</div>
+                  </div>
+                  <svg class="w-4 h-4 text-haven-textTertiary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </div>
+
+                <!-- Inquiry 2: Tolu Adebayo -->
+                <div class="p-3.5 flex items-center gap-3 hover:bg-haven-surface transition-colors cursor-pointer">
+                  <div class="w-10 h-10 rounded-full bg-haven-container flex items-center justify-center text-haven-textPrimary font-semibold text-sm flex-shrink-0">
+                    T
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-haven-textPrimary truncate">Tolu Adebayo</div>
+                    <div class="text-xs text-haven-textSecondary">4 messages · Oct 25, 09:02</div>
+                  </div>
+                  <svg class="w-4 h-4 text-haven-textTertiary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </div>
+
+                <!-- Inquiry 3: Ngozi Eze -->
+                <div class="p-3.5 flex items-center gap-3 hover:bg-haven-surface transition-colors cursor-pointer">
+                  <div class="w-10 h-10 rounded-full bg-haven-container flex items-center justify-center text-haven-textPrimary font-semibold text-sm flex-shrink-0">
+                    N
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-haven-textPrimary truncate">Ngozi Eze</div>
+                    <div class="text-xs text-haven-textSecondary">4 messages · Oct 25, 09:02</div>
+                  </div>
+                  <svg class="w-4 h-4 text-haven-textTertiary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Gesture Area -->
+          <div class="h-6 flex items-center justify-center z-20 bg-white">
+            <div class="w-18 h-1 bg-haven-textPrimary rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame 05: Not-Public (Private) State with Empty Photos & Empty Inquiries -->
+      <div class="flex flex-col items-center">
+        <span class="text-xs font-medium text-haven-textSecondary mb-2 font-mono">Frame 05 · "Your offer" (Private State · Zero Photos & Inquiries)</span>
+        <div class="android-frame">
+          <!-- Status Bar -->
+          <div class="h-6 px-6 pt-1 flex justify-between items-center text-xs font-semibold text-haven-textPrimary z-20">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25A9.957 9.957 0 0 1 2 12C2 6.48 6.48 2 12 2s10 4.48 10 10c0 2.32-.79 4.45-2.11 6.16l-.62-.62C20.35 16.03 21 14.1 21 12c0-4.97-4.03-9-9-9z"/></svg>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/></svg>
+              <div class="w-5 h-2.5 border border-haven-textPrimary rounded-sm p-0.5 flex items-center">
+                <div class="h-full w-full bg-haven-textPrimary rounded-2xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back Top Bar -->
+          <div class="h-12 px-4 flex items-center z-10 border-b border-transparent">
+            <button class="w-12 h-12 -ml-2 flex items-center justify-center text-haven-textPrimary hover:bg-haven-surface rounded-full transition-colors" aria-label="Back">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+
+          <!-- Scrollable Owner Content -->
+          <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 space-y-5">
+            
+            <!-- Header Block -->
+            <div>
+              <h1 class="text-[25px] font-semibold text-haven-textPrimary leading-tight mb-1">
+                Weaving lessons for beginners, 1 day
+              </h1>
+              <div class="text-[20px] font-semibold text-haven-textPrimary mb-2">
+                20,000 NGN
+              </div>
+              
+              <!-- Status line with grey dot ("Only you can see this") -->
+              <div class="flex items-center gap-2 text-sm font-medium text-haven-textSecondary mb-3">
+                <span class="w-2 h-2 rounded-full bg-haven-textTertiary"></span>
+                <span>Only you can see this</span>
+              </div>
+
+              <!-- Bordered Notice Banner: "Only you can see this offer. Add a photo to make it public." -->
+              <div class="p-3.5 rounded-lg border border-haven-border bg-haven-surface flex items-start gap-2.5 mb-3">
+                <svg class="w-5 h-5 text-haven-textSecondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="text-sm font-medium text-haven-textPrimary leading-snug">
+                  Only you can see this offer. Add a photo to make it public.
+                </div>
+              </div>
+
+              <p class="text-base text-haven-textPrimary leading-relaxed">
+                Full-day hands-on workshop on narrow-frame loom setup, warp winding, and basic geometric weft patterns. Includes all yarns and take-home sample.
+              </p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="space-y-2.5">
+              <button class="w-full h-12 bg-haven-textPrimary text-white text-base font-semibold rounded-lg flex items-center justify-center">
+                Edit offer
+              </button>
+              <button class="w-full h-12 bg-white border border-haven-borderDark text-haven-textTertiary text-base font-medium rounded-lg flex items-center justify-center cursor-not-allowed">
+                View public page (Draft)
+              </button>
+              <button class="w-full h-12 bg-white border border-haven-borderDark text-haven-textPrimary text-base font-semibold rounded-lg flex items-center justify-center">
+                Delete offer
+              </button>
+            </div>
+
+            <div class="border-t border-haven-border pt-1"></div>
+
+            <!-- Empty Photos Section -->
+            <div>
+              <div class="flex items-baseline justify-between mb-3">
+                <h2 class="text-[20px] font-semibold text-haven-textPrimary">Photos</h2>
+                <span class="text-sm text-haven-textSecondary font-medium">0 of 5 photos.</span>
+              </div>
+
+              <!-- Empty Photo State Prompt -->
+              <div class="p-4 rounded-xl border border-haven-border bg-haven-surface text-center mb-3">
+                <div class="w-10 h-10 mx-auto rounded-full bg-haven-container flex items-center justify-center text-haven-textSecondary mb-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div class="text-sm font-medium text-haven-textPrimary leading-snug max-w-xs mx-auto">
+                  No photos yet. Add at least one photo to make this offer public.
+                </div>
+              </div>
+
+              <!-- Add a Photo Dashed Box -->
+              <div class="border-2 border-dashed border-haven-borderDark rounded-xl p-4 text-center bg-white space-y-2">
+                <div class="text-sm font-semibold text-haven-textPrimary">Add a photo</div>
+                <div class="flex justify-center gap-2">
+                  <button class="h-10 px-4 rounded-lg border border-haven-borderDark bg-white text-haven-textPrimary text-xs font-semibold">
+                    Choose a photo
+                  </button>
+                  <button class="h-10 px-4 rounded-lg bg-haven-textPrimary text-white text-xs font-semibold">
+                    Upload photo
+                  </button>
+                </div>
+                <p class="text-xs text-haven-textSecondary leading-normal pt-1">
+                  JPEG, PNG or WebP up to 5 MB. Keep the subject near the centre, since the cover is cropped to a square on cards.
+                </p>
+              </div>
+            </div>
+
+            <div class="border-t border-haven-border pt-1"></div>
+
+            <!-- Empty Inquiries Section -->
+            <div>
+              <h2 class="text-[20px] font-semibold text-haven-textPrimary mb-3">Inquiries</h2>
+              <div class="p-6 rounded-xl border border-haven-border bg-haven-surface text-center">
+                <p class="text-sm text-haven-textSecondary">
+                  No one has asked about this offer yet.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Gesture Area -->
+          <div class="h-6 flex items-center justify-center z-20 bg-white">
+            <div class="w-18 h-1 bg-haven-textPrimary rounded-full"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
