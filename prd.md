@@ -23,19 +23,47 @@ Haven operates under the **Haven Monastic Market** visual architecture:
 
 ## 3. Native Android Technology Stack & Architecture
 
-Haven is engineered natively for Android, leveraging modern Android development (MAD) practices and an offline-first architecture:
+Haven is engineered natively for Android. The Haven backend and its documented product journeys lead development: each running screen uses real server data and server-confirmed actions. Local persistence may cache that data, but cannot define different product behavior.
 
 ### 3.1 Core Technologies
-- **Language**: Kotlin 2.x
-- **UI Toolkit**: **Jetpack Compose** (100% declarative UI, zero legacy XML layouts)
-- **Architecture Pattern**: Unidirectional Data Flow (UDF) with Clean Architecture / MVI (Model-View-Intent) or MVVM
-- **Asynchronous Execution & Reactivity**: Kotlin Coroutines + `StateFlow` / `SharedFlow`
-- **Dependency Injection**: Hilt / Dagger
-- **Networking**: Ktor Client or Retrofit with Kotlinx Serialization
-- **Image Loading**: Coil (Compose-first asynchronous image loader with memory caching and blur transformations)
-- **Local Persistence**: 
-  - **Room Database**: Offline-first caching for listings, provider profiles, and message threads.
-  - **Jetpack DataStore (Preferences & Proto)**: Storing user credentials, session state, filter configurations, and proximity coordinates (`haven:proximity:v1`).
+- **Language**: Kotlin 2.x, Gradle version catalog, KSP (not kapt)
+- **UI**: Jetpack Compose with Navigation Compose
+- **Architecture**: UI layer and data layer. A domain layer is added only where
+  logic is reused or complex.
+  - UI: MVVM with unidirectional data flow. One immutable `UiState` per screen,
+    exposed as `StateFlow`. One-off events are modelled as state, not `SharedFlow`.
+  - Data: repositories are the only code that touches both network and database.
+  - Room may be the source of truth for cached product data after the corresponding API contract exists. Authentication credentials use secure storage; pending actions and errors remain explicit UI state.
+- **Async**: Kotlin Coroutines + `StateFlow`
+- **Dependency Injection**: Hilt
+- **Networking**: Ktor Client (OkHttp engine) + kotlinx.serialization, talking to the
+  Haven backend over HTTPS (JSON). Use a server-push transport only when the Haven API defines one. Wrap calls in per-feature API classes; no Ktor types leave the data layer.
+- **Authentication**: Both sign-in actions open Haven web sign-in in the system browser. Haven handles Google or email verification, then returns a short-lived one-time authorization code through a verified HTTPS Android App Link. The app validates state, exchanges the code using PKCE S256, stores the rotating refresh token using an Android Keystore-backed key, and confirms the person with `GET /api/v1/me` before showing an authenticated session. Access tokens stay in memory. Never store credentials in plain DataStore. Use the existing Haven flow; do not add Firebase Auth or a separate native Google Credential Manager flow.
+- **Images**: Coil loading Cloudinary URLs, with a capped disk cache. Offer title is
+  used as `contentDescription`. First offer image is the cover.
+- **Local persistence**
+  - **Room (SQLite)**: source of truth for offers, profiles, conversations and messages.
+    Exported schemas, tested migrations, no destructive fallback in release builds.
+    Add paging or an outbox only when supported by an agreed Haven API contract.
+  - **DataStore (Preferences)**: non-sensitive settings only (filters, coarse proximity).
+- **Background work**: Add WorkManager, push notifications, or a live connection when an existing Haven journey and API contract require them.
+- **Quality**: detekt + ktlint, unit tests for repositories and DAOs
+
+### 3.2 Backend contract and integration rule
+
+- **Source of truth**: The Haven roadmap, journeys, implemented API routes, and their tests define product behavior. Confirm an endpoint and its response before implementing a screen. If a required endpoint is absent, define the smallest contract for the existing Haven journey and implement it in Haven before wiring the screen. Do not invent a client-only substitute.
+- **Current mobile auth contract**: `GET /api/v1/auth/authorize`, `POST /api/v1/auth/exchange`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/revoke`, and `GET /api/v1/me`. The Android callback is the configured HTTPS `/auth/callback` App Link. Preserve state, PKCE, token rotation, and server-confirmed identity.
+- **Product data**: Offers, people, saved offers, follows, inquiries, conversations, messages, and proximity results come from Haven. The server enforces ownership, privacy, ordering, and write outcomes. The client handles loading, empty, error, retry, and signed-out states without fabricating successful operations.
+- **Proximity**: Haven ranks located offers against the selected reference location and retains distant and unlocated offers under its documented rules. The app does not locally reorder or exclude them.
+- **Future transport and sync**: Room, paging, background work, push, WebSockets, tombstones, change feeds, generated schemas, and idempotent writes require an agreed Haven API contract and a demonstrated journey need. Their presence in an architecture proposal does not make them shipped backend capabilities.
+- **Prototype boundary**: Sample content and fake repositories may exist only in previews and isolated tests. No running screen may claim a real person, offer, message, save, follow, or write was created by a simulation.
+
+### 3.2.1 Proposed implementation choices, subject to the backend contract
+
+- Room can cache offers, profiles, conversations, and messages once their APIs exist. Export schemas and test migrations; avoid destructive release migrations.
+- DataStore stores non-sensitive settings only. Secure auth storage remains separate.
+- Adopt Paging 3, WorkManager, FCM, or a streaming transport only when a corresponding Haven endpoint and mobile journey justify them.
+- Map actual server error codes and retry semantics into screen state. Do not presume undocumented response formats or an app-version gate.
 
 ### 3.2 Design System Translation to Jetpack Compose
 - **Design Tokens**: A bespoke `HavenTheme` wrapping Compose primitives without forced Material 3 chromatic accents.
@@ -94,15 +122,17 @@ Haven is engineered natively for Android, leveraging modern Android development 
 
 ## 6. Offline-First Synchronization & Data Persistence
 
-- **Local-First Pattern**: All reads query the local Room database (`Flow<List<OfferEntity>>`). Background sync fetches updates via Ktor/Retrofit and populates Room.
-- **Optimistic UI Updates**: Toggling saves or editing listings updates local Room/DataStore state immediately with background sync dispatch.
-- **Proximity Calculations**: Proximity filtering performed locally or via geo-bounded queries using reference location coordinates stored in Jetpack DataStore.
+- **Server-backed state**: Screens render Haven API responses, with Room caching where the agreed endpoint and invalidation rules support it. A first load, offline state, and stale cache must be distinguishable.
+- **Writes**: Saves, offers, and messages show pending state until Haven confirms them. Failed writes remain visibly failed and retryable; local state cannot claim server persistence.
+- **Proximity Ordering**: Request server-ranked results using the selected reference location. Store the returned order by query; never calculate an alternate feed order on device.
 
 ---
 
-## 7. Roadmap & Delivery Phases
+## 7. Backend-led delivery sequence
 
-1. **Phase 1 (UI Prototype & Compose Design System)**: Complete UI component library (`HavenTheme`), Compose screen composables, navigation graph setup, and interactive preview flows.
-2. **Phase 2 (Local Architecture & State Layer)**: Room schema, DataStore integration, ViewModels with `StateFlow`, image picker integration (Android Photo Picker), and mock repository implementations.
-3. **Phase 3 (Network Integration & Backend Connectivity)**: Ktor/Retrofit API clients, WebSocket real-time messaging client, authentication (Magic Link + Google Credential Manager), and push notifications via FCM.
-4. **Phase 4 (Hardening & Play Store Release)**: Edge-to-edge audit across Android API 26–35+, baseline profiles, automated Compose tests, accessibility review (TalkBack 48dp touch targets), and Play Store deployment.
+1. **Repair and verify authentication**: Run the existing Haven browser flow in an Android simulated device, inspect the exact Google error and redirect chain, verify the App Link association for the installed signer, exchange the code, and confirm `/api/v1/me`. Repeat on the intended installed build. An error must not be presented as user cancellation without evidence.
+2. **Integrate one real journey at a time**: For each offerer or responder journey, inventory the existing Haven endpoint and tests; fill only required API gaps; connect the Android screen to real responses; verify loading, empty, failure, retry, and ownership states. Remove that screen's runtime sample data and simulated actions as it becomes integrated.
+3. **Add local persistence only where it supports the real journey**: Cache server data and add offline behavior after consistency, invalidation, and write rules are agreed with Haven. Never let cached data or optimistic UI claim an unconfirmed server result as final.
+4. **Release verification**: Run Android tests and a full sign-in and core-journey pass on the installed build, including App Link verification for its signing certificate. Record any backend or deployment dependency that prevents completion.
+
+The implementation sequence follows Haven's released scope and development-freeze decisions. New product capabilities require an explicit product decision; mobile implementation does not expand the backend contract by implication.
