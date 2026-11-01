@@ -79,6 +79,7 @@ fun OffersScreen(
   messagesViewModel: MessagesViewModel = viewModel(),
   onNavigateBack: () -> Unit,
   onNavigateToSignIn: () -> Unit,
+  onSignOut: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val uiState by viewModel.uiState.collectAsState()
@@ -378,7 +379,6 @@ fun OffersScreen(
                 "Attach offers to any message bubble",
                 "Instant sign-in via magic link (no passwords)"
               ),
-              onDemoSignIn = { SessionManager.signIn("adaeze.obi@haven.ng") },
               onSignIn = onNavigateToSignIn,
               onBrowseOffers = { viewModel.selectTab(OffersTab.OFFERS) },
               modifier = Modifier.weight(1f)
@@ -419,7 +419,6 @@ fun OffersScreen(
                 "Verified Haven member badge",
                 "Fast passwordless authentication"
               ),
-              onDemoSignIn = { SessionManager.signIn("adaeze.obi@haven.ng") },
               onSignIn = onNavigateToSignIn,
               onBrowseOffers = { viewModel.selectTab(OffersTab.OFFERS) },
               modifier = Modifier.weight(1f)
@@ -428,7 +427,7 @@ fun OffersScreen(
             ProfileScreen(
               session = session,
               savedOffersCount = uiState.allOffers.count { it.isFavorite },
-              onSignOut = { SessionManager.signOut() },
+              onSignOut = onSignOut,
               onNavigateToSavedOffers = {
                 viewModel.selectTab(OffersTab.OFFERS)
               },
@@ -548,7 +547,6 @@ private fun AuthGateView(
   title: String,
   description: String,
   benefits: List<String>,
-  onDemoSignIn: () -> Unit,
   onSignIn: () -> Unit,
   onBrowseOffers: () -> Unit,
   modifier: Modifier = Modifier
@@ -643,16 +641,7 @@ private fun AuthGateView(
 
     // Call to action buttons
     HavenPrimaryButton(
-      text = "Sign in as Demo Member (1-Click)",
-      onClick = onDemoSignIn,
-      modifier = Modifier.fillMaxWidth(),
-      testTag = "auth_gate_demo_sign_in_button"
-    )
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    HavenSecondaryButton(
-      text = "Sign in with Magic Link",
+      text = "Sign in",
       onClick = onSignIn,
       modifier = Modifier.fillMaxWidth(),
       testTag = "auth_gate_sign_in_button"

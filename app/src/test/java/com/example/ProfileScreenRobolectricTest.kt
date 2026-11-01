@@ -27,18 +27,18 @@ class ProfileScreenRobolectricTest {
 
   @Test
   fun `session manager handles sign in and display name formatting`() {
-    SessionManager.signIn("adaeze.obi@haven.ng")
+    SessionManager.signInPerson("person-1", "Adaeze Obi", "adaeze")
     val session = SessionManager.session.value
 
     assertTrue(session.isAuthenticated)
-    assertEquals("adaeze.obi@haven.ng", session.email)
+    assertEquals("person-1", session.personId)
     assertEquals("Adaeze Obi", session.displayName)
     assertEquals("A", session.initial)
   }
 
   @Test
   fun `session manager sign out clears user state`() {
-    SessionManager.signIn("adaeze.obi@haven.ng")
+    SessionManager.signInPerson("person-1", "Adaeze Obi", "adaeze")
     assertTrue(SessionManager.session.value.isAuthenticated)
 
     SessionManager.signOut()

@@ -12,21 +12,24 @@ Kotlin and Jetpack Compose. The main Haven project lives in
 
 ## Current state
 
-The app is a UI prototype with sample offers, conversations, and local session
-state. It is not connected to the Haven backend yet.
+The app still uses sample offers and conversations. Sign-in now uses Haven's
+browser authorization flow and `/api/v1/me`; other features remain local prototypes.
 
 The prototype includes:
 
-- Welcome and passwordless sign-in screens, with validation and simulated states.
+- Welcome and passwordless sign-in screens, with browser handoff and email validation.
 - Offer browsing, title search, currency and price filters, and saved-offer controls.
 - Full-screen offer detail with a swipeable gallery, provider card, and location breakdown.
 - Offer attachment sheets inside conversations.
 - A conversation inbox and message threads using local state.
 - Profile screens and theme controls.
 
-Email sign-in currently simulates success; it does not send or verify a magic
-link. Google sign-in is not integrated. Messages and saved state do not represent
-server-persisted activity.
+Both sign-in buttons open Haven's web sign-in. The browser handles email and
+Google authentication; the app only marks a person signed in after a one-time
+PKCE code exchange and `/api/v1/me` response. The email field validates the
+address before handoff; the browser may ask for it again. Refresh credentials
+are encrypted with Android Keystore and excluded from backup. Messages and
+saved state do not represent server-persisted activity.
 
 An inquiry is non-binding communication about an offer. Sending a message does
 not imply an agreement or reserve an offer. Payments and closing an exchange
@@ -39,15 +42,17 @@ are outside this prototype.
 2. Sync the Gradle project. The build currently specifies compile SDK 36.1,
    target SDK 36, and minimum SDK 24 (Android 7.0).
 3. Select the `app` debug configuration and an emulator or connected device.
-4. Check signing before running: the current AI Studio debug configuration expects
-   a `debug.keystore` at the repository root. For a standalone local checkout
-   without that file, use Android Studio's standard debug signing configuration
-   by removing the explicit `debugConfig` assignment from the debug build type
-   in your local setup. Never substitute a production signing key.
-5. Build and run the app.
+4. Build and run the app. Standard Android debug signing is used.
 
-No Gemini API key or Haven backend credentials are needed for the current sample
-flows. The `.env.example` and Firebase/AI dependencies are inherited scaffolding;
+The `Android APK` GitHub Action builds and tests on branch pushes and attaches a
+testing APK to each published release. It is debug signed and is not a production
+release artifact. To verify the HTTPS callback on an installed app, deploy the
+matching package ID and APK signing certificate SHA-256 fingerprint in Haven's
+Android App Links configuration. The AI Studio install may use a different signer
+than the GitHub Actions APK. Until that fingerprint is known, Android cannot
+verify the callback link and end-to-end sign-in remains untested.
+
+No Gemini API key or Haven backend credentials are needed to build the app. The `.env.example` and Firebase/AI dependencies are inherited scaffolding;
 there are no Gemini calls in the current app source.
 
 The checkout currently has Gradle wrapper properties but no `gradlew` launcher or
@@ -79,6 +84,6 @@ and follow. Distinguish working backend behavior from prototype interactions.
 People search and proximity discovery are future product questions, not shipped
 mobile capabilities.
 
-Before release, backend authentication, persistence, error handling, and production
-app identity/signing need to be established. Android version `1.0` is the current
+Before release, remaining backend integration, persistence, error handling, and
+production app identity/signing need to be established. Android version `1.0` is the current
 scaffold value; it does not mean Haven's v1.0 product milestone is complete.

@@ -1,0 +1,115 @@
+package com.example.auth
+
+import android.net.Uri
+import android.util.Base64
+import com.example.ui.model.SessionManager
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import java.security.SecureRandom
+import org.json.JSONObject
+
+/** The native half of Haven's browser sign-in and PKCE code exchange. */
+class HavenAuthClient(private val store: SecureAuthStore) {
+  companion object {
+    const val HOST = "haven-odysseon-d48990aa.koyeb.app"
+    private const val BASE = "https://$HOST"
+  }
+
+  private val random = SecureRandom()
+  private var accessToken: String? = null
+
+  private fun randomUrlSafe(size: Int): String = ByteArray(size).also(random::nextBytes).let {
+    Base64.encodeToString(it, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+  }
+
+  fun beginAuthorization(): Uri {
+    val verifier = randomUrlSafe(32)
+    val state = randomUrlSafe(24)
+    val challenge = Base64.encodeToString(
+      MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)),
+      Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
+    )
+    store.savePending(verifier, state)
+    return Uri.parse("$BASE/api/v1/auth/authorize").buildUpon()
+      .appendQueryParameter("code_challenge", challenge)
+      .appendQueryParameter("state", state)
+      .build()
+  }
+
+  fun acceptsCallback(uri: Uri?): Boolean = uri?.scheme == "https" &&
+    uri.host == HOST && uri.path == "/auth/callback"
+
+  /** Returns true only after the code is exchanged and /me confirms the person. */
+  fun finishAuthorization(uri: Uri): Boolean {
+    if (!acceptsCallback(uri)) return false
+    val state = uri.getQueryParameter("state") ?: return false
+    val verifier = store.consumePending(state) ?: return false
+    val code = uri.getQueryParameter("code") ?: return false
+    val response = request("POST", "/api/v1/auth/exchange", JSONObject()
+      .put("code", code).put("code_verifier", verifier))
+    if (response.first != 200) return false
+    return acceptTokens(JSONObject(response.second))
+  }
+
+  /** Restores a session by rotating the stored refresh token, then checking /me. */
+  fun restore(): Boolean {
+    val refresh = store.refreshToken ?: return false
+    val response = request("POST", "/api/v1/auth/refresh", JSONObject().put("refresh_token", refresh))
+    if (response.first == 401) {
+      store.refreshToken = null
+      SessionManager.signOut()
+      return false
+    }
+    if (response.first != 200) return false
+    return acceptTokens(JSONObject(response.second))
+  }
+
+  private fun acceptTokens(body: JSONObject): Boolean {
+    val access = body.getString("access_token")
+    val refresh = body.getString("refresh_token")
+    // Persist the rotated token before any further request. Access stays in memory.
+    store.refreshToken = refresh
+    accessToken = access
+    val me = request("GET", "/api/v1/me", null, access)
+    if (me.first != 200) return false
+    val profile = JSONObject(me.second)
+    SessionManager.signInPerson(
+      profile.getString("id"), profile.getString("display_name"), profile.getString("handle")
+    )
+    return true
+  }
+
+  fun signOut() {
+    val refresh = store.refreshToken
+    store.refreshToken = null
+    accessToken = null
+    SessionManager.signOut()
+    if (refresh != null) {
+      try { request("POST", "/api/v1/auth/revoke", JSONObject().put("refresh_token", refresh)) }
+      catch (_: Exception) { /* Local sign-out wins even if offline. */ }
+    }
+  }
+
+  private fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> {
+    val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
+      requestMethod = method
+      connectTimeout = 10_000
+      readTimeout = 10_000
+      setRequestProperty("Accept", "application/json")
+      if (bearer != null) setRequestProperty("Authorization", "Bearer $bearer")
+      if (body != null) {
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+      }
+    }
+    return try {
+      if (body != null) connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+      val status = connection.responseCode
+      val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+      status to (stream?.bufferedReader()?.use { it.readText() } ?: "")
+    } finally {
+      connection.disconnect()
+    }
+  }
+}

@@ -6,14 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,13 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -53,7 +45,6 @@ import com.example.ui.components.HavenAlertBanner
 import com.example.ui.components.HavenGoogleButton
 import com.example.ui.components.HavenInsets
 import com.example.ui.components.HavenPrimaryButton
-import com.example.ui.components.HavenSecondaryButton
 import com.example.ui.components.HavenTextField
 import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.model.SignInViewModel
@@ -65,10 +56,8 @@ import com.example.ui.theme.InterFontFamily
  * Faithfully implements all specifications:
  * - Default Idle State
  * - State A: Keyboard Open / Typing with keyboard avoidance and dynamic insets
- * - State B: Loading (Sending...)
- * - State C: Error Banner ("Google sign-in was cancelled.")
- * - State D: Invalid Email Validation ("Enter a valid email address.")
- * - Success State: "Check your email"
+ * - Error banner for browser sign-in failures
+ * - Invalid email validation before browser handoff
  *
  * Centralized Insets:
  * - Top bar extends behind the status bar and display cutouts to the top edge.
@@ -79,7 +68,7 @@ import com.example.ui.theme.InterFontFamily
 fun SignInScreen(
   viewModel: SignInViewModel,
   onNavigateBack: () -> Unit,
-  onNavigateToOffers: () -> Unit = {},
+  onStartBrowserSignIn: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val uiState by viewModel.uiState.collectAsState()
@@ -168,18 +157,6 @@ fun SignInScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (uiState.isSuccess) {
-          // Success View ("Check your email")
-          SuccessMessageCard(
-            email = uiState.successEmail,
-            onContinueToHaven = {
-              com.example.ui.model.SessionManager.signIn(uiState.successEmail.ifBlank { "adaeze.obi@haven.ng" })
-              onNavigateToOffers()
-            },
-            onResend = { viewModel.onSendMagicLink() },
-            onUseDifferentEmail = { viewModel.onResetSuccess() }
-          )
-        } else {
           // State C: Auth Error Banner (when Google auth was tapped)
           AnimatedVisibility(
             visible = uiState.googleErrorBanner != null,
@@ -200,6 +177,7 @@ fun SignInScreen(
             onClick = {
               focusManager.clearFocus()
               viewModel.onGoogleSignInClicked()
+              onStartBrowserSignIn()
             },
             enabled = !uiState.isInputsDisabled,
             testTag = "google_sign_in_button"
@@ -241,7 +219,7 @@ fun SignInScreen(
             keyboardActions = KeyboardActions(
               onDone = {
                 focusManager.clearFocus()
-                viewModel.onSendMagicLink()
+                if (viewModel.onSendMagicLink()) onStartBrowserSignIn()
               }
             ),
             testTag = "email_input_field"
@@ -251,19 +229,18 @@ fun SignInScreen(
 
           // Primary Submit Button ("Send magic link" or "Sending...")
           HavenPrimaryButton(
-            text = "Send magic link",
+            text = "Continue with email",
             onClick = {
               focusManager.clearFocus()
-              viewModel.onSendMagicLink()
+              if (viewModel.onSendMagicLink()) onStartBrowserSignIn()
             },
             enabled = !uiState.isInputsDisabled,
             isLoading = uiState.isSending,
             testTag = "send_magic_link_button"
           )
-        }
       }
 
-      // Bottom Footer: centered account creation note & quick state inspector
+      // Account creation note
       Column(
         modifier = Modifier
           .fillMaxWidth()
@@ -283,154 +260,7 @@ fun SignInScreen(
             .testTag("account_creation_note")
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Spec State Selector Chips (allows testing States A, B, C, D instantly)
-        StateInspectorRow(
-          onSelectIdle = { viewModel.setIdlePreset() },
-          onSelectInvalid = { viewModel.setInvalidEmailPreset() },
-          onSelectSending = { viewModel.setLoadingPreset() },
-          onSelectGoogleError = { viewModel.setGoogleErrorPreset() }
-        )
       }
     }
-  }
-}
-
-/**
- * Success view matching the spec: "Check your email"
- */
-@Composable
-private fun SuccessMessageCard(
-  email: String,
-  onContinueToHaven: () -> Unit,
-  onResend: () -> Unit,
-  onUseDifferentEmail: () -> Unit,
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .background(HavenColors.SurfaceContainer, RoundedCornerShape(12.dp))
-      .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(12.dp))
-      .padding(20.dp)
-      .testTag("success_message_card"),
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    Box(
-      modifier = Modifier
-        .size(48.dp)
-        .clip(CircleShape)
-        .background(HavenColors.Canvas)
-        .border(1.dp, HavenColors.BorderSubtle, CircleShape),
-      contentAlignment = Alignment.Center
-    ) {
-      Icon(
-        imageVector = Icons.Outlined.MailOutline,
-        contentDescription = "Email sent",
-        tint = HavenColors.Primary,
-        modifier = Modifier.size(24.dp)
-      )
-    }
-
-    Spacer(modifier = Modifier.height(14.dp))
-
-    Text(
-      text = "Check your email",
-      fontFamily = InterFontFamily,
-      fontWeight = FontWeight.SemiBold,
-      fontSize = 20.sp,
-      color = HavenColors.TextPrimary
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Text(
-      text = "We sent a magic sign-in link to:\n$email\n\nThe link works for 15 minutes.",
-      fontFamily = InterFontFamily,
-      fontWeight = FontWeight.Normal,
-      fontSize = 14.sp,
-      lineHeight = 20.sp,
-      color = HavenColors.TextSecondary,
-      textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    HavenPrimaryButton(
-      text = "Enter Haven (Demo Session)",
-      onClick = onContinueToHaven,
-      modifier = Modifier.fillMaxWidth().testTag("continue_to_haven_button")
-    )
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    HavenSecondaryButton(
-      text = "Sign in with a different email",
-      onClick = onUseDifferentEmail,
-      modifier = Modifier.fillMaxWidth()
-    )
-  }
-}
-
-/**
- * Spec inspection bar providing 1-click test toggles for all documented auxiliary states
- */
-@Composable
-private fun StateInspectorRow(
-  onSelectIdle: () -> Unit,
-  onSelectInvalid: () -> Unit,
-  onSelectSending: () -> Unit,
-  onSelectGoogleError: () -> Unit,
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(top = 4.dp),
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    Text(
-      text = "Interactive Spec States",
-      fontFamily = InterFontFamily,
-      fontWeight = FontWeight.Medium,
-      fontSize = 11.sp,
-      letterSpacing = 0.5.sp,
-      color = HavenColors.TextMuted,
-      modifier = Modifier.padding(bottom = 6.dp)
-    )
-
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-    ) {
-      InspectorPill(label = "Default", onClick = onSelectIdle)
-      InspectorPill(label = "Invalid Email", onClick = onSelectInvalid)
-      InspectorPill(label = "Sending", onClick = onSelectSending)
-      InspectorPill(label = "Google Alert", onClick = onSelectGoogleError)
-    }
-  }
-}
-
-@Composable
-private fun InspectorPill(
-  label: String,
-  onClick: () -> Unit
-) {
-  Box(
-    modifier = Modifier
-      .clip(RoundedCornerShape(6.dp))
-      .background(HavenColors.SurfaceContainer)
-      .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(6.dp))
-      .clickable { onClick() }
-      .padding(horizontal = 8.dp, vertical = 4.dp)
-  ) {
-    Text(
-      text = label,
-      fontFamily = InterFontFamily,
-      fontWeight = FontWeight.Normal,
-      fontSize = 11.sp,
-      color = HavenColors.TextSecondary
-    )
   }
 }

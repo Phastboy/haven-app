@@ -91,35 +91,14 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `tapping Google sign-in triggers cancelled error banner`() {
-    val viewModel = SignInViewModel(testDispatcher)
-    assertNull(viewModel.uiState.value.googleErrorBanner)
-
-    viewModel.onGoogleSignInClicked()
-    assertNotNull(viewModel.uiState.value.googleErrorBanner)
-    assertEquals("Google sign-in was cancelled.", viewModel.uiState.value.googleErrorBanner)
-
-    viewModel.onDismissGoogleError()
-    assertNull(viewModel.uiState.value.googleErrorBanner)
-  }
-
-  @Test
-  fun `submitting valid email simulates 1_5s sending then transitions to success`() = runTest(testDispatcher) {
+  fun `browser handoff never authenticates without an API exchange`() {
+    SessionManager.signOut()
     val viewModel = SignInViewModel(testDispatcher)
     viewModel.onEmailChange("adaeze@crafts.ng")
-    viewModel.onSendMagicLink()
-
-    // Dispatch initial coroutine execution
-    testScheduler.advanceTimeBy(100)
-    assertTrue(viewModel.uiState.value.isSending)
-    assertFalse(viewModel.uiState.value.isSuccess)
-
-    // Advance past the 1.5s simulated network request
-    testScheduler.advanceTimeBy(1600)
-
-    assertFalse(viewModel.uiState.value.isSending)
-    assertTrue(viewModel.uiState.value.isSuccess)
-    assertEquals("adaeze@crafts.ng", viewModel.uiState.value.successEmail)
+    assertTrue(viewModel.onSendMagicLink())
+    viewModel.onGoogleSignInClicked()
+    assertFalse(SessionManager.session.value.isAuthenticated)
+    assertNull(viewModel.uiState.value.googleErrorBanner)
   }
 
   @Test
@@ -191,9 +170,9 @@ class ExampleRobolectricTest {
     assertNull(SessionManager.session.value.email)
     assertEquals("Guest Member", SessionManager.session.value.displayName)
 
-    SessionManager.signIn("adaeze.obi@haven.ng")
+    SessionManager.signInPerson("person-1", "Adaeze Obi", "adaeze")
     assertTrue(SessionManager.session.value.isAuthenticated)
-    assertEquals("adaeze.obi@haven.ng", SessionManager.session.value.email)
+    assertEquals("person-1", SessionManager.session.value.personId)
     assertEquals("Adaeze Obi", SessionManager.session.value.displayName)
     assertEquals("A", SessionManager.session.value.initial)
 
