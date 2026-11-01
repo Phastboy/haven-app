@@ -87,7 +87,7 @@ class WindowInsetsRobolectricTest {
       HavenTheme {
         WelcomeScreen(
           onNavigateToSignIn = {},
-          onStartBrowserSignIn = {}
+          onNavigateToOffers = {}
         )
       }
     }
