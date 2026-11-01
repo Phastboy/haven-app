@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<title>Sign in · Haven</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#fff;color:#111827;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}:root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);--safe-right:env(safe-area-inset-right,0px)}html[data-preview=true]{--safe-top:47px;--safe-bottom:34px}button,input{font:inherit;color:inherit}button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:transparent}button:focus-visible,input:focus-visible{outline:2px solid #111827;outline-offset:3px}button:disabled{cursor:default;opacity:.6}[hidden]{display:none!important}svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}.header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #f3f4f6;padding:calc(var(--safe-top) + 8px) max(16px,var(--safe-right)) 10px max(16px,var(--safe-left));display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px}.header-title{margin:0;text-align:center;font-size:15px;font-weight:600;line-height:1.25;letter-spacing:-.01em}.back{width:44px;height:44px;padding:0;display:grid;place-items:center;border-radius:50%}.back:active{background:#f3f4f6}.content{flex:1;display:flex;flex-direction:column;justify-content:center;width:100%;max-width:438px;margin:0 auto;padding:32px max(24px,var(--safe-right)) calc(var(--safe-bottom) + 32px) max(24px,var(--safe-left))}.intro{text-align:center;margin-bottom:32px}h1{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.025em;margin:0 0 8px}.intro p{margin:0;color:#6b7280;font-size:16px;line-height:24px}.action{width:100%;min-height:52px;border-radius:8px;display:flex;justify-content:center;align-items:center;gap:12px;padding:12px 16px;font-size:14px;font-weight:500;line-height:20px}.google{border:1px solid #d1d5db;background:#fff}.google svg{width:18px;height:18px;stroke:none}.primary{background:#111827;color:#fff;margin-top:24px}.divider{display:flex;align-items:center;gap:12px;margin:28px 0;color:#6b7280;font-size:12px}.divider:before,.divider:after{content:"";height:1px;background:#e5e7eb;flex:1}.field-label{display:block;font-size:13px;font-weight:500;margin-bottom:8px}.input{display:block;width:100%;min-height:52px;padding:12px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:16px;line-height:24px}.input[aria-invalid=true]{border-color:#b91c1c}.input::placeholder{color:#9ca3af}.hint,.error{font-size:13px;line-height:20px;margin:8px 0 0}.hint{color:#6b7280}.error{color:#b91c1c}.account-note{margin:40px auto 0;max-width:290px;text-align:center;color:#6b7280;font-size:12px;line-height:19px}.feedback{font-size:14px;line-height:21px;margin:20px 0 0;overflow-wrap:anywhere}.feedback:empty{margin:0}.check{text-align:center}.mail{width:64px;height:64px;display:grid;place-items:center;border-radius:50%;background:#f3f4f6;margin:0 auto 24px}.mail svg{width:28px;height:28px}.check h2{font-size:24px;line-height:32px;letter-spacing:-.025em;margin:0 0 12px;font-weight:600}.check p{font-size:14px;line-height:22px;color:#6b7280;margin:0 0 12px}.check strong{font-weight:500;color:#111827;overflow-wrap:anywhere}.text-button{min-height:44px;padding:12px;font-size:14px;text-decoration:underline;text-underline-offset:3px}.secondary{background:#f3f4f6;margin-top:20px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-height:600px){html[data-preview=true]{--safe-top:0px;--safe-bottom:0px}.content{justify-content:flex-start}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header"><button aria-label="Back" class="back" id="btn-back" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg></button><p class="header-title">Sign in</p><span aria-hidden="true"></span></header>
+<main class="content" id="content">
+<section aria-labelledby="welcome-title" id="entry">
+<div class="intro"><h1 id="welcome-title">Welcome to Haven</h1><p>Sign in to continue.</p></div>
+<button class="action google" id="btn-google" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.86c2.26-2.09 3.68-5.17 3.68-9.09z" fill="#4285F4"></path><path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.37 24 12 24z" fill="#34A853"></path><path d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" fill="#FBBC05"></path><path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" fill="#EA4335"></path></svg><span>Continue with Google</span></button>
+<div aria-hidden="true" class="divider">or</div>
+<form id="auth-form" novalidate="">
+<label class="field-label" for="email-input">Email</label>
+<input aria-describedby="helper-note email-error" autocapitalize="none" autocomplete="email" class="input" id="email-input" inputmode="email" name="email" placeholder="name@example.com" required="" spellcheck="false" type="email"/>
+<p class="error" hidden="" id="email-error">Enter a valid email address.</p>
+<p class="hint" id="helper-note">We’ll email you a link to sign in. No password needed.</p>
+<button class="action primary" id="btn-submit" type="submit">Send magic link</button>
+</form>
+<p class="account-note">New to Haven? We’ll create your account the first time you sign in.</p>
+</section>
+<section aria-labelledby="check-title" class="check" hidden="" id="check-email">
+<div aria-hidden="true" class="mail"><svg viewbox="0 0 24 24"><rect height="14" rx="2" width="18" x="3" y="5"></rect><path d="m3 6 9 7 9-7"></path></svg></div>
+<h2 id="check-title" tabindex="-1">Check your email</h2><p>We sent a sign-in link to<br/><strong id="sent-email"></strong></p><p>Open the link to continue to Haven. If you can’t find it, check your spam folder.</p>
+<button class="action secondary" id="btn-resend" type="button">Send another link</button><button class="text-button" id="btn-change-email" type="button">Use a different email</button>
+</section>
+<p aria-atomic="true" aria-live="polite" class="feedback" id="feedback" role="status"></p>
+<noscript><p class="hint">Enable JavaScript to request a sign-in link or continue with Google.</p></noscript>
+</main>
+</div>
+<script>
+(()=>{
+'use strict';
+const host=window.HavenPrototype||{},$=id=>document.getElementById(id);
+const returnTo=host.returnTo?structuredClone(host.returnTo):{destination:'offers-feed'};
+let busy=false,epoch=0,controller=null,sentEmail='',completed=false;
+const controls=['btn-google','btn-submit','btn-resend','btn-change-email','email-input'];
+function feedback(message){$('feedback').textContent=message;}
+function setBusy(value,kind){busy=value;for(const id of controls)$(id).disabled=value;$('content').setAttribute('aria-busy',String(value));$('btn-submit').textContent=value&&kind==='magic'?'Sending…':'Send magic link';$('btn-resend').textContent=value&&kind==='magic'?'Sending…':'Send another link';}
+function route(destination,extra={}){const detail={destination,returnTo:structuredClone(returnTo),...extra};try{if(host.navigate?.(detail)===true)return true;if(!window.dispatchEvent(new CustomEvent('haven:navigate',{detail,cancelable:true})))return true;}catch{feedback('Could not open that screen. Please try again.');return false;}feedback('This screen is awaiting a prototype connection.');return false;}
+function cancel(){epoch++;controller?.abort();controller=null;setBusy(false);}
+async function request(kind){
+ if(busy||completed)return;
+ let email=sentEmail;
+ if(kind==='magic'&&!$('entry').hidden){$('email-input').value=$('email-input').value.trim();if(!$('email-input').checkValidity()){$('email-error').hidden=false;$('email-input').setAttribute('aria-invalid','true');$('email-input').focus();return;}email=$('email-input').value;}
+ const adapter=window.HavenAuthAdapter,method=kind==='magic'?'requestMagicLink':'startOAuth';
+ if(typeof adapter?.[method]!=='function'){feedback('Sign-in is awaiting a backend connection. Please try again once it is connected.');return;}
+ const token=++epoch;controller=new AbortController();setBusy(true,kind);feedback(kind==='magic'?'Requesting your sign-in link…':'Connecting to Google…');
+ try{
+  const result=await adapter[method]({...kind==='magic'?{email}:{provider:'google'},returnTo:structuredClone(returnTo),signal:controller.signal});
+  if(token!==epoch)return;
+  if(result?.user?.id){complete(result);return;}
+  if(kind==='magic'&&result?.sent===true){const wasVisible=!$('check-email').hidden;sentEmail=email;$('sent-email').textContent=email;$('entry').hidden=true;$('check-email').hidden=false;feedback(wasVisible?'Another sign-in link has been sent.':'Your sign-in link has been sent.');if(!wasVisible)$('check-title').focus();}
+  else if(kind==='oauth'&&result?.redirecting===true)feedback('Continue with Google in the sign-in window.');
+  else throw new Error('Unconfirmed authentication response');
+ }catch(error){if(token!==epoch)return;feedback(kind==='magic'?'We couldn’t send the link. Please try again.':'We couldn’t connect to Google. Please try again.');}
+ finally{if(token===epoch){controller=null;setBusy(false);}}
+}
+function complete(result){if(!result?.user?.id||completed)return false;cancel();completed=true;for(const id of controls)$(id).disabled=true;feedback('You’re signed in.');window.dispatchEvent(new CustomEvent('haven:auth-complete',{detail:{user:structuredClone(result.user),returnTo:structuredClone(returnTo)}}));const {destination,...extra}=returnTo;if(!route(destination||'offers-feed',extra))feedback('You’re signed in. Returning to your previous screen is awaiting a prototype connection.');return true;}
+$('auth-form').onsubmit=e=>{e.preventDefault();request('magic');};
+$('btn-google').onclick=()=>request('oauth');$('btn-resend').onclick=()=>request('magic');
+$('btn-change-email').onclick=()=>{cancel();$('entry').hidden=false;$('check-email').hidden=true;sentEmail='';$('sent-email').textContent='';feedback('');$('email-input').focus();};
+$('email-input').oninput=()=>{$('email-error').hidden=true;$('email-input').removeAttribute('aria-invalid');feedback('');};
+$('btn-back').onclick=()=>{cancel();route('back',{intent:'cancel-sign-in'});};
+window.addEventListener('pagehide',cancel);
+window.HavenSignIn={complete,cancel};
+})();
+</script>
+</body></html>

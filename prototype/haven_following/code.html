@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Following · Haven</title>
+<style>
+/* Foundation */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 prototype mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+}
+/* Header */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 10px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-back {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-back:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+}
+.header-spacer {
+  width: 44px;
+  margin-right: -8px;
+}
+/* Scrollable Content */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 24px) max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+}
+.content > * { flex-shrink: 0; }
+/* Followed Providers List */
+.following-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.following-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 0;
+  background: #ffffff;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.following-row:last-child {
+  border-bottom: 0;
+}
+/* Identity target link (avatar + text) - separate from following button */
+.provider-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  padding: 2px 4px 2px 0;
+  transition: background-color 0.15s ease;
+}
+.provider-link:active {
+  opacity: 0.8;
+}
+.provider-link:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 4px;
+}
+/* Initials Avatar */
+.avatar-initials {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+.provider-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.provider-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  margin: 0;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.provider-bio {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 17px;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Following Action Button */
+.follow-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  min-width: 88px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.follow-btn:active {
+  transform: scale(0.96);
+  background: #e5e7eb;
+}
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 20px;
+  margin: auto 0;
+  gap: 16px;
+}
+.empty-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+.empty-icon-wrap svg {
+  width: 26px;
+  height: 26px;
+}
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin: 0;
+}
+.empty-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin: 0;
+  max-width: 280px;
+}
+.explore-btn {
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 12px 24px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+.explore-btn:active {
+  background: #000000;
+  transform: scale(0.98);
+}
+/* Toast */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" hidden="">
+<defs>
+<symbol id="i-back" viewbox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-users" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></symbol>
+<symbol id="i-compass" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></symbol>
+</defs>
+</svg>
+<div class="app" id="app">
+<!-- Pinned Safe-Area Header -->
+<header class="header">
+<button aria-label="Back to previous screen" class="header-back" id="back-btn">
+<svg aria-hidden="true"><use href="#i-back"></use></svg>
+</button>
+<div class="header-center">
+<h1 class="header-title" style="margin:0">Following</h1>
+<span class="header-count" id="header-count">5 people</span>
+</div>
+<div aria-hidden="true" class="header-spacer"></div>
+</header>
+<!-- Scrollable Following List -->
+<main class="content" id="main-content" tabindex="-1">
+<ul aria-label="Followed providers list" class="following-list" id="following-list" role="list">
+<li class="following-row" data-provider-id="olumide-adeleke"><a aria-label="View Olumide Adeleke’s profile" class="provider-link" href="haven-provider-profile.html?providerId=olumide-adeleke"><div aria-hidden="true" class="avatar-initials">OA</div><div class="provider-info"><h2 class="provider-name" title="Olumide Adeleke">Olumide Adeleke</h2><p class="provider-bio" title="Traditional master weaver creating custom hand-loomed Aso Oke textiles and ceremonial cloths.">Traditional master weaver creating custom hand-loomed Aso Oke textiles and ceremonial cloths.</p></div></a><button aria-label="Unfollow Olumide Adeleke" class="follow-btn" type="button">Following</button></li><li class="following-row" data-provider-id="amaya-chen"><a aria-label="View Amaya Chen’s profile" class="provider-link" href="haven-provider-profile.html?providerId=amaya-chen"><div aria-hidden="true" class="avatar-initials">AC</div><div class="provider-info"><h2 class="provider-name" title="Amaya Chen">Amaya Chen</h2><p class="provider-bio" title="Studio ceramicist focusing on wheel-thrown stoneware tableware, textured vases, and wood-fired tea bowls.">Studio ceramicist focusing on wheel-thrown stoneware tableware, textured vases, and wood-fired tea bowls.</p></div></a><button aria-label="Unfollow Amaya Chen" class="follow-btn" type="button">Following</button></li><li class="following-row" data-provider-id="soren-lindqvist"><a aria-label="View Sören Lindqvist’s profile" class="provider-link" href="haven-provider-profile.html?providerId=soren-lindqvist"><div aria-hidden="true" class="avatar-initials">SL</div><div class="provider-info"><h2 class="provider-name" title="Sören Lindqvist">Sören Lindqvist</h2><p class="provider-bio" title="Nordic linen weaver and textile designer producing natural raw home goods and textured runners.">Nordic linen weaver and textile designer producing natural raw home goods and textured runners.</p></div></a><button aria-label="Unfollow Sören Lindqvist" class="follow-btn" type="button">Following</button></li><li class="following-row" data-provider-id="kenji-sato"><a aria-label="View Kenji Sato’s profile" class="provider-link" href="haven-provider-profile.html?providerId=kenji-sato"><div aria-hidden="true" class="avatar-initials">KS</div><div class="provider-info"><h2 class="provider-name" title="Kenji Sato">Kenji Sato</h2><p class="provider-bio" title="Heritage paper artisan crafting structural washi lanterns and architectural lamps.">Heritage paper artisan crafting structural washi lanterns and architectural lamps.</p></div></a><button aria-label="Unfollow Kenji Sato" class="follow-btn" type="button">Following</button></li><li class="following-row" data-provider-id="elena-rostova"><a aria-label="View Elena Rostova’s profile" class="provider-link" href="haven-provider-profile.html?providerId=elena-rostova"><div aria-hidden="true" class="avatar-initials">ER</div><div class="provider-info"><h2 class="provider-name" title="Elena Rostova">Elena Rostova</h2><p class="provider-bio" title="Luthier and acoustic craftsman specializing in instrument setups, fretwork, and restoration.">Luthier and acoustic craftsman specializing in instrument setups, fretwork, and restoration.</p></div></a><button aria-label="Unfollow Elena Rostova" class="follow-btn" type="button">Following</button></li>
+</ul>
+<!-- Empty State -->
+<div class="empty-state" hidden="" id="empty-state">
+<div aria-hidden="true" class="empty-icon-wrap">
+<svg><use href="#i-users"></use></svg>
+</div>
+<h2 class="empty-title" id="empty-title">You’re not following anyone yet</h2>
+<p class="empty-description">
+        When you follow craftspeople and providers on Haven, they’ll appear here so you can keep track of their work.
+      </p>
+<button class="explore-btn" id="explore-btn" type="button">
+<svg aria-hidden="true"><use href="#i-compass"></use></svg>
+<span>Explore offers</span>
+</button>
+</div>
+</main>
+</div>
+<!-- Accessible Toast -->
+<div aria-atomic="true" aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
+<script>
+(()=>{
+'use strict';
+/* Host supplies followedProviders (the complete followed collection), or providers
+   with user and getFollowing/setFollowing, plus navigate. This uses the same
+   account keys and haven:follow-change payload as HavenProviderProfile.
+   No host: isolated signed-in presentation fixture with sample followed providers. */
+const standalone = !Object.prototype.hasOwnProperty.call(window, 'HavenPrototype');
+const host = window.HavenPrototype || {};
+const $ = id => document.getElementById(id);
+// Initial sample providers adhering strictly to instructions:
+// Includes "Olumide Adeleke" whose bio describes traditional Aso Oke weaving,
+// alongside consistent fictional sample providers matching Haven's artisan ethos.
+const sampleProviders = [
+  {
+    id: 'olumide-adeleke',
+    name: 'Olumide Adeleke',
+    initials: 'OA',
+    bio: 'Traditional master weaver creating custom hand-loomed Aso Oke textiles and ceremonial cloths.'
+  },
+  {
+    id: 'amaya-chen',
+    name: 'Amaya Chen',
+    initials: 'AC',
+    bio: 'Studio ceramicist focusing on wheel-thrown stoneware tableware, textured vases, and wood-fired tea bowls.'
+  },
+  {
+    id: 'soren-lindqvist',
+    name: 'Sören Lindqvist',
+    initials: 'SL',
+    bio: 'Nordic linen weaver and textile designer producing natural raw home goods and textured runners.'
+  },
+  {
+    id: 'kenji-sato',
+    name: 'Kenji Sato',
+    initials: 'KS',
+    bio: 'Heritage paper artisan crafting structural washi lanterns and architectural lamps.'
+  },
+  {
+    id: 'elena-rostova',
+    name: 'Elena Rostova',
+    initials: 'ER',
+    bio: 'Luthier and acoustic craftsman specializing in instrument setups, fretwork, and restoration.'
+  }
+];
+let user = host.user || null;
+let source = structuredClone(host.followedProviders || host.providers || (standalone ? sampleProviders : []));
+const explicitIds=new Set((host.followedProviders||[]).map(p=>p.id));
+const localOverrides=new Map();
+let demoFollowed = new Set(sampleProviders.map(p => p.id));
+function isFollowed(id) {
+  if (standalone) return demoFollowed.has(id);
+  if (!user) return false;
+  if (host.getFollowing) return !!host.getFollowing(id, user.id);
+  if (localOverrides.has(id)) return localOverrides.get(id);
+  try {
+    const val = localStorage.getItem(`haven:following:${user.id}:${id}`);
+    if (val !== null) return val === 'true';
+  } catch {}
+  return explicitIds.has(id);
+}
+function collection() {
+  return source.filter(p => isFollowed(p.id));
+}
+let timer;
+function notify(message) {
+  clearTimeout(timer);
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  timer = setTimeout(() => { toast.hidden = true; }, 3600);
+}
+function route(destination, extra = {}) {
+  const detail = {
+    destination,
+    returnTo: 'following',
+    ...extra
+  };
+  try {
+    if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+    const event = new CustomEvent('haven:navigate', { detail, cancelable: true });
+    if (!window.dispatchEvent(event)) return true;
+  } catch (err) {
+    console.error('Haven navigation failed', err);
+    notify('Navigation failed. Please try again.');
+    return false;
+  }
+  const destinationNames = {
+    'back': 'Back navigation',
+    'profile': 'Provider public profile',
+    'offers-feed': 'Offers feed',
+    'signin': 'Sign in'
+  };
+  notify((destinationNames[destination] || destination) + ' is awaiting a prototype connection.');
+  return false;
+}
+function unfollowProvider(providerId, triggerBtn) {
+  const list = collection();
+  const index = list.findIndex(p => p.id === providerId);
+  if (index < 0) return;
+  const removed = list[index];
+  const hadFocus = triggerBtn === document.activeElement;
+  try {
+    if (standalone) {
+      demoFollowed.delete(providerId);
+    } else {
+      if (!user) return;
+      if (host.setFollowing) host.setFollowing(providerId, user.id, false);
+      else localStorage.setItem(`haven:following:${user.id}:${providerId}`, 'false');
+      localOverrides.set(providerId,false);
+    }
+  } catch {
+    notify('Unable to unfollow provider. Please try again.');
+    return;
+  }
+  renderList();
+  // Shift keyboard focus sensibly to next surviving control
+  if (hadFocus) {
+    const buttons = $('following-list').querySelectorAll('.follow-btn');
+    const target = buttons[Math.min(index, buttons.length - 1)] || $('explore-btn');
+    if (target) target.focus();
+  }
+  notify(`Unfollowed ${removed.name}. ${collection().length} remaining.`);
+  if (!standalone) {
+    window.dispatchEvent(new CustomEvent('haven:follow-change', {
+      detail: { providerId, userId: user.id, following: false }
+    }));
+  }
+}
+function createRowElement(provider) {
+  const li = document.createElement('li');
+  li.className = 'following-row';
+  li.dataset.providerId = provider.id;
+  // Separate clickable profile link spanning initials avatar and name/bio
+  const link = document.createElement('a');
+  link.className = 'provider-link';
+  link.href = `haven-provider-profile.html?providerId=${encodeURIComponent(provider.id)}`;
+  link.setAttribute('aria-label', `View ${provider.name}’s profile`);
+  link.onclick = e => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    route('profile', { providerId: provider.id });
+  };
+  // Initials Avatar
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar-initials';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = provider.initials || provider.name.split(/\s+/).filter(Boolean).slice(0,2).map(n=>Array.from(n)[0]).join('');
+  // Provider text
+  const info = document.createElement('div');
+  info.className = 'provider-info';
+  const name = document.createElement('h2');
+  name.className = 'provider-name';
+  name.textContent = provider.name;
+  name.title = provider.name;
+  const bio = document.createElement('p');
+  bio.className = 'provider-bio';
+  bio.textContent = provider.bio||'';
+  bio.title = provider.bio||'';
+  bio.hidden=!provider.bio;
+  info.append(name, bio);
+  link.append(avatar, info);
+  // Independent Following button (not nested inside link)
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'follow-btn';
+  btn.setAttribute('aria-label', `Unfollow ${provider.name}`);
+  btn.textContent = 'Following';
+  btn.onclick = e => {
+    e.stopPropagation();
+    unfollowProvider(provider.id, btn);
+  };
+  li.append(link, btn);
+  return li;
+}
+function renderList() {
+  const listEl = $('following-list');
+  const emptyState = $('empty-state');
+  const countEl = $('header-count');
+  const providers = collection();
+  const count = providers.length;
+  const guest=!standalone&&!user;
+  $('empty-title').textContent=guest?'Sign in to see who you follow':'You’re not following anyone yet';
+  document.querySelector('.empty-description').textContent=guest?'Return to the people you follow with your Haven account.':'People you follow on Haven appear here so you can return to their profiles and offers.';
+  $('explore-btn').querySelector('span').textContent=guest?'Sign in':'Explore offers';
+  countEl.textContent = count === 1 ? '1 person' : `${count} people`;
+  if (count === 0) {
+    listEl.hidden = true;
+    emptyState.hidden = false;
+    listEl.replaceChildren();
+  } else {
+    listEl.hidden = false;
+    emptyState.hidden = true;
+    const fragment = document.createDocumentFragment();
+    for (const p of providers) {
+      fragment.append(createRowElement(p));
+    }
+    listEl.replaceChildren(fragment);
+  }
+}
+// Global actions
+$('back-btn').onclick = () => route('back', { intent: 'back' });
+$('explore-btn').onclick=()=>!standalone&&!user?route('signin',{intent:'view-following'}):route('offers-feed',{intent:'explore-offers'});
+// Refresh only this account; preserve the focused row or nearest survivor.
+function refresh(event){
+ if(event?.detail?.userId&&event.detail.userId!==user?.id)return;
+ const active=document.activeElement,row=active?.closest?.('.following-row'),id=row?.dataset.providerId,index=row?[...$('following-list').children].indexOf(row):-1;
+ if(event?.detail?.providerId)localOverrides.set(event.detail.providerId,event.detail.following);
+ renderList();
+ if(id){const rows=[...$('following-list').children],target=rows.find(r=>r.dataset.providerId===id)||rows[Math.min(index,rows.length-1)];(target?.querySelector(active.classList.contains('follow-btn')?'.follow-btn':'.provider-link')||$('explore-btn')).focus();}
+}
+window.addEventListener('haven:follow-change',refresh);
+window.addEventListener('storage',event=>{if(user&&(!event.key||event.key.startsWith(`haven:following:${user.id}:`))){localOverrides.clear();refresh();}});
+window.HavenFollowing = {
+ setUser(next,providers=[]){user=next;source=structuredClone(providers);explicitIds.clear();providers.forEach(p=>explicitIds.add(p.id));localOverrides.clear();renderList();},
+ setProviders(providers){source=structuredClone(providers);explicitIds.clear();providers.forEach(p=>explicitIds.add(p.id));localOverrides.clear();renderList();},
+  getFollowed: () => structuredClone(collection()),
+  unfollow: id => {
+    const row = [...$('following-list').children].find(r => r.dataset.providerId === id);
+    if (row) unfollowProvider(id, row.querySelector('.follow-btn'));
+  },
+  reset: () => {
+    if (!standalone) return;
+    demoFollowed = new Set(sampleProviders.map(p => p.id));
+    source = structuredClone(sampleProviders);
+    renderList();
+  }
+};
+renderList();
+})();
+</script>
+</body></html>

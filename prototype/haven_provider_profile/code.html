@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en" data-preview="true">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Olumide Adeleke · Haven Profile</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 3px;
+}
+button:disabled {
+  cursor: default;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 prototype mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+}
+/* Header */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 8px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-back {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-back:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.header-spacer {
+  width: 44px;
+  margin-right: -8px;
+}
+/* Scrollable Main */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  padding: 24px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 32px) max(16px, var(--safe-left));
+}
+/* Identity Section */
+.profile-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.avatar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  display: grid;
+  place-items: center;
+}
+.name-bio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.provider-name {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0;
+  color: #111827;
+}
+.provider-location {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+.provider-bio {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #374151;
+  margin: 6px 0 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+/* Profile Actions */
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 4px;
+}
+.btn-message {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.12s ease;
+}
+.btn-message:active {
+  background: #000000;
+}
+.btn-follow {
+  min-height: 44px;
+  min-width: 108px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #f3f4f6;
+  color: #111827;
+  transition: all 0.15s ease;
+}
+.btn-follow:active {
+  background: #e5e7eb;
+}
+.btn-follow[aria-pressed="true"] {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+/* Offers Section */
+.offers-section {
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+  color: #111827;
+}
+/* Offer Cards List */
+.offers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.offer-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: #f9fafb;
+  overflow: hidden;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+.offer-card:active {
+  background: #f3f4f6;
+  transform: scale(0.99);
+}
+.offer-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: #eceff1;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+}
+.offer-thumb svg {
+  width: 32px;
+  height: 32px;
+}
+.offer-details {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.offer-category {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+  text-transform: capitalize;
+}
+.offer-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.offer-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 4px 0 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.offer-currency {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+/* Feedback Toast */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+dialog{border:0;border-radius:20px 20px 0 0;inset:auto 0 0;margin:0 auto;width:100%;max-width:480px;padding:24px 20px calc(var(--safe-bottom) + 16px);color:#111827;background:white}dialog::backdrop{background:#0006}dialog h2{font-size:20px;margin:0 0 12px}dialog p{line-height:1.5;color:#4b5563}dialog button{width:100%;min-height:48px;border-radius:8px;margin-top:8px;background:#f3f4f6}dialog #signin{background:#111827;color:white}.profile-actions{flex-wrap:wrap}.offer-card:focus-visible{outline-offset:-3px}.offer-title{white-space:normal;overflow-wrap:anywhere}
+/* Centered introduction; fixed two-column catalogue, including odd final rows. */
+.profile-intro { gap:14px; text-align:center; }
+.avatar-row { justify-content:center; }
+.name-bio { align-items:center; min-width:0; }
+.provider-name { overflow-wrap:anywhere; }
+.profile-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.profile-actions button { min-width:0; width:100%; height:100%; }
+.profile-actions .btn-message { order:2; padding:10px 8px; }
+.profile-actions .btn-follow { order:1; }
+.offers-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:20px 12px; }
+.offer-card { min-width:0; background:white; border-radius:0; }
+.offer-card:active { background:white; }
+.offer-thumb { aspect-ratio:1; border-radius:10px; }
+.offer-details { padding:10px 0 0; gap:5px; }
+.offer-title { font-size:14px; }
+.offer-price { flex-wrap:wrap; font-size:15px; }
+.category-rail { display:flex; gap:8px; overflow-x:auto; padding:4px; margin:-4px; }
+.category-chip { flex:none; min-height:44px; padding:10px 14px; border-radius:22px; background:#f3f4f6; font-size:13px; }
+.category-chip[aria-pressed="true"] { background:#111827; color:white; }
+.offer-count { font-size:13px; color:#6b7280; }
+.offers-empty { grid-column:1 / -1; color:#6b7280; font-size:14px; }
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 3-3 6 6"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8v.5Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  </defs>
+</svg>
+<div class="app" id="app">
+  <!-- Pinned Top App Bar -->
+  <header class="header">
+    <button class="header-back" id="back-btn" aria-label="Back">
+      <svg aria-hidden="true"><use href="#i-back"/></svg>
+    </button>
+    <span class="header-title" id="header-name">Olumide Adeleke</span>
+    <div class="header-spacer" aria-hidden="true"></div>
+  </header>
+  <!-- Scrollable Profile Content -->
+  <main class="content" id="profile-content" tabindex="-1">
+    <!-- Provider Identity & Description -->
+    <section class="profile-intro" aria-labelledby="provider-name-heading">
+      <div class="avatar-row">
+        <div class="avatar" id="avatar-initials" aria-hidden="true">OA</div>
+      </div>
+      <div class="name-bio">
+        <h1 class="provider-name" id="provider-name-heading">Olumide Adeleke</h1>
+        <p class="provider-bio" id="provider-bio">Master weaver and textile preservationist specializing in heritage strip-woven Aso Oke. Dedicated to traditional Nigerian loom craftsmanship, sustainable cotton harvesting, and archival garment repair.</p>
+      </div>
+      <!-- Actions -->
+      <div class="profile-actions">
+        <button class="btn-message" id="message-btn" aria-label="Message Olumide Adeleke">
+          <svg aria-hidden="true"><use href="#i-message"/></svg>
+          <span>Message provider</span>
+        </button>
+        <button class="btn-follow" id="follow-btn" aria-pressed="false" aria-label="Follow Olumide Adeleke">
+          <svg aria-hidden="true" id="follow-icon"><use href="#i-plus"/></svg>
+          <span id="follow-label">Follow</span>
+        </button>
+      </div>
+    </section>
+    <!-- Provider's Offers Section -->
+    <section class="offers-section" aria-labelledby="offers-heading">
+      <div class="section-header">
+        <h2 class="section-title" id="offers-heading">Offers</h2><span class="offer-count" id="offer-count" role="status" aria-live="polite"></span>
+      </div>
+      <div class="category-rail" id="category-rail" role="group" aria-label="Filter offers by category" hidden></div>
+      <div class="offers-list" id="offers-list">
+        <!-- Sample Offer Card matching Haven's canonical offer -->
+        <button class="offer-card" id="offer-aso-oke" data-offer-id="aso-oke" aria-label="View Hand-woven Aso Oke textile">
+          <div class="offer-thumb" aria-hidden="true">
+            <svg class="placeholder"><use href="#i-image"/></svg>
+          </div>
+          <div class="offer-details">
+            <span class="offer-category">Craft &amp; Making</span>
+            <h3 class="offer-title">Hand-woven Aso Oke textile</h3>
+            <p class="offer-price">120 <span class="offer-currency">USD</span></p>
+          </div>
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+<!-- Accessible Toast Notification for Unconnected Destinations -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<dialog id="auth-dialog" aria-labelledby="auth-title"><h2 id="auth-title">Sign in to continue</h2><p>Continue with your Haven account.</p><button id="signin">Sign in</button><button id="cancel">Cancel</button></dialog>
+<script>
+/* Host: HavenPrototype {user, provider, offers, navigate, getFollowing, setFollowing}.
+Navigation is handled only when navigate returns true or haven:navigate is canceled.
+Default standalone preview is a guest. Offer locations never become profile locations. */
+(()=>{'use strict';
+const host=window.HavenPrototype||{},$=id=>document.getElementById(id),content=$('profile-content'),dialog=$('auth-dialog');
+let provider=host.provider||{id:'olumide-adeleke',name:'Olumide Adeleke',bio:'Weaver specializing in heritage strip-woven Aso Oke and traditional Nigerian loom craftsmanship.'};
+let offers=host.offers||[{id:'aso-oke',provider:{id:'olumide-adeleke'},title:'Hand-woven Aso Oke textile',category:'Craft & Making',price:120,currency:'USD'}];
+let user=host.user||null,pending=null,trigger=null,timer;
+let selectedCategory=null;
+const contexts=new Map();
+const providerOffers=()=>offers.filter(o=>(o.provider?.id||o.providerId||provider.id)===provider.id);
+// The host supplies the complete available collection for this provider.
+function getContext(){return {providerId:provider.id,selectedCategory,scrollTop:content.scrollTop};}
+function remember(){const context=getContext();contexts.set(provider.id,context);try{sessionStorage.setItem("haven:profile:"+provider.id,JSON.stringify(context));}catch{}return context;}
+function savedContext(){try{return contexts.get(provider.id)||JSON.parse(sessionStorage.getItem("haven:profile:"+provider.id));}catch{return null;}}
+function restoreContext(context){if(context?.providerId!==provider.id)return;selectedCategory=context.selectedCategory??null;renderOffers();content.scrollTop=Math.max(0,Number(context.scrollTop)||0);}
+const template=$('offers-list').firstElementChild.cloneNode(true);
+function notify(message){clearTimeout(timer);$('toast').textContent=message;$('toast').hidden=false;timer=setTimeout(()=>$('toast').hidden=true,4000);}
+function route(destination,extra={}){remember();const detail={destination,context:getContext(),selectedCategory,providerId:provider.id,intent:null,returnTo:'profile',origin:host.origin||null,scrollTop:content.scrollTop,...extra};try{if(host.navigate?.(detail)===true)return true;if(!window.dispatchEvent(new CustomEvent('haven:navigate',{detail,cancelable:true})))return true;}catch(e){console.error(e);notify('Unable to open this screen. Please try again.');return false;}notify(({back:'Back navigation',conversation:'The conversation screen','offer-detail':'The offer detail screen',signin:'The Sign in screen'}[destination]||'This screen')+' is ready to connect in the prototype.');return false;}
+function following(){if(!user)return false;try{return host.getFollowing?!!host.getFollowing(provider.id,user.id):localStorage.getItem(`haven:following:${user.id}:${provider.id}`)==='true';}catch{return false;}}
+function renderFollow(){const value=following();$('follow-btn').setAttribute('aria-pressed',String(value));$('follow-btn').setAttribute('aria-label',(value?'Unfollow ':'Follow ')+provider.name);$('follow-label').textContent=value?'Following':'Follow';$('follow-icon').querySelector('use').setAttribute('href',value?'#i-check':'#i-plus');const own=user?.id===provider.id;$('follow-btn').hidden=own;$('message-btn').hidden=own;}
+function follow(value){try{if(host.setFollowing)host.setFollowing(provider.id,user.id,value);else localStorage.setItem(`haven:following:${user.id}:${provider.id}`,String(value));renderFollow();window.dispatchEvent(new CustomEvent('haven:follow-change',{detail:{providerId:provider.id,userId:user.id,following:value}}));notify(value?'Following '+provider.name:'Unfollowed '+provider.name);}catch{notify('Unable to update following. Please try again.');}}
+function ask(intent,button){pending=intent;trigger=button;$('auth-title').textContent=intent==='follow'?'Sign in to follow this provider':'Sign in to message this provider';dialog.showModal();$('app').inert=true;$('signin').focus();}
+function render(){document.title=provider.name+' · Haven';$('header-name').textContent=provider.name;$('provider-name-heading').textContent=provider.name;$('avatar-initials').textContent=provider.name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('');$('provider-bio').textContent=provider.bio||'';$('provider-bio').hidden=!provider.bio;$('message-btn').setAttribute('aria-label','Message '+provider.name);renderOffers();renderFollow();}
+function renderOffers(){
+ const all=providerOffers();
+ const categories=[...new Set(all.map(o=>o.category).filter(Boolean))];
+ if(selectedCategory!==null&&!categories.includes(selectedCategory))selectedCategory=null;
+ const rail=$('category-rail');rail.replaceChildren();rail.hidden=categories.length<2;
+ if(!rail.hidden)for(const category of [null,...categories]){
+  const chip=document.createElement('button');chip.type='button';chip.className='category-chip';chip.textContent=category??'All';chip.setAttribute('aria-pressed',String(selectedCategory===category));chip.setAttribute('aria-controls','offers-list');
+  chip.onclick=()=>{selectedCategory=category;renderOffers();const index=category===null?0:categories.indexOf(category)+1;rail.children[index]?.focus({preventScroll:true});remember();};rail.append(chip);
+ }
+ const visible=selectedCategory===null?all:all.filter(o=>o.category===selectedCategory);
+ $('offer-count').textContent=visible.length+' '+(visible.length===1?'offer':'offers');
+ $('offers-list').replaceChildren();
+ for(const offer of visible){
+  const card=template.cloneNode(true);card.removeAttribute('id');card.dataset.offerId=offer.id;card.setAttribute('aria-label','View '+offer.title);card.querySelector('.offer-title').textContent=offer.title;card.querySelector('.offer-category').textContent=offer.category||'';
+  const price=card.querySelector('.offer-price');price.replaceChildren(document.createTextNode(offer.price===0?'Free':new Intl.NumberFormat('en',{maximumFractionDigits:2}).format(offer.price)));
+  if(offer.price!==0){const currency=document.createElement('span');currency.className='offer-currency';currency.textContent=offer.currency;price.append(currency);}
+  card.onclick=()=>route('offer-detail',{offerId:offer.id});$('offers-list').append(card);
+ }
+ if(!visible.length){const empty=document.createElement('p');empty.className='offers-empty';empty.textContent='No offers to show yet.';$('offers-list').append(empty);}
+}
+$('back-btn').onclick=()=>route('back');$('follow-btn').onclick=()=>user?follow(!following()):ask('follow',$('follow-btn'));$('message-btn').onclick=()=>user?route('conversation'):ask('message',$('message-btn'));
+$('cancel').onclick=()=>{pending=null;dialog.close();};dialog.addEventListener('cancel',()=>{pending=null;});dialog.addEventListener('close',()=>{$('app').inert=false;trigger?.focus();});$('signin').onclick=()=>{dialog.close();route('signin',{intent:pending});};
+window.addEventListener('storage',renderFollow);window.addEventListener('haven:follow-change',renderFollow);
+window.HavenProviderProfile={setUser(next){user=next;renderFollow();if(!user)return;const action=pending;pending=null;if(dialog.open)dialog.close();if(action==='follow')follow(true);if(action==='message')route('conversation');},setProvider(next,nextOffers=[]){if(!next?.id||!next.name)return;pending=null;if(dialog.open)dialog.close();remember();provider=next;offers=nextOffers;selectedCategory=null;content.scrollTop=0;render();restoreContext(savedContext());},getContext,restoreContext};
+render();restoreContext(host.context||savedContext());if(Number.isFinite(host.scrollTop))content.scrollTop=host.scrollTop;
+window.addEventListener('pagehide',remember);window.addEventListener('pageshow',()=>restoreContext(savedContext()));
+let scrollFrame;content.addEventListener('scroll',()=>{cancelAnimationFrame(scrollFrame);scrollFrame=requestAnimationFrame(remember);},{passive:true});
+})();
+</script>
+</body>
+</html>

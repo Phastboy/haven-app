@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Create offer · Haven</title>
+<style>
+/* Foundation */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 mobile prototype mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+/* Header */
+.header {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 10px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-close {
+  justify-self: start;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-close:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.header-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+}
+.header-spacer {
+  justify-self: end;
+  width: 44px;
+  margin-right: -8px;
+}
+/* Scrollable Form Content */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px max(16px, var(--safe-right)) 24px max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+}
+.form-container {
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Form Field Anatomy */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+.field-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+.field-counter {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.field-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+.input-control {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #111827;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-control::placeholder {
+  color: #9ca3af;
+}
+.input-control:focus {
+  border-color: #111827;
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+.input-control.has-error {
+  border-color: #111827;
+}
+.textarea-control {
+  min-height: 108px;
+  resize: vertical;
+  line-height: 1.45;
+}
+/* Category Select Custom Style */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.select-control {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 38px 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.select-control:focus {
+  border-color: #111827;
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+.select-wrapper svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #6b7280;
+  width: 18px;
+  height: 18px;
+}
+/* Price & Currency Combined Control */
+.price-currency-group {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.price-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+.currency-select-wrapper {
+  width: 110px;
+  flex-shrink: 0;
+  position: relative;
+}
+.price-input {
+  min-height: 46px;
+  padding: 10px 14px;
+}
+/* Error Feedback */
+.field-error {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.field-error svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+/* Anchored Bottom Publish Bar */
+.bottom-bar {
+  position: relative;
+  flex: none;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid #f3f4f6;
+  padding: 12px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 12px) max(16px, var(--safe-left));
+  display: flex;
+  justify-content: center;
+}
+.bottom-bar-inner {
+  max-width: 480px;
+  width: 100%;
+}
+.publish-btn {
+  width: 100%;
+  min-height: 48px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.publish-btn:active {
+  background: #000000;
+  transform: scale(0.98);
+}
+.publish-btn[disabled] {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+/* Leave Confirmation Modal Sheet */
+.modal-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - var(--safe-top) - 12px);
+  overflow: auto;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(var(--safe-bottom) + 20px);
+  background: white;
+  color: #111827;
+  transition: transform .18s ease-out;
+}
+.modal-sheet::backdrop {
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal-sheet[data-dragging="true"] {
+  transition: none;
+}
+.modal-handle {
+  width: 88px;
+  min-height: 44px;
+  padding: 0;
+  margin: -12px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.modal-handle::before {
+  content: "";
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #9ca3af;
+}
+.modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.modal-desc {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #6b7280;
+  margin: 8px 0 0;
+}
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-btn-discard {
+  min-height: 46px;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.modal-btn-discard:active {
+  background: #000000;
+}
+.modal-btn-keep {
+  min-height: 44px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 0;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.modal-btn-keep:active {
+  background: #f3f4f6;
+}
+/* Toast Notification */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+.image-list{list-style:none;margin:8px 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.image-item{min-width:0}.image-item img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#f3f4f6}.image-actions{display:flex;flex-wrap:wrap;gap:2px}.image-actions button,.image-add{min-height:44px;padding:8px;font-size:12px;border-radius:8px;background:#f3f4f6}.image-actions button:disabled{opacity:.4;cursor:default}.image-caption{margin:6px 0;font-size:12px;color:#6b7280}.image-add{align-self:flex-start;font-size:14px;padding:10px 16px}.image-status{font-size:12px;color:#6b7280;margin:4px 0}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" hidden="">
+<defs>
+<symbol id="i-close" viewbox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+<symbol id="i-chevron-down" viewbox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+<symbol id="i-alert" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></symbol>
+<symbol id="i-check" viewbox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></symbol>
+</defs>
+</svg>
+<div class="app" id="app">
+<!-- Pinned Safe-Area Header -->
+<header class="header">
+<button aria-label="Leave Create offer" class="header-close" id="close-btn">
+<svg aria-hidden="true"><use href="#i-close"></use></svg>
+</button>
+<div class="header-center">
+<h1 class="header-title">Create offer</h1>
+<span class="header-subtitle" id="preview-label">Preview · sample categories</span>
+</div>
+<div aria-hidden="true" class="header-spacer"></div>
+</header>
+<!-- Scrollable Form Content -->
+<main class="content" id="main-content" tabindex="-1">
+<form class="form-container" id="create-offer-form" novalidate="">
+<section aria-labelledby="images-label" class="form-field" id="offer-images">
+<div class="field-header"><span class="field-label" id="images-label">Images</span><span class="field-counter" id="images-count">0/5</span></div>
+<p class="field-hint" id="images-hint">Add up to 5 images. Move them earlier or later to choose their order.</p>
+<ol class="image-list" id="images-list"></ol>
+<input accept="image/*" aria-describedby="images-hint" aria-label="Choose offer images" hidden="" id="images-input" multiple="" type="file"/>
+<button class="image-add" id="images-add" type="button">Add images</button>
+<p aria-live="polite" class="image-status" id="images-status" role="status"></p>
+</section>
+<p aria-live="polite" class="field-hint" id="form-status" role="status"></p>
+<noscript><p>Enable JavaScript to publish an offer.</p></noscript>
+<!-- Title Field -->
+<div class="form-field" id="field-title">
+<div class="field-header">
+<label class="field-label" for="offer-title">Title</label>
+<span class="field-counter" id="title-counter">0/80</span>
+</div>
+<input aria-describedby="title-hint title-error" autocomplete="off" class="input-control" id="offer-title" maxlength="80" name="title" placeholder="e.g. Hand-woven Aso Oke textile" required="" type="text"/>
+<p class="field-hint" id="title-hint">Name what you are offering.</p>
+<div class="field-error" hidden="" id="title-error">
+<svg aria-hidden="true"><use href="#i-alert"></use></svg>
+<span class="error-text">Please provide an offer title.</span>
+</div>
+</div>
+<!-- Category Field (Approved Haven Categories) -->
+<div class="form-field" id="field-category">
+<div class="field-header">
+<label class="field-label" for="offer-category">Category</label>
+</div>
+<div class="select-wrapper">
+<select aria-describedby="category-hint category-error" class="select-control" id="offer-category" name="category" required="">
+<option disabled="" selected="" value="">Choose a category</option>
+<option value="Craft &amp; Making">Craft &amp; Making</option>
+<option value="Food &amp; Hearth">Food &amp; Hearth</option>
+<option value="Stays &amp; Spaces">Stays &amp; Spaces</option>
+<option value="Goods &amp; Apparel">Goods &amp; Apparel</option>
+<option value="Teaching &amp; Skills">Teaching &amp; Skills</option>
+</select>
+<svg aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+</div>
+<p class="field-hint" id="category-hint">Choose the category that best fits your offer.</p>
+<div class="field-error" hidden="" id="category-error">
+<svg aria-hidden="true"><use href="#i-alert"></use></svg>
+<span class="error-text">Please choose a category.</span>
+</div>
+</div>
+<!-- Description Field -->
+<div class="form-field" id="field-description">
+<div class="field-header">
+<label class="field-label" for="offer-description">Description</label>
+<span class="field-counter" id="desc-counter">0/500</span>
+</div>
+<textarea aria-describedby="desc-hint desc-error" class="input-control textarea-control" id="offer-description" maxlength="500" name="description" placeholder="Describe what you offer and what someone should know…" required="" rows="4"></textarea>
+<p class="field-hint" id="desc-hint">Include useful details and what is included.</p>
+<div class="field-error" hidden="" id="desc-error">
+<svg aria-hidden="true"><use href="#i-alert"></use></svg>
+<span class="error-text">Please provide a description.</span>
+</div>
+</div>
+<!-- Price & Currency Section -->
+<div class="form-field" id="field-pricing">
+<div class="field-header">
+<label class="field-label" id="pricing-label">Price &amp; currency</label>
+</div>
+<div class="price-currency-group">
+<!-- Numerical Price Input -->
+<div class="price-input-wrapper">
+<input aria-describedby="price-hint price-error" aria-labelledby="pricing-label" class="input-control price-input" id="offer-price" inputmode="decimal" min="0" name="price" placeholder="0.00" step="any" type="number"/>
+</div>
+<!-- Approved Currencies -->
+<div class="currency-select-wrapper">
+<div class="select-wrapper">
+<select aria-label="Currency code" class="select-control" id="offer-currency" name="currency">
+<option selected="" value="USD">USD</option>
+<option value="EUR">EUR</option>
+<option value="GBP">GBP</option>
+<option value="NGN">NGN</option>
+<option value="CAD">CAD</option>
+</select>
+<svg aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+</div>
+</div>
+</div>
+<p class="field-hint" id="price-hint">Enter the price in your chosen currency. Use 0 for a free offer.</p>
+<div class="field-error" hidden="" id="price-error">
+<svg aria-hidden="true"><use href="#i-alert"></use></svg>
+<span class="error-text">Enter a valid price of 0 or more.</span>
+</div>
+</div>
+</form>
+</main>
+<!-- Anchored Bottom Publish Bar (safe area accounted) -->
+<footer class="bottom-bar">
+<div class="bottom-bar-inner">
+<button class="publish-btn" form="create-offer-form" id="publish-btn" type="submit">
+<span>Publish offer</span>
+</button>
+</div>
+</footer>
+<!-- Leave Confirmation Dialog Sheet -->
+<dialog aria-describedby="leave-modal-desc" aria-labelledby="leave-modal-title" class="modal-sheet" id="leave-modal">
+<button aria-label="Keep editing and close sheet" class="modal-handle" id="leave-handle" title="Drag down or tap to close" type="button"></button>
+<h3 class="modal-title" id="leave-modal-title">Discard this draft?</h3>
+<p class="modal-desc" id="leave-modal-desc">
+      You have unsaved changes in this offer draft. Leaving now will discard your input.
+    </p>
+<div class="modal-actions">
+<button class="modal-btn-discard" id="modal-discard-btn" type="button">Discard changes</button>
+<button class="modal-btn-keep" id="modal-keep-btn" type="button">Continue editing</button>
+</div>
+</dialog>
+</div>
+<!-- Accessible Toast & Live Region -->
+<div aria-atomic="true" aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
+<script>
+(()=>{
+'use strict';
+const hosted=!!window.HavenPrototype, host=window.HavenPrototype||{}, $=id=>document.getElementById(id);
+const form=$('create-offer-form'),titleInput=$('offer-title'),categorySelect=$('offer-category'),descTextarea=$('offer-description'),priceInput=$('offer-price'),currencySelect=$('offer-currency'),publishBtn=$('publish-btn'),closeBtn=$('close-btn'),leaveModal=$('leave-modal'),modalKeepBtn=$('modal-keep-btn'),leaveHandle=$('leave-handle');
+let user=host.user||null,busy=false,published=false,attempted=false,toastTimer,revision=0;
+let baseline;
+// Image order is part of the draft; host adapters receive the ordered images array.
+let offerImages=[], imagesLoading=false, imageGeneration=0;
+function setImages(items=[]){imageGeneration++;imagesLoading=false;offerImages=structuredClone(items).slice(0,5);$('images-input').value='';$('images-status').textContent='';renderImages();}
+function imageSource(item){return typeof item==='string'?item:item?.url||item?.src||'';}
+function renderImages(focusIndex,action){
+  const list=$('images-list');
+  if(focusIndex===undefined&&list.contains(document.activeElement)){focusIndex=Array.from(list.children).indexOf(document.activeElement.closest('li'));action=document.activeElement.dataset.action;}
+  list.replaceChildren();
+  offerImages.forEach((item,index)=>{
+    const li=document.createElement('li');li.className='image-item';
+    const img=document.createElement('img');const src=imageSource(item);if(/^(https?:|data:image\/|blob:|\/)/i.test(src))img.src=src;img.alt=`Offer image ${index+1}`;li.append(img);
+    const caption=document.createElement('p');caption.className='image-caption';caption.textContent=`Image ${index+1}`;li.append(caption);
+    const actions=document.createElement('div');actions.className='image-actions';
+    for(const [kind,label] of [['earlier','Move earlier'],['later','Move later'],['remove','Remove']]){
+      const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.action=kind;button.setAttribute('aria-label',`${label}, image ${index+1}`);
+      button.disabled=busy||imagesLoading||(kind==='earlier'&&index===0)||(kind==='later'&&index===offerImages.length-1);
+      button.onclick=()=>{if(busy||imagesLoading)return;if(kind==='remove'){offerImages.splice(index,1);renderImages(Math.min(index,offerImages.length-1),'remove');}else{const next=index+(kind==='earlier'?-1:1);[offerImages[index],offerImages[next]]=[offerImages[next],offerImages[index]];renderImages(next,kind);}sync();$('images-status').textContent=kind==='remove'?'Image removed.':`Image moved ${kind}.`;};actions.append(button);
+    }li.append(actions);list.append(li);
+  });
+  $('images-count').textContent=`${offerImages.length}/5`;
+  $('images-add').disabled=busy||imagesLoading||offerImages.length>=5;
+  $('images-input').disabled=busy||imagesLoading||offerImages.length>=5;
+  if(focusIndex!==undefined){const target=list.children[focusIndex]?.querySelector(`[data-action="${action}"]:not(:disabled)` )||list.children[focusIndex]?.querySelector('button:not(:disabled)')||$('images-add');target.focus();}
+}
+$('images-add').onclick=()=>$('images-input').click();
+$('images-input').onchange=async e=>{
+  if(busy||imagesLoading)return;
+  const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;
+  if(files.length+offerImages.length>5){$('images-status').textContent='You can add up to 5 images. Choose fewer images.';return;}
+  const token=++imageGeneration;imagesLoading=true;sync();renderImages();$('images-status').textContent='Preparing images…';
+  try{
+    const added=[];
+    for(const file of files){
+      if(!file.type.startsWith('image/'))throw Error('Choose image files only.');
+      const url=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Could not read that image. Try another file.'));reader.readAsDataURL(file);});
+      await new Promise((resolve,reject)=>{const img=new Image();img.onload=resolve;img.onerror=()=>reject(Error('This image cannot be previewed. Try a JPEG, PNG, or WebP image.'));img.src=url;});
+      added.push({url,name:file.name});
+    }
+    if(token!==imageGeneration)return;offerImages.push(...added);$('images-status').textContent=`${added.length} image${added.length===1?'':'s'} added.`;
+  }catch(error){if(token===imageGeneration)$('images-status').textContent=error.message;}
+  finally{if(token===imageGeneration){imagesLoading=false;sync();renderImages();}}
+};
+function draft(){return {title:titleInput.value,category:categorySelect.value,description:descTextarea.value,price:priceInput.value===''?null:Number(priceInput.value),currency:currencySelect.value,images:structuredClone(offerImages)};}
+function snapshot(){return JSON.stringify(draft());}
+function notify(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},4500);}
+function route(destination,extra={}){const detail={destination,returnTo:'create-offer',...extra};try{if(host.navigate?.(detail)===true)return true;if(!window.dispatchEvent(new CustomEvent('haven:navigate',{detail,cancelable:true})))return true;}catch{notify('Could not open that screen. Please try again.');return false;}notify('This screen is awaiting a prototype connection.');return false;}
+// Host categories carry stable values (id or slug) separately from display names.
+if(hosted){$('preview-label').hidden=true;categorySelect.replaceChildren(new Option('Choose a category',''));for(const c of host.categories||[]){const value=typeof c==='string'?c:c.slug||c.id;const label=typeof c==='string'?c:c.name||c.label;if(value&&label)categorySelect.add(new Option(label,value));}if(categorySelect.options.length===1)$('form-status').textContent='Categories are unavailable. Please try again later.';}
+function sync(){publishBtn.disabled=busy||imagesLoading||published||(hosted&&categorySelect.options.length===1);publishBtn.textContent=busy?'Publishing…':published?'Offer published':'Publish offer';closeBtn.disabled=busy;for(const el of form.elements)el.disabled=busy||published;$('title-counter').textContent=`${titleInput.value.length}/80`;$('desc-counter').textContent=`${descTextarea.value.length}/500`;form.setAttribute('aria-busy',String(busy||imagesLoading));renderImages();if(published)for(const el of $('offer-images').querySelectorAll('button,input'))el.disabled=true;}
+function validate(name){const fields={title:[titleInput,'title-error',!!titleInput.value.trim()],category:[categorySelect,'category-error',!!categorySelect.value],description:[descTextarea,'desc-error',!!descTextarea.value.trim()],pricing:[priceInput,'price-error',priceInput.value.trim()!==''&&Number.isFinite(Number(priceInput.value))&&Number(priceInput.value)>=0]};const [el,id,valid]=fields[name];$(id).hidden=valid;el.classList.toggle('has-error',!valid);el.setAttribute('aria-invalid',String(!valid));return valid;}
+for(const [el,name] of [[titleInput,'title'],[categorySelect,'category'],[descTextarea,'description'],[priceInput,'pricing']]){el.addEventListener('blur',()=>validate(name));el.addEventListener('input',()=>{sync();if(attempted||el.getAttribute('aria-invalid')==='true')validate(name);});}
+categorySelect.addEventListener('change',()=>validate('category'));
+baseline=snapshot();
+form.addEventListener('submit',async e=>{e.preventDefault();if(busy||imagesLoading||published)return;attempted=true;const results=['title','category','description','pricing'].map(validate);if(results.includes(false)){notify('Check the highlighted fields.');form.querySelector('[aria-invalid="true"]').focus();return;}if(hosted&&!user?.id){route('sign-in',{intent:'create-offer'});return;}if(typeof host.createOffer!=='function'){notify('Publishing is awaiting a prototype connection. Your draft is still here.');return;}
+const submitted={...draft(),title:titleInput.value.trim(),description:descTextarea.value.trim()};const accountId=user?.id;const token=revision;busy=true;sync();
+try{const result=await host.createOffer(submitted,accountId);if(token!==revision)return;const offer=result?.offer||result;if(!offer?.id)throw new Error('No saved offer returned');published=true;baseline=snapshot();$('form-status').textContent='Your offer has been published.';window.dispatchEvent(new CustomEvent('haven:offer-created',{detail:{offer,userId:accountId}}));route('my-offers',{intent:'created-offer',offerId:offer.id});}catch{if(token===revision)notify('Could not publish your offer. Your draft is still here. Please try again.');}finally{if(token===revision){busy=false;sync();}}});
+closeBtn.addEventListener('click',()=>{if(busy)return;if(!published&&snapshot()!==baseline){leaveModal.showModal();modalKeepBtn.focus();}else route('my-offers',{intent:'cancelled'});});
+modalKeepBtn.addEventListener('click',()=>leaveModal.close());
+$('modal-discard-btn').addEventListener('click',()=>{reset();leaveModal.close();route('my-offers',{intent:'discarded'});});
+window.addEventListener('beforeunload',e=>{if(!published&&snapshot()!==baseline){e.preventDefault();e.returnValue='';}});
+function reset(){if(busy)return;form.reset();setImages();attempted=false;published=false;for(const el of form.querySelectorAll('[aria-invalid]'))el.removeAttribute('aria-invalid');for(const el of form.querySelectorAll('.field-error'))el.hidden=true;for(const el of form.querySelectorAll('.has-error'))el.classList.remove('has-error');$('form-status').textContent='';baseline=snapshot();sync();}
+// Dismiss modal sheet on background click or handle drag
+leaveModal.addEventListener('click', e => {
+  if (e.target !== leaveModal) return;
+  const r = leaveModal.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+    leaveModal.close();
+  }
+});
+let drag = null, ignoreClick = false;
+function resetGrip() {
+  const id = drag?.id;
+  drag = null;
+  leaveModal.style.removeProperty('transform');
+  delete leaveModal.dataset.dragging;
+  if (id !== undefined && leaveHandle.hasPointerCapture?.(id)) leaveHandle.releasePointerCapture(id);
+}
+leaveHandle.onpointerdown = e => {
+  if (!e.isPrimary || e.button !== 0) return;
+  ignoreClick = false;
+  drag = { id: e.pointerId, y: e.clientY };
+  leaveModal.dataset.dragging = 'true';
+  try { leaveHandle.setPointerCapture(e.pointerId); } catch {}
+};
+leaveHandle.onpointermove = e => {
+  if (drag?.id !== e.pointerId) return;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dy) > 8) ignoreClick = true;
+  leaveModal.style.transform = `translateY(${Math.max(0, dy)}px)`;
+};
+leaveHandle.onpointerup = e => {
+  if (drag?.id !== e.pointerId) return;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dy) > 8) ignoreClick = true;
+  resetGrip();
+  if (dy >= 72) leaveModal.close();
+};
+leaveHandle.onpointercancel = () => { ignoreClick = true; resetGrip(); };
+leaveHandle.onclick = e => {
+  if (e.detail !== 0 && ignoreClick) { ignoreClick = false; return; }
+  leaveModal.close();
+};
+leaveModal.addEventListener('close', resetGrip);
+window.HavenCreateOffer={getDraft:()=>({...draft()}),hasChanges:()=>snapshot()!==baseline,reset,setUser(next){if((next?.id||null)===(user?.id||null))return;revision++;busy=false;user=next||null;if(leaveModal.open)leaveModal.close();reset();}};
+sync();
+})();
+</script>
+</body></html>
