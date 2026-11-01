@@ -70,12 +70,12 @@ fun FilterBottomSheet(
   onApply: () -> Unit,
   onClear: () -> Unit,
   onDismiss: () -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  currencies: List<String> = emptyList()
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   var isCurrencyDropdownOpen by remember { mutableStateOf(false) }
 
-  val currencies = listOf("Any", "NGN", "USD", "EUR", "GBP", "CAD", "AUD", "KES", "GHS")
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,

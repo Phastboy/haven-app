@@ -12,8 +12,11 @@ Kotlin and Jetpack Compose. The main Haven project lives in
 
 ## Current state
 
-The app still uses sample offers and conversations. Sign-in now uses Haven's
-browser authorization flow and `/api/v1/me`; other features remain local prototypes.
+Sign-in uses Haven's browser authorization flow and `/api/v1/me`. The Offers
+feed now uses `GET /api/v1/offers` for real public data, search, category and
+price filters, and cursor pagination. Its implementation requires backend
+0.8.2 or later. Missing connectivity or an unavailable endpoint shows an error,
+never sample results. See [the integration contract](MOBILE_OFFERS_FEED.md).
 
 The prototype includes:
 
@@ -29,7 +32,9 @@ Google authentication; the app only marks a person signed in after a one-time
 PKCE code exchange and `/api/v1/me` response. The email field validates the
 address before handoff; the browser may ask for it again. Refresh credentials
 are encrypted with Android Keystore and excluded from backup. Messages and
-saved state do not represent server-persisted activity.
+saved state in the remaining prototype files do not represent server-persisted activity.
+The integrated feed opens real Haven web pages for offer detail/save, location,
+messages, and profile journeys; it does not navigate into those sample screens.
 
 An inquiry is non-binding communication about an offer. Sending a message does
 not imply an agreement or reserve an offer. Payments and closing an exchange
@@ -55,9 +60,11 @@ verify the callback link and end-to-end sign-in remains untested.
 No Gemini API key or Haven backend credentials are needed to build the app. The `.env.example` and Firebase/AI dependencies are inherited scaffolding;
 there are no Gemini calls in the current app source.
 
-The checkout currently has Gradle wrapper properties but no `gradlew` launcher or
-wrapper JAR. Use Android Studio's Gradle setup, or generate a complete wrapper
-with Gradle 9.3.1 before using `./gradlew` commands.
+The repository includes the Gradle 9.3.1 wrapper (`gradlew` and `gradlew.bat`).
+It downloads the pinned Gradle distribution on first use and verifies its checksum.
+Install Java 17 and the Android SDK (platform 36.1 and build tools 36.0.0),
+then set `JAVA_HOME` and `ANDROID_HOME` or configure the SDK through Android Studio.
+A separate system Gradle installation is unnecessary.
 
 ## Project layout
 
@@ -75,14 +82,23 @@ with Gradle 9.3.1 before using `./gradlew` commands.
 
 ## Development
 
-Run the local unit/Robolectric tests through Android Studio's Gradle task
-`app:testDebugUnitTest`. A generated Gradle wrapper also supports
-`./gradlew :app:testDebugUnitTest` and `./gradlew :app:assembleDebug`.
+Build the debug APK, run unit/Robolectric tests, and check Kotlin/Java, resources,
+and manifest issues with Android Lint:
+
+```sh
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+```
+
+The Android APK workflow runs these checks on main and feature-branch pushes
+and pull requests. It uploads lint and test reports, including when a check fails.
+The local lint report is `app/build/reports/lint-results-debug.html`.
+Android Lint checks Android correctness and API usage; it does not enforce a
+complete Kotlin formatting style.
 
 Keep product language consistent with Haven: person, offer, inquiry, saved offer,
 and follow. Distinguish working backend behavior from prototype interactions.
-People search and proximity discovery are future product questions, not shipped
-mobile capabilities.
+Proximity selection currently opens Haven web; native proximity API integration
+is still pending. The public mobile feed itself uses general discovery.
 
 Before release, remaining backend integration, persistence, error handling, and
 production app identity/signing need to be established. Android version `1.0` is the current

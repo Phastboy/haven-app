@@ -2,7 +2,7 @@ name: Android APK
 
 on:
   push:
-    branches: [feat/haven-screens]
+    branches: [main, feat/haven-screens]
   pull_request:
   release:
     types: [published]
@@ -23,10 +23,18 @@ jobs:
       - name: Install Android SDK platform
         run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Build, test, and lint
+        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          gradle-version: '9.3.1'
-      - name: Build testing APK
-        run: gradle --no-daemon :app:assembleDebug :app:testDebugUnitTest
+          name: haven-android-verification-reports
+          path: |
+            app/build/reports/lint-results-debug.*
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: haven-android-debug-apk
