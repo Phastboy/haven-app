@@ -1,5 +1,26 @@
 # Start here — Haven mobile/backend handoff, 2026-11-01
 
+## Latest steering: real profile and dark-mode defect
+
+This section supersedes the older next-work list below. The owner chose **My
+profile next**, preserving its real Appearance setting and forbidding all dummy
+profile behavior. Their device screenshot demonstrated unreadable feed text and
+icons in dark mode; theme tokens alone had not established correct rendering.
+
+Current work: backend `feat/mobile-profile-api`, PR #50, version 0.8.3; Android
+`feat/real-profile-and-theme-fix`, PR #4, versionCode 4. Read `MOBILE_PROFILE.md`
+for the private `/api/v1/me/profile` contract, actual counters, native profile,
+serialized token refresh, and theme correction. These records describe the
+implementation; check the PRs and release v0.8.3 for current CI/deployment status.
+The last independently verified deployment before this slice was 0.8.2.
+
+Feed and profile now share `FeedOfferCard`, supporting optional real distance.
+Current general API results contain no distance; no distance is invented. CI
+renders card/profile screenshots in both themes and tests foreground pixels.
+Inspect those artifacts and request device comparison before accepting exact
+prototype fidelity. Native edit/collections/detail still open real web journeys.
+
+
 ## Owner decisions
 
 - Backend contracts lead Android development. Expose an existing Haven journey,

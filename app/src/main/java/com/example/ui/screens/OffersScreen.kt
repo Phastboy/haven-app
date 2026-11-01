@@ -110,7 +110,9 @@ fun OffersScreen(
 
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("offers_screen")) {
     if (showProfile && session.isAuthenticated) {
-      ProfileScreen(profileState,
+      val visibleProfile = if (profileState.profile?.let { it.id != session.personId } == true)
+        com.example.ui.model.ProfileUiState(loading = true) else profileState
+      ProfileScreen(visibleProfile,
         onRetry = { session.personId?.let { profileModel.load(it, force = true) } },
         onOpenWeb = ::openWeb, onSignOut = onSignOut, modifier = Modifier.weight(1f))
     } else {
@@ -202,6 +204,10 @@ fun OffersScreen(
       }
     }
   }
+  if (showProfile && browserError != null) AlertDialog(
+    onDismissRequest = { browserError = null }, title = { Text("Couldn’t open page") },
+    text = { Text(browserError ?: "") },
+    confirmButton = { TextButton(onClick = { browserError = null }) { Text("Close") } })
   if (state.isFilterSheetVisible) FilterBottomSheet(
     currency = state.draftCurrency, minPriceText = state.draftMinPriceText,
     maxPriceText = state.draftMaxPriceText, currencies = listOf("Any") + state.currencies,

@@ -8,11 +8,11 @@
 | Repository | Phastboy/haven-app (local checkout: h-mobile) |
 | Platform | Android |
 | Implementation | Kotlin, Jetpack Compose, Material 3 |
-| Status | Real sign-in and public feed integrated; device design corrections pending |
+| Status | Real sign-in/feed plus native profile integration; inspect MOBILE_PROFILE.md and CI/device evidence |
 | Parent project | https://github.com/phastboy/haven |
 | Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
 | Android namespace | `com.example` (current scaffold namespace) |
-| Version name / code | `1.0` / `3` (independent of backend 0.8.2; visible version may start at 0.0.0) |
+| Version name / code | `1.0` / `4` (independent of backend 0.8.2; visible version may start at 0.0.0) |
 | Minimum Android version | Android 7.0 / API 24 |
 
 ## Repository description
@@ -31,7 +31,7 @@ know the people behind those offers. Browse offers, explore a person's catalogue
 and express interest through private conversation. An inquiry starts a discussion;
 it does not create a commitment, reservation, or agreement.
 
-**Current capability disclosure:** Sign-in and the public Offers feed use the live Haven backend. Native messaging, personal collections, and offer detail are not integrated; feed navigation opens real Haven web journeys. Remaining prototype files must not be used as runtime fallbacks. Read `NEXT_AGENT.md` first for current scope and outstanding device checks.
+**Current capability disclosure:** Sign-in and the public Offers feed use the live Haven backend. Native profile uses the private overview endpoint; native messaging, collection management, and offer detail are not integrated; feed navigation opens real Haven web journeys. Remaining prototype files must not be used as runtime fallbacks. Read `NEXT_AGENT.md` first for current scope and outstanding device checks.
 
 The product description is reusable copy, not a claim that every journey is live
 in this prototype. Pair it with the prototype disclosure wherever the app's
