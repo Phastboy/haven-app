@@ -22,8 +22,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.SemiBold,
     fontSize = 34.sp,
     lineHeight = 37.sp,
-    letterSpacing = (-0.5).sp,
-    color = HavenColors.TextPrimary
+    letterSpacing = (-0.5).sp
   ),
   // Sign In Title: 25sp, SemiBold, leading tight
   headlineSmall = TextStyle(
@@ -31,8 +30,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.SemiBold,
     fontSize = 25.sp,
     lineHeight = 30.sp,
-    letterSpacing = (-0.3).sp,
-    color = HavenColors.TextPrimary
+    letterSpacing = (-0.3).sp
   ),
   // Wordmark: 20sp, SemiBold, tracking tight
   titleLarge = TextStyle(
@@ -40,8 +38,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.SemiBold,
     fontSize = 20.sp,
     lineHeight = 24.sp,
-    letterSpacing = (-0.2).sp,
-    color = HavenColors.TextPrimary
+    letterSpacing = (-0.2).sp
   ),
   // Primary Buttons / Subtitle: 16sp, Medium / Normal
   bodyLarge = TextStyle(
@@ -49,8 +46,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 22.sp,
-    letterSpacing = (-0.1).sp,
-    color = HavenColors.TextSecondary
+    letterSpacing = (-0.1).sp
   ),
   // Button text: 16sp Medium
   labelLarge = TextStyle(
@@ -66,8 +62,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.Normal,
     fontSize = 15.sp,
     lineHeight = 20.sp,
-    letterSpacing = 0.sp,
-    color = HavenColors.TextPrimary
+    letterSpacing = 0.sp
   ),
   // Input Labels: 14sp, Medium
   labelMedium = TextStyle(
@@ -75,8 +70,7 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.Medium,
     fontSize = 14.sp,
     lineHeight = 18.sp,
-    letterSpacing = 0.sp,
-    color = HavenColors.TextPrimary
+    letterSpacing = 0.sp
   ),
   // Microcopy / helper text / "or" divider / account notice: 13sp
   bodySmall = TextStyle(
@@ -84,7 +78,6 @@ val HavenTypography = Typography(
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     lineHeight = 17.sp,
-    letterSpacing = 0.sp,
-    color = HavenColors.TextSecondary
+    letterSpacing = 0.sp
   )
 )
