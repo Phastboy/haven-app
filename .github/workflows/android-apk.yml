@@ -32,6 +32,7 @@ jobs:
           name: haven-android-verification-reports
           path: |
             app/build/reports/lint-results-debug.*
+            app/build/reports/screenshots/
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn

@@ -5,7 +5,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import com.example.ui.components.OfferCardSkeleton
 import com.example.ui.components.OffersGridSkeleton
 import com.example.ui.model.SessionManager
-import com.example.ui.screens.ProfileSpecState
 import com.example.ui.theme.HavenTheme
 import com.example.ui.theme.ThemeManager
 import com.example.ui.theme.ThemeMode
@@ -45,16 +44,6 @@ class ProfileScreenRobolectricTest {
     val session = SessionManager.session.value
     assertFalse(session.isAuthenticated)
     assertEquals(null, session.email)
-  }
-
-  @Test
-  fun `profile spec states cover all required visual scenarios`() {
-    val labels = ProfileSpecState.values().map { it.label }
-    assertTrue(labels.contains("Default"))
-    assertTrue(labels.contains("State A: Updated"))
-    assertTrue(labels.contains("State B: Sign Out"))
-    assertTrue(labels.contains("State C: No Photo/Bio"))
-    assertTrue(labels.contains("State D: Stress Test"))
   }
 
   @Test

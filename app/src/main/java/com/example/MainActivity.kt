@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
     window.navigationBarColor = Color.TRANSPARENT
     enableEdgeToEdge()
     com.example.ui.theme.ThemeManager.init(this)
-    auth = HavenAuthClient(SecureAuthStore(this))
+    auth = HavenAuthClient.shared(this)
     setContent {
       HavenTheme {
         HavenApp(signInViewModel = signInViewModel,

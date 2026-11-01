@@ -2,6 +2,7 @@ package com.example.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -21,11 +22,29 @@ val HavenLightColorScheme = lightColorScheme(
   background = HavenLightPalette.canvas,
   onBackground = HavenLightPalette.textPrimary,
   surface = HavenLightPalette.canvas,
+  surfaceTint = HavenLightPalette.primary,
+  inverseSurface = HavenLightPalette.primary,
+  inverseOnSurface = HavenLightPalette.textOnDark,
   onSurface = HavenLightPalette.textPrimary,
   surfaceVariant = HavenLightPalette.surfaceContainer,
   onSurfaceVariant = HavenLightPalette.textSecondary,
   outline = HavenLightPalette.borderDefault,
   outlineVariant = HavenLightPalette.borderSubtle,
+  surfaceContainer = HavenLightPalette.surfaceContainer,
+  surfaceContainerHigh = HavenLightPalette.surfaceContainer,
+  surfaceContainerHighest = HavenLightPalette.surfaceContainer,
+  surfaceContainerLow = HavenLightPalette.surfaceCard,
+  surfaceContainerLowest = HavenLightPalette.canvas,
+  surfaceBright = HavenLightPalette.surfaceCard,
+  surfaceDim = HavenLightPalette.canvas,
+  secondaryContainer = HavenLightPalette.surfaceContainer,
+  onSecondaryContainer = HavenLightPalette.textPrimary,
+  tertiary = HavenLightPalette.primary,
+  onTertiary = HavenLightPalette.textOnDark,
+  tertiaryContainer = HavenLightPalette.surfaceContainer,
+  onTertiaryContainer = HavenLightPalette.textPrimary,
+  errorContainer = HavenLightPalette.surfaceContainer,
+  onErrorContainer = HavenLightPalette.textPrimary,
   error = HavenLightPalette.primary, // Strict monastic design: no decorative red
   onError = HavenLightPalette.textOnDark
 )
@@ -40,11 +59,29 @@ val HavenDarkColorScheme = darkColorScheme(
   background = HavenDarkPalette.canvas,
   onBackground = HavenDarkPalette.textPrimary,
   surface = HavenDarkPalette.canvas,
+  surfaceTint = HavenDarkPalette.primary,
+  inverseSurface = HavenDarkPalette.primary,
+  inverseOnSurface = HavenDarkPalette.textOnDark,
   onSurface = HavenDarkPalette.textPrimary,
   surfaceVariant = HavenDarkPalette.surfaceContainer,
   onSurfaceVariant = HavenDarkPalette.textSecondary,
   outline = HavenDarkPalette.borderDefault,
   outlineVariant = HavenDarkPalette.borderSubtle,
+  surfaceContainer = HavenDarkPalette.surfaceContainer,
+  surfaceContainerHigh = HavenDarkPalette.surfaceContainer,
+  surfaceContainerHighest = HavenDarkPalette.surfaceContainer,
+  surfaceContainerLow = HavenDarkPalette.surfaceCard,
+  surfaceContainerLowest = HavenDarkPalette.canvas,
+  surfaceBright = HavenDarkPalette.surfaceCard,
+  surfaceDim = HavenDarkPalette.canvas,
+  secondaryContainer = HavenDarkPalette.surfaceContainer,
+  onSecondaryContainer = HavenDarkPalette.textPrimary,
+  tertiary = HavenDarkPalette.primary,
+  onTertiary = HavenDarkPalette.textOnDark,
+  tertiaryContainer = HavenDarkPalette.surfaceContainer,
+  onTertiaryContainer = HavenDarkPalette.textPrimary,
+  errorContainer = HavenDarkPalette.surfaceContainer,
+  onErrorContainer = HavenDarkPalette.textPrimary,
   error = HavenDarkPalette.primary,
   onError = HavenDarkPalette.textOnDark
 )
@@ -77,7 +114,8 @@ fun HavenTheme(
   }
 
   CompositionLocalProvider(
-    LocalHavenColors provides palette
+    LocalHavenColors provides palette,
+    LocalContentColor provides palette.textPrimary
   ) {
     MaterialTheme(
       colorScheme = colorScheme,
