@@ -99,19 +99,24 @@ fun OffersScreen(
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Outlined.Search, null, tint = HavenColors.TextSecondary, modifier = Modifier.size(20.dp))
             Box(Modifier.weight(1f)) {
-              if (state.query.search.isEmpty()) Text("Search offer titles", fontSize = 14.sp,
+              if (state.query.search.isEmpty()) Text("Search offer titles", fontSize = 16.sp,
                 fontFamily = InterFontFamily, color = HavenColors.TextSecondary)
               BasicTextField(state.query.search, viewModel::onSearchQueryChange,
                 singleLine = true, modifier = Modifier.fillMaxWidth().testTag("offer_search"),
-                textStyle = TextStyle(fontFamily = InterFontFamily, fontSize = 14.sp, color = HavenColors.TextPrimary),
+                textStyle = TextStyle(fontFamily = InterFontFamily, fontSize = 16.sp, color = HavenColors.TextPrimary),
                 cursorBrush = SolidColor(HavenColors.Primary))
             }
           }
-          IconButton(onClick = viewModel::openFilterSheet,
-            enabled = state.currencies.isNotEmpty(), modifier = Modifier.testTag("open_filters_button")) {
-            Icon(Icons.Outlined.Tune, "Price filters${if (state.activeFilterCount > 0) ", active" else ""}")
+          Row(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp))
+            .background(HavenColors.SurfaceContainer)
+            .clickable(enabled = state.currencies.isNotEmpty(), onClick = viewModel::openFilterSheet)
+            .padding(horizontal = 12.dp).testTag("open_filters_button"),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Outlined.Tune, null, modifier = Modifier.size(18.dp))
+            Text(if (state.activeFilterCount > 0) "Filters (1)" else "Filters", fontSize = 13.sp, fontFamily = InterFontFamily)
           }
-          IconButton(onClick = { openWeb("/offers") }) {
+          IconButton(onClick = { openWeb("/offers") }, modifier = Modifier
+            .background(HavenColors.SurfaceContainer, RoundedCornerShape(24.dp))) {
             Icon(Icons.Outlined.LocationOn, "Choose a place on Haven")
           }
         }
@@ -129,7 +134,7 @@ fun OffersScreen(
       contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
       horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
       item(span = { GridItemSpan(2) }) {
-        Text("${state.items.size} offers${if (state.nextCursor != null) " loaded" else ""}",
+        Text(if (state.isLoading && state.items.isEmpty()) "Loading offers…" else "${state.items.size} offers${if (state.nextCursor != null) " loaded" else ""}",
           fontSize = 12.sp, fontFamily = InterFontFamily, color = HavenColors.TextSecondary)
       }
       items(state.items, key = { it.id }) { offer ->
@@ -146,7 +151,7 @@ fun OffersScreen(
           Text(error, fontFamily = InterFontFamily, fontSize = 14.sp, modifier = Modifier.testTag("offers_error"))
           TextButton(onClick = {
             browserError = null
-            if (state.items.isEmpty()) viewModel.refresh() else viewModel.loadMore()
+            if (state.items.isNotEmpty() && state.nextCursor != null) viewModel.loadMore() else viewModel.refresh()
           }) { Text("Try again") }
         }
       }
