@@ -1,6 +1,9 @@
 package com.example
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
@@ -8,15 +11,13 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
@@ -42,9 +43,37 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [35], qualifiers = "w390dp-h844dp")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ProfileAndThemeRobolectricTest {
-  @get:Rule val compose = createComposeRule()
+  @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
   @After fun resetTheme() { ThemeManager.setMode(ThemeMode.SYSTEM, ApplicationProvider.getApplicationContext()) }
   private val offer = FeedOffer("test", "real-test", "Visible offer title", "Real person", "100 NGN", null, 1250.0)
+
+  private fun captureRootBitmap(): Bitmap {
+    compose.waitForIdle()
+    val view = compose.activity.window.decorView
+    val width = view.width.takeIf { it > 0 } ?: 1080
+    val height = view.height.takeIf { it > 0 } ?: 2340
+    if (view.width <= 0 || view.height <= 0) {
+      view.measure(
+        View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+      )
+      view.layout(0, 0, width, height)
+    }
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    view.draw(canvas)
+    return bitmap
+  }
+
+  private fun captureNodeBitmap(tag: String): Bitmap {
+    val root = captureRootBitmap()
+    val bounds = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
+    val left = bounds.left.toInt().coerceIn(0, root.width - 1)
+    val top = bounds.top.toInt().coerceIn(0, root.height - 1)
+    val width = bounds.width.toInt().coerceIn(1, root.width - left)
+    val height = bounds.height.toInt().coerceIn(1, root.height - top)
+    return Bitmap.createBitmap(root, left, top, width, height)
+  }
 
   private fun verifyCard(mode: ThemeMode) {
     var foreground = Color.Unspecified
@@ -61,24 +90,26 @@ class ProfileAndThemeRobolectricTest {
     compose.onNodeWithText("Real person · 1.3 km", useUnmergedTree = true).assertIsDisplayed()
     assertEquals(if (mode == ThemeMode.DARK) HavenDarkPalette.textPrimary else HavenLightPalette.textPrimary, foreground)
     for (tag in listOf("offer_title_test", "offer_price_test")) {
-    val pixels = compose.onNodeWithTag(tag, useUnmergedTree = true).captureToImage().toPixelMap()
-    var darkest = 1f
-    var brightest = 0f
-    for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
-      val luminance = pixels[x, y].luminance()
-      darkest = minOf(darkest, luminance)
-      brightest = maxOf(brightest, luminance)
-    }
-    if (mode == ThemeMode.DARK) assertTrue("Dark title must contain light foreground pixels", brightest > 0.5f)
-    else assertTrue("Light title must contain dark foreground pixels", darkest < 0.15f)
+      val pixels = captureNodeBitmap(tag).asImageBitmap().toPixelMap()
+      var darkest = 1f
+      var brightest = 0f
+      for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
+        val luminance = pixels[x, y].luminance()
+        darkest = minOf(darkest, luminance)
+        brightest = maxOf(brightest, luminance)
+      }
+      if (mode == ThemeMode.DARK) assertTrue("Dark title must contain light foreground pixels", brightest > 0.5f)
+      else assertTrue("Light title must contain dark foreground pixels", darkest < 0.15f)
     }
     saveScreenshot("offer-card-${mode.name.lowercase()}.png")
   }
+
   private fun saveScreenshot(name: String) {
     val file = File("build/reports/screenshots/$name")
-    file.parentFile.mkdirs()
-    file.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+    file.parentFile?.mkdirs()
+    file.outputStream().use { captureRootBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
   }
+
   @Test fun `dark offer title and price are readable`() = verifyCard(ThemeMode.DARK)
   @Test fun `light offer title and price are readable`() = verifyCard(ThemeMode.LIGHT)
   @Test fun `distance stays absent without valid server data`() {
