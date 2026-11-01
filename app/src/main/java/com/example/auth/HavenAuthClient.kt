@@ -1,5 +1,7 @@
 package com.example.auth
 
+import android.content.Context
+import java.io.IOException
 import android.net.Uri
 import android.util.Base64
 import com.example.ui.model.SessionManager
@@ -14,6 +16,12 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   companion object {
     const val HOST = "haven-odysseon-d48990aa.koyeb.app"
     private const val BASE = "https://$HOST"
+    private var sharedClient: HavenAuthClient? = null
+
+    @Synchronized
+    fun shared(context: Context): HavenAuthClient = sharedClient ?: HavenAuthClient(
+      SecureAuthStore(context.applicationContext)
+    ).also { sharedClient = it }
   }
 
   private val random = SecureRandom()
@@ -41,6 +49,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     uri.host == HOST && uri.path == "/auth/callback"
 
   /** Returns null on success, or an explicit failure message identifying the exact failing step. */
+  @Synchronized
   fun completeAuthorization(uri: Uri): String? {
     if (!acceptsCallback(uri)) {
       return "Invalid callback URL: ${uri.scheme}://${uri.host}${uri.path}"
@@ -92,6 +101,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   fun finishAuthorization(uri: Uri): Boolean = completeAuthorization(uri) == null
 
   /** Restores a session by rotating the stored refresh token, then checking /me. */
+  @Synchronized
   fun restore(): Boolean {
     val refresh = store.refreshToken ?: return false
     val response = request("POST", "/api/v1/auth/refresh", JSONObject().put("refresh_token", refresh))
@@ -119,6 +129,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return true
   }
 
+  @Synchronized
   fun signOut() {
     val refresh = store.refreshToken
     store.refreshToken = null
@@ -128,6 +139,16 @@ class HavenAuthClient(private val store: SecureAuthStore) {
       try { request("POST", "/api/v1/auth/revoke", JSONObject().put("refresh_token", refresh)) }
       catch (_: Exception) { /* Local sign-out wins even if offline. */ }
     }
+  }
+
+  /** Serializes refresh rotation with restore/sign-out; never creates a fake session. */
+  @Synchronized
+  fun authenticatedGet(path: String): String {
+    if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    var response = request("GET", path, null, accessToken)
+    if (response.first == 401 && restore()) response = request("GET", path, null, accessToken)
+    if (response.first != 200) throw IOException("Request failed (HTTP ${response.first}).")
+    return response.second
   }
 
   private fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> {

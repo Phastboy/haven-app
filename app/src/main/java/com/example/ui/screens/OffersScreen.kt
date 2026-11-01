@@ -60,6 +60,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.example.auth.HavenAuthClient
 import com.example.data.FeedOffer
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.example.ui.model.ProfileViewModel
+import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.HavenBottomBarContainer
 import com.example.ui.components.HavenTopBarContainer
@@ -81,15 +88,32 @@ fun OffersScreen(
   val session by SessionManager.session.collectAsState()
   val uriHandler = LocalUriHandler.current
   val base = "https://${HavenAuthClient.HOST}"
-  var showAccount by remember { mutableStateOf(false) }
+  var showProfile by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
+    ProfileViewModel.factory(context.applicationContext)
+  })
+  val profileState by profileModel.state.collectAsState()
+  LaunchedEffect(showProfile, session.personId) {
+    val person = session.personId
+    if (person == null) profileModel.clear() else if (showProfile) profileModel.load(person)
+  }
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    if (showProfile) session.personId?.let { profileModel.load(it, force = true) }
+  }
   var browserError by remember { mutableStateOf<String?>(null) }
   fun openWeb(path: String) {
     try { uriHandler.openUri(base + path) }
     catch (_: Exception) { browserError = "Couldn’t open your browser. Please try again." }
   }
-  BackHandler(onBack = onNavigateBack)
+  BackHandler { if (showProfile) showProfile = false else onNavigateBack() }
 
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("offers_screen")) {
+    if (showProfile && session.isAuthenticated) {
+      ProfileScreen(profileState,
+        onRetry = { session.personId?.let { profileModel.load(it, force = true) } },
+        onOpenWeb = ::openWeb, onSignOut = onSignOut, modifier = Modifier.weight(1f))
+    } else {
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas, showBottomBorder = false) {
       Column {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -166,13 +190,14 @@ fun OffersScreen(
       }
     }
 
+    }
     HavenBottomBarContainer(backgroundColor = HavenColors.Canvas, showTopBorder = true,
       borderColor = HavenColors.BorderSubtle) {
       Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        FeedNavItem("Offers", Icons.Outlined.GridView, true) { viewModel.refresh() }
+        FeedNavItem("Offers", Icons.Outlined.GridView, !showProfile) { showProfile = false; viewModel.refresh() }
         FeedNavItem("Messages", Icons.Outlined.ChatBubbleOutline, false) { openWeb("/conversations") }
-        FeedNavItem(if (session.isAuthenticated) "Profile" else "Log in", Icons.Outlined.PersonOutline, false) {
-          if (session.isAuthenticated) showAccount = true else onNavigateToSignIn()
+        FeedNavItem(if (session.isAuthenticated) "Profile" else "Log in", Icons.Outlined.PersonOutline, showProfile && session.isAuthenticated) {
+          if (session.isAuthenticated) showProfile = true else onNavigateToSignIn()
         }
       }
     }
@@ -183,10 +208,7 @@ fun OffersScreen(
     onCurrencyChange = viewModel::onDraftCurrencyChange,
     onMinPriceChange = viewModel::onDraftMinPriceChange, onMaxPriceChange = viewModel::onDraftMaxPriceChange,
     onApply = viewModel::applyFilters, onClear = viewModel::clearFilters, onDismiss = viewModel::closeFilterSheet)
-  if (showAccount) AlertDialog(onDismissRequest = { showAccount = false },
-    title = { Text(session.displayName) }, text = { Text("@${session.handle}") },
-    confirmButton = { TextButton(onClick = { showAccount = false; openWeb("/profile") }) { Text("View profile") } },
-    dismissButton = { TextButton(onClick = { showAccount = false; onSignOut() }) { Text("Sign out") } })
+
 }
 
 @Composable
@@ -196,32 +218,6 @@ private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) 
     .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 14.dp)) {
     Text(label, fontFamily = InterFontFamily, fontSize = 13.sp,
       color = if (selected) HavenColors.TextOnDark else HavenColors.TextSecondary)
-  }
-}
-
-@Composable
-private fun FeedOfferCard(offer: FeedOffer, onOpen: () -> Unit) {
-  Column(Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("offer_card_${offer.id}")) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(HavenColors.SurfaceContainer)) {
-      SubcomposeAsyncImage(model = offer.coverUrl, contentDescription = offer.title,
-        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
-        error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)
-        } })
-      IconButton(onClick = onOpen, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-        .background(HavenColors.Canvas.copy(alpha = 0.8f), RoundedCornerShape(24.dp))) {
-        Icon(Icons.Outlined.FavoriteBorder, "Open offer to save on Haven", tint = HavenColors.Primary)
-      }
-    }
-    Spacer(Modifier.height(10.dp))
-    Text(offer.title, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
-      fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    Spacer(Modifier.height(4.dp))
-    Text(offer.makerName, fontFamily = InterFontFamily, fontSize = 13.sp, lineHeight = 19.sp,
-      color = HavenColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    Spacer(Modifier.height(4.dp))
-    Text(offer.priceDisplay, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
-      fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
   }
 }
 

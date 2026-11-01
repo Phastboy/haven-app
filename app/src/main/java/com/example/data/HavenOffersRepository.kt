@@ -15,7 +15,8 @@ data class FeedOffer(
   val title: String,
   val makerName: String,
   val priceDisplay: String,
-  val coverUrl: String?
+  val coverUrl: String?,
+  val distanceMeters: Double? = null
 )
 
 data class FeedCategory(val slug: String, val label: String)
@@ -65,18 +66,20 @@ class HavenOffersRepository : OffersRepository {
   }
 
   companion object {
+    fun parseOffer(item: JSONObject) = FeedOffer(
+      item.getString("id"), item.getString("slug"), item.getString("title"),
+      item.getString("maker_name"), item.getString("price_display"),
+      if (item.isNull("cover_url")) null else item.getString("cover_url"),
+      if (item.isNull("distance_meters")) null else item.getDouble("distance_meters")
+    )
+
     fun parsePage(body: String): OffersPage {
       val json = JSONObject(body)
       val items = json.getJSONArray("items")
       val categories = json.getJSONArray("categories")
       val currencies = json.getJSONArray("currencies")
       return OffersPage(
-        items = List(items.length()) { index ->
-          val item = items.getJSONObject(index)
-          FeedOffer(item.getString("id"), item.getString("slug"), item.getString("title"),
-            item.getString("maker_name"), item.getString("price_display"),
-            if (item.isNull("cover_url")) null else item.getString("cover_url"))
-        },
+        items = List(items.length()) { parseOffer(items.getJSONObject(it)) },
         categories = List(categories.length()) { index ->
           val category = categories.getJSONObject(index)
           FeedCategory(category.getString("slug"), category.getString("label"))
