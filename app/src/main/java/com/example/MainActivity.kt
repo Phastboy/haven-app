@@ -38,7 +38,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { WELCOME, SIGN_IN, OFFERS }
+enum class Screen {
+  WELCOME,
+  SIGN_IN,
+  OFFERS
+}
 
 class MainActivity : ComponentActivity() {
   private val signInViewModel: SignInViewModel by viewModels()
@@ -111,10 +115,12 @@ fun HavenApp(
     targetState = currentScreen,
     transitionSpec = {
       if (targetState == Screen.SIGN_IN || targetState == Screen.OFFERS) {
+        // Forward navigation
         (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
           slideOutHorizontally { width -> -width / 3 } + fadeOut()
         )
       } else {
+        // Return / Back navigation
         (slideInHorizontally { width -> -width / 3 } + fadeIn()).togetherWith(
           slideOutHorizontally { width -> width } + fadeOut()
         )
@@ -124,21 +130,28 @@ fun HavenApp(
     modifier = Modifier.fillMaxSize()
   ) { screen ->
     when (screen) {
-      Screen.WELCOME -> WelcomeScreen(
-        onNavigateToSignIn = { currentScreen = Screen.SIGN_IN },
-        onNavigateToOffers = { currentScreen = Screen.OFFERS }
-      )
-      Screen.SIGN_IN -> SignInScreen(
-        viewModel = signInViewModel,
-        onNavigateBack = { currentScreen = Screen.WELCOME },
-        onStartBrowserSignIn = onStartBrowserSignIn
-      )
-      Screen.OFFERS -> OffersScreen(
-        viewModel = offersViewModel,
-        onNavigateBack = { currentScreen = Screen.WELCOME },
-        onNavigateToSignIn = { currentScreen = Screen.SIGN_IN },
-        onSignOut = onSignOut
-      )
+      Screen.WELCOME -> {
+        WelcomeScreen(
+          onNavigateToSignIn = { currentScreen = Screen.SIGN_IN },
+          onNavigateToOffers = { currentScreen = Screen.OFFERS }
+        )
+      }
+      Screen.SIGN_IN -> {
+        SignInScreen(
+          viewModel = signInViewModel,
+          onNavigateBack = { currentScreen = Screen.WELCOME },
+          onStartBrowserSignIn = onStartBrowserSignIn,
+          onNavigateToOffers = { currentScreen = Screen.OFFERS }
+        )
+      }
+      Screen.OFFERS -> {
+        OffersScreen(
+          viewModel = offersViewModel,
+          onNavigateBack = { currentScreen = Screen.WELCOME },
+          onNavigateToSignIn = { currentScreen = Screen.SIGN_IN },
+          onSignOut = onSignOut
+        )
+      }
     }
   }
 }

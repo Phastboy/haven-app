@@ -70,6 +70,7 @@ fun SignInScreen(
   viewModel: SignInViewModel,
   onNavigateBack: () -> Unit,
   onStartBrowserSignIn: () -> Unit = {},
+  onNavigateToOffers: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val uiState by viewModel.uiState.collectAsState()
@@ -158,20 +159,20 @@ fun SignInScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-          // State C: Auth Error Banner (when Google auth was tapped)
-          AnimatedVisibility(
-            visible = uiState.googleErrorBanner != null,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut()
-          ) {
-            uiState.googleErrorBanner?.let { message ->
-              HavenAlertBanner(
-                message = message,
-                modifier = Modifier.padding(bottom = 16.dp),
-                testTag = "google_error_banner"
-              )
-            }
+        // State C: Auth Error Banner (when Google auth was tapped)
+        AnimatedVisibility(
+          visible = uiState.googleErrorBanner != null,
+          enter = fadeIn() + slideInVertically(),
+          exit = fadeOut()
+        ) {
+          uiState.googleErrorBanner?.let { message ->
+            HavenAlertBanner(
+              message = message,
+              modifier = Modifier.padding(bottom = 16.dp),
+              testTag = "google_error_banner"
+            )
           }
+        }
 
           // Google Auth Button
           HavenGoogleButton(
