@@ -15,6 +15,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -102,7 +103,9 @@ fun HavenApp(
 ) {
   var currentScreen by remember { mutableStateOf(Screen.WELCOME) }
   val session by SessionManager.session.collectAsState()
-  if (session.isAuthenticated && currentScreen == Screen.SIGN_IN) currentScreen = Screen.OFFERS
+  LaunchedEffect(session.isAuthenticated) {
+    if (session.isAuthenticated) currentScreen = Screen.OFFERS
+  }
 
   AnimatedContent(
     targetState = currentScreen,
