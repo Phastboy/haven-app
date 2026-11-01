@@ -97,8 +97,8 @@ this backend. Give it precise Android/device tasks; handle backend work here.
 - Host: `https://haven-odysseon-d48990aa.koyeb.app`; Koyeb service `haven/web`.
 - Android package: `com.aistudio.haven.xvykpt`.
 - `MOBILE_APP_LINK`: same host with `/auth/callback`.
-- AI Studio APK SHA-256 signer:
-  `E3:C8:36:5A:5B:B9:CF:5B:ED:37:50:69:98:EC:75:A2:04:56:B2:4B:BF:9A:D7:CF:C2:07:42:22:4C:1A:F5:13`.
+- AI Studio APK SHA-256 signer (pinned to workspace debug.keystore via debugConfig):
+  `00:27:07:D7:C9:09:36:6B:CE:B9:72:30:95:C9:64:5E:54:4D:E8:FF:3B:74:C8:61:BF:3F:1E:BB:66:36:41:49`.
 - Configured via `ANDROID_APP_PACKAGE` and `ANDROID_APP_SHA256_CERT`.
   `/.well-known/assetlinks.json` returns 200; Google returned `linked: true`.
   CI debug APKs can have a different signer; do not assume their App Links verify.
