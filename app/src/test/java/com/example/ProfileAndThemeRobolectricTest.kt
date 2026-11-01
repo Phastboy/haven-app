@@ -23,10 +23,13 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.FeedOffer
+import com.example.data.InboxConversation
 import com.example.data.ProfileOverview
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.offerDistanceLabel
+import com.example.ui.model.MessagesInboxUiState
 import com.example.ui.model.ProfileUiState
+import com.example.ui.screens.MessagesInboxScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.*
 import java.io.File
@@ -138,5 +141,28 @@ class ProfileAndThemeRobolectricTest {
     assertEquals(ThemeMode.DARK, ThemeManager.themeMode)
     compose.onNodeWithTag("profile_display_name").performScrollTo()
     saveScreenshot("profile-dark.png")
+  }
+
+  @Test fun `messages inbox renders actual rows and unread state in both themes`() {
+    val rows = listOf(
+      InboxConversation("conv-1", "person-1", "Olumide Adeleke", "olumide-adeleke", null,
+        "Here are three offers to take a look at. Let's discuss.", "2026-11-02T09:44:00Z", true),
+      InboxConversation("conv-2", "person-2", "Sarah Nwachukwu", "sarah-nwachukwu", null,
+        "I sent over the revised logo concepts.", "2026-11-01T09:15:00Z", false)
+    )
+    for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
+      var selected: String? = null
+      compose.setContent {
+        HavenTheme(mode) {
+          MessagesInboxScreen(MessagesInboxUiState(items = rows), {}, {}, { selected = it })
+        }
+      }
+      compose.onNodeWithText("Messages").assertIsDisplayed()
+      compose.onNodeWithText("Here are three offers to take a look at. Let's discuss.").assertIsDisplayed()
+      compose.onNodeWithTag("unread_conv-1").assertIsDisplayed()
+      compose.onNodeWithTag("conversation_conv-1").performClick()
+      assertEquals("conv-1", selected)
+      saveScreenshot("messages-${mode.name.lowercase()}.png")
+    }
   }
 }
