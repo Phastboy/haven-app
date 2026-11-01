@@ -6,6 +6,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.browser.customtabs.CustomTabsIntent
+import com.example.ui.theme.ThemeManager
+import com.example.ui.theme.ThemeMode
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -77,7 +80,16 @@ class MainActivity : ComponentActivity() {
 
   private fun startBrowserSignIn() {
     try {
-      startActivity(Intent(Intent.ACTION_VIEW, auth.beginAuthorization()))
+      val scheme = when (ThemeManager.themeMode) {
+        ThemeMode.SYSTEM -> CustomTabsIntent.COLOR_SCHEME_SYSTEM
+        ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
+        ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
+      }
+      CustomTabsIntent.Builder()
+        .setShowTitle(true)
+        .setColorScheme(scheme)
+        .build()
+        .launchUrl(this, auth.beginAuthorization())
     } catch (_: Exception) {
       signInViewModel.onAuthError("Could not open your browser. Please try again.")
     }

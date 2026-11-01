@@ -43,7 +43,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.HavenColors
@@ -333,7 +332,6 @@ fun FilterBottomSheet(
           fontWeight = FontWeight.Medium,
           fontSize = 13.sp,
           color = HavenColors.TextPrimary,
-          textDecoration = TextDecoration.Underline,
           modifier = Modifier
             .clickable { onClear() }
             .padding(4.dp)
