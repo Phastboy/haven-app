@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | App name | Haven |
-| Repository | h-mobile |
+| Repository | Phastboy/haven-app (local checkout: h-mobile) |
 | Platform | Android |
 | Implementation | Kotlin, Jetpack Compose, Material 3 |
-| Status | UI prototype; backend integration pending |
+| Status | Real sign-in and public feed integrated; device design corrections pending |
 | Parent project | https://github.com/phastboy/haven |
 | Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
 | Android namespace | `com.example` (current scaffold namespace) |
-| Version name / code | `1.0` / `1` (scaffold values, independent of Haven roadmap stages) |
+| Version name / code | `1.0` / `3` (independent of backend 0.8.2; visible version may start at 0.0.0) |
 | Minimum Android version | Android 7.0 / API 24 |
 
 ## Repository description
@@ -31,9 +31,7 @@ know the people behind those offers. Browse offers, explore a person's catalogue
 and express interest through private conversation. An inquiry starts a discussion;
 it does not create a commitment, reservation, or agreement.
 
-**Prototype disclosure:** This Android app currently demonstrates these journeys
-with sample data and local state. Live authentication, backend messaging, and
-persistent personal collections are not connected yet.
+**Current capability disclosure:** Sign-in and the public Offers feed use the live Haven backend. Native messaging, personal collections, and offer detail are not integrated; feed navigation opens real Haven web journeys. Remaining prototype files must not be used as runtime fallbacks. Read `NEXT_AGENT.md` first for current scope and outstanding device checks.
 
 The product description is reusable copy, not a claim that every journey is live
 in this prototype. Pair it with the prototype disclosure wherever the app's
@@ -42,9 +40,8 @@ current capabilities are described.
 ## Integration boundaries
 
 - The main Haven repository owns the product roadmap and backend behavior.
-- The mobile app currently has no configured Haven API client or endpoint.
-- Sign-in, offers, and conversations must use the backend's verified contracts
-  when integration begins; local simulation is not authentication.
+- Live backend: `https://haven-odysseon-d48990aa.koyeb.app`; auth, `/api/v1/me`, and `/api/v1/offers` are integrated.
+- Every screen selected for integration must use verified backend behavior. Samples, fake timers, and fabricated successful writes are forbidden in that runtime path.
 - People search, proximity, agreement/closing, and payments are not current app
   capabilities. Do not advertise them as available.
 - No Gemini feature or embedded-frame permission is required by the current UI.
