@@ -74,8 +74,7 @@ class ExampleRobolectricTest {
     val state = viewModel.uiState.value
     assertTrue(state.isError)
     assertEquals("Enter a valid email address.", state.emailError)
-    assertFalse(state.isSending)
-    assertFalse(state.isSuccess)
+    assertNull(state.authError)
   }
 
   @Test
@@ -98,7 +97,7 @@ class ExampleRobolectricTest {
     assertTrue(viewModel.onSendMagicLink())
     viewModel.onGoogleSignInClicked()
     assertFalse(SessionManager.session.value.isAuthenticated)
-    assertNull(viewModel.uiState.value.googleErrorBanner)
+    assertNull(viewModel.uiState.value.authError)
   }
 
   @Test

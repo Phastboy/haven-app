@@ -130,7 +130,7 @@ fun HavenSecondaryButton(
 }
 
 /**
- * Haven Google Sign-in Button with monochrome G mark per design spec
+ * Haven Google sign-in button matching the sign-in prototype.
  */
 @Composable
 fun HavenGoogleButton(
@@ -168,10 +168,10 @@ fun HavenGoogleButton(
         painter = painterResource(id = R.drawable.ic_google_monochrome),
         contentDescription = null,
         modifier = Modifier.size(20.dp),
-        tint = contentColor
+        tint = Color.Unspecified
       )
       Text(
-        text = "Sign in with Google",
+        text = "Continue with Google",
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 15.sp,

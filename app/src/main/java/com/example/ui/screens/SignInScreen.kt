@@ -54,11 +54,7 @@ import com.example.ui.theme.InterFontFamily
 
 /**
  * Screen 2: Sign In Screen
- * Faithfully implements all specifications:
- * - Default Idle State
- * - State A: Keyboard Open / Typing with keyboard avoidance and dynamic insets
- * - Error banner for browser sign-in failures
- * - Invalid email validation before browser handoff
+ * Matches the sign-in prototype while Haven handles authentication in the browser.
  *
  * Centralized Insets:
  * - Top bar extends behind the status bar and display cutouts to the top edge.
@@ -102,19 +98,21 @@ fun SignInScreen(
           .fillMaxWidth()
           .height(56.dp)
           .padding(horizontal = 4.dp),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.Center
       ) {
+        Text("Sign in", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold,
+          fontSize = 15.sp, color = HavenColors.TextPrimary)
         IconButton(
           onClick = onNavigateBack,
-          enabled = !uiState.isSending,
           modifier = Modifier
+            .align(Alignment.CenterStart)
             .size(48.dp)
             .testTag("back_button")
         ) {
           Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
             contentDescription = "Go back",
-            tint = if (uiState.isSending) HavenColors.TextMuted else HavenColors.Primary,
+            tint = HavenColors.Primary,
             modifier = Modifier.size(24.dp)
           )
         }
@@ -129,47 +127,49 @@ fun SignInScreen(
         .windowInsetsPadding(HavenInsets.bottomWithIme.only(WindowInsetsSides.Bottom))
         .padding(horizontal = 24.dp)
         .verticalScroll(scrollState),
-      verticalArrangement = Arrangement.SpaceBetween
+      verticalArrangement = Arrangement.Center
     ) {
       Column {
         Spacer(modifier = Modifier.height(24.dp))
 
         // Heading & Subtitle
         Text(
-          text = "Sign in",
+          text = "Welcome to Haven",
           fontFamily = InterFontFamily,
           fontWeight = FontWeight.SemiBold,
-          fontSize = 25.sp,
-          lineHeight = 30.sp,
+          fontSize = 24.sp,
+          lineHeight = 32.sp,
           letterSpacing = (-0.3).sp,
           color = HavenColors.TextPrimary,
-          modifier = Modifier.testTag("sign_in_title")
+          textAlign = TextAlign.Center,
+          modifier = Modifier.fillMaxWidth().testTag("sign_in_title")
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-          text = "Welcome to Haven.",
+          text = "Sign in to continue.",
           fontFamily = InterFontFamily,
           fontWeight = FontWeight.Normal,
           fontSize = 16.sp,
           color = HavenColors.TextSecondary,
-          modifier = Modifier.testTag("sign_in_subtitle")
+          textAlign = TextAlign.Center,
+          modifier = Modifier.fillMaxWidth().testTag("sign_in_subtitle")
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // State C: Auth Error Banner (when Google auth was tapped)
+        // Shown only for a real browser-launch or callback failure.
         AnimatedVisibility(
-          visible = uiState.googleErrorBanner != null,
+          visible = uiState.authError != null,
           enter = fadeIn() + slideInVertically(),
           exit = fadeOut()
         ) {
-          uiState.googleErrorBanner?.let { message ->
+          uiState.authError?.let { message ->
             HavenAlertBanner(
               message = message,
               modifier = Modifier.padding(bottom = 16.dp),
-              testTag = "google_error_banner"
+              testTag = "auth_error_banner"
             )
           }
         }
@@ -181,7 +181,6 @@ fun SignInScreen(
               viewModel.onGoogleSignInClicked()
               onStartBrowserSignIn()
             },
-            enabled = !uiState.isInputsDisabled,
             testTag = "google_sign_in_button"
           )
 
@@ -189,7 +188,7 @@ fun SignInScreen(
           Box(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(vertical = 24.dp),
+              .padding(vertical = 28.dp),
             contentAlignment = Alignment.Center
           ) {
             HorizontalDivider(
@@ -202,7 +201,7 @@ fun SignInScreen(
               fontFamily = InterFontFamily,
               fontWeight = FontWeight.Normal,
               fontSize = 13.sp,
-              color = if (uiState.isSending) HavenColors.TextMuted else HavenColors.TextSecondary,
+              color = HavenColors.TextSecondary,
               modifier = Modifier
                 .background(HavenColors.Canvas)
                 .padding(horizontal = 12.dp)
@@ -217,7 +216,7 @@ fun SignInScreen(
             placeholder = "name@example.com",
             errorMessage = uiState.emailError,
             isError = uiState.isError,
-            enabled = !uiState.isInputsDisabled,
+            helperText = "We’ll email you a link to sign in. No password needed.",
             keyboardActions = KeyboardActions(
               onDone = {
                 focusManager.clearFocus()
@@ -227,17 +226,15 @@ fun SignInScreen(
             testTag = "email_input_field"
           )
 
-          Spacer(modifier = Modifier.height(20.dp))
+          Spacer(modifier = Modifier.height(24.dp))
 
-          // Primary Submit Button ("Send magic link" or "Sending...")
+          // Continue to Haven's browser sign-in for email verification.
           HavenPrimaryButton(
-            text = "Continue with email",
+            text = "Send magic link",
             onClick = {
               focusManager.clearFocus()
               if (viewModel.onSendMagicLink()) onStartBrowserSignIn()
             },
-            enabled = !uiState.isInputsDisabled,
-            isLoading = uiState.isSending,
             testTag = "send_magic_link_button"
           )
       }
@@ -246,16 +243,16 @@ fun SignInScreen(
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(top = 28.dp, bottom = 16.dp),
+          .padding(top = 40.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
         Text(
-          text = "New to Haven? We'll create your account the first time you sign in.",
+          text = "New to Haven? We’ll create your account the first time you sign in.",
           fontFamily = InterFontFamily,
           fontWeight = FontWeight.Normal,
-          fontSize = 13.sp,
-          lineHeight = 18.sp,
-          color = if (uiState.isSending) HavenColors.TextMuted else HavenColors.TextSecondary,
+          fontSize = 12.sp,
+          lineHeight = 19.sp,
+          color = HavenColors.TextSecondary,
           textAlign = TextAlign.Center,
           modifier = Modifier
             .fillMaxWidth(0.9f)

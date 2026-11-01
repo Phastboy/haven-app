@@ -15,7 +15,7 @@ class SignInViewModel(
   val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
   fun onEmailChange(newEmail: String) {
-    _uiState.update { it.copy(email = newEmail, emailError = null) }
+    _uiState.update { it.copy(email = newEmail, emailError = null, authError = null) }
   }
 
   /** Browser sign-in handles the actual email delivery and Google authentication. */
@@ -24,20 +24,16 @@ class SignInViewModel(
       _uiState.update { it.copy(emailError = "Enter a valid email address.") }
       return false
     }
-    _uiState.update { it.copy(emailError = null, googleErrorBanner = null) }
+    _uiState.update { it.copy(emailError = null, authError = null) }
     return true
   }
 
   fun onGoogleSignInClicked() {
-    _uiState.update { it.copy(googleErrorBanner = null) }
+    _uiState.update { it.copy(authError = null) }
   }
 
   fun onAuthError(message: String) {
-    _uiState.update { it.copy(googleErrorBanner = message) }
-  }
-
-  fun onDismissGoogleError() {
-    _uiState.update { it.copy(googleErrorBanner = null) }
+    _uiState.update { it.copy(authError = message) }
   }
 
   companion object {
