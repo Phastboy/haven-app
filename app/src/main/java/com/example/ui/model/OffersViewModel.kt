@@ -2,189 +2,111 @@ package com.example.ui.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.FeedCategory
+import com.example.data.FeedOffer
+import com.example.data.HavenOffersRepository
+import com.example.data.OffersQuery
+import com.example.data.OffersRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class OffersTab {
-  OFFERS,
-  MESSAGES,
-  PROFILE
-}
-
-data class FilterCriteria(
-  val currency: String = "Any",
-  val minPrice: Double? = null,
-  val maxPrice: Double? = null
-)
-
 data class OffersUiState(
-  val searchQuery: String = "",
-  val activeFilters: FilterCriteria = FilterCriteria(),
-  // Pending filter draft state in bottom sheet
-  val draftCurrency: String = "USD",
-  val draftMinPriceText: String = "",
-  val draftMaxPriceText: String = "30",
-  val isFilterSheetVisible: Boolean = false,
+  val query: OffersQuery = OffersQuery(),
+  val items: List<FeedOffer> = emptyList(),
+  val categories: List<FeedCategory> = emptyList(),
+  val currencies: List<String> = emptyList(),
+  val nextCursor: String? = null,
   val isLoading: Boolean = false,
-  val allOffers: List<Offer> = SampleOffers.defaultOffers,
-  val selectedOffer: Offer? = null,
-  val activeTab: OffersTab = OffersTab.OFFERS,
-  val hasUnreadMessages: Boolean = true
+  val error: String? = null,
+  val isFilterSheetVisible: Boolean = false,
+  val draftCurrency: String = "Any",
+  val draftMinPriceText: String = "",
+  val draftMaxPriceText: String = ""
 ) {
-  val filteredOffers: List<Offer>
-    get() {
-      return allOffers.filter { offer ->
-        val matchesSearch = if (searchQuery.isBlank()) {
-          true
-        } else {
-          offer.title.contains(searchQuery, ignoreCase = true) ||
-              offer.creatorName.contains(searchQuery, ignoreCase = true) ||
-              offer.category.contains(searchQuery, ignoreCase = true)
-        }
-
-        val matchesCurrency = when (activeFilters.currency) {
-          "Any" -> true
-          else -> offer.currency.equals(activeFilters.currency, ignoreCase = true) ||
-              (offer.priceNumeric == 0.0) // Free items match any currency
-        }
-
-        val matchesMin = activeFilters.minPrice?.let { offer.priceNumeric >= it } ?: true
-        val matchesMax = activeFilters.maxPrice?.let { offer.priceNumeric <= it } ?: true
-
-        matchesSearch && matchesCurrency && matchesMin && matchesMax
-      }
-    }
-
-  val activeFilterCount: Int
-    get() {
-      var count = 0
-      if (activeFilters.currency != "Any") count++
-      if (activeFilters.minPrice != null) count++
-      if (activeFilters.maxPrice != null) count++
-      return count
-    }
+  val activeFilterCount: Int get() = if (query.currency.isNotBlank()) 1 else 0
 }
 
-class OffersViewModel : ViewModel() {
-
+/** Real request state only. No local filtering, fabricated rows, or timed loading. */
+class OffersViewModel(
+  private val repository: OffersRepository = HavenOffersRepository()
+) : ViewModel() {
   private val _uiState = MutableStateFlow(OffersUiState())
-  val uiState: StateFlow<OffersUiState> = _uiState.asStateFlow()
-
+  val uiState = _uiState.asStateFlow()
   private var loadJob: Job? = null
 
-  init {
-    // Initial entry skeleton load
-    simulateLoading(durationMs = 600)
+  init { refresh() }
+
+  fun refresh() = load(reset = true)
+  fun loadMore() {
+    if (!_uiState.value.isLoading && _uiState.value.nextCursor != null) load(reset = false)
   }
 
-  fun onSearchQueryChange(query: String) {
-    _uiState.update { it.copy(searchQuery = query) }
-  }
-
-  fun onToggleFavorite(offerId: String) {
-    _uiState.update { current ->
-      val updatedList = current.allOffers.map { offer ->
-        if (offer.id == offerId) {
-          offer.copy(isFavorite = !offer.isFavorite)
-        } else {
-          offer
-        }
+  private fun load(reset: Boolean) {
+    loadJob?.cancel()
+    val before = _uiState.value
+    val query = before.query.copy(after = if (reset) null else before.nextCursor)
+    _uiState.update { it.copy(isLoading = true, error = null,
+      items = if (reset) emptyList() else it.items, nextCursor = if (reset) null else it.nextCursor) }
+    loadJob = viewModelScope.launch {
+      try {
+        val page = repository.fetch(query)
+        _uiState.update { it.copy(isLoading = false,
+          items = if (reset) page.items else (it.items + page.items).distinctBy { offer -> offer.id },
+          categories = page.categories, currencies = page.currencies, nextCursor = page.nextCursor) }
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (_: Exception) {
+        _uiState.update { it.copy(isLoading = false, error = "Couldn’t load offers. Check your connection and try again.") }
       }
-      val updatedSelection = current.selectedOffer?.let { selected ->
-        if (selected.id == offerId) {
-          selected.copy(isFavorite = !selected.isFavorite)
-        } else {
-          selected
-        }
-      }
-      current.copy(allOffers = updatedList, selectedOffer = updatedSelection)
     }
   }
 
+  fun onSearchQueryChange(value: String) {
+    _uiState.update { it.copy(query = it.query.copy(search = value)) }
+    refresh()
+  }
+  fun selectCategory(slug: String) {
+    _uiState.update { it.copy(query = it.query.copy(category = slug)) }
+    refresh()
+  }
   fun openFilterSheet() {
-    _uiState.update { current ->
-      current.copy(
-        isFilterSheetVisible = true,
-        draftCurrency = if (current.activeFilters.currency == "Any") "USD" else current.activeFilters.currency,
-        draftMinPriceText = current.activeFilters.minPrice?.toInt()?.toString() ?: "",
-        draftMaxPriceText = current.activeFilters.maxPrice?.toInt()?.toString() ?: "30"
-      )
-    }
+    _uiState.update { it.copy(isFilterSheetVisible = true,
+      draftCurrency = it.query.currency.ifBlank { "Any" },
+      draftMinPriceText = it.query.minPrice?.toString() ?: "",
+      draftMaxPriceText = it.query.maxPrice?.toString() ?: "") }
   }
-
-  fun closeFilterSheet() {
-    _uiState.update { it.copy(isFilterSheetVisible = false) }
-  }
-
-  fun onDraftCurrencyChange(currency: String) {
-    _uiState.update { it.copy(draftCurrency = currency) }
-  }
-
-  fun onDraftMinPriceChange(text: String) {
-    _uiState.update { it.copy(draftMinPriceText = text) }
-  }
-
-  fun onDraftMaxPriceChange(text: String) {
-    _uiState.update { it.copy(draftMaxPriceText = text) }
-  }
+  fun closeFilterSheet() { _uiState.update { it.copy(isFilterSheetVisible = false) } }
+  fun onDraftCurrencyChange(value: String) { _uiState.update { it.copy(draftCurrency = value) } }
+  fun onDraftMinPriceChange(value: String) { _uiState.update { it.copy(draftMinPriceText = value) } }
+  fun onDraftMaxPriceChange(value: String) { _uiState.update { it.copy(draftMaxPriceText = value) } }
 
   fun applyFilters() {
-    val current = _uiState.value
-    val minVal = current.draftMinPriceText.toDoubleOrNull()
-    val maxVal = current.draftMaxPriceText.toDoubleOrNull()
-    val newCriteria = FilterCriteria(
-      currency = current.draftCurrency,
-      minPrice = minVal,
-      maxPrice = maxVal
-    )
-
-    _uiState.update {
-      it.copy(
-        activeFilters = newCriteria,
-        isFilterSheetVisible = false
-      )
+    val state = _uiState.value
+    val min = state.draftMinPriceText.trim().takeIf { it.isNotEmpty() }?.toIntOrNull()
+    val max = state.draftMaxPriceText.trim().takeIf { it.isNotEmpty() }?.toIntOrNull()
+    val invalid = (state.draftMinPriceText.isNotBlank() && min == null) ||
+      (state.draftMaxPriceText.isNotBlank() && max == null) ||
+      (min != null && min < 0) || (max != null && max < 0) ||
+      (min != null && max != null && min > max) ||
+      ((min != null || max != null) && state.draftCurrency == "Any") ||
+      (state.draftCurrency != "Any" && min == null && max == null)
+    if (invalid) {
+      _uiState.update { it.copy(isFilterSheetVisible = false,
+        error = "Choose a currency and a valid whole-number price range. Use 0 for free offers.") }
+      return
     }
-
-    // Brief skeleton flash to visually confirm new filtered dataset
-    simulateLoading(durationMs = 450)
+    _uiState.update { it.copy(isFilterSheetVisible = false,
+      query = it.query.copy(currency = state.draftCurrency.takeUnless { value -> value == "Any" } ?: "",
+        minPrice = min, maxPrice = max)) }
+    refresh()
   }
-
   fun clearFilters() {
-    _uiState.update {
-      it.copy(
-        activeFilters = FilterCriteria(currency = "Any", minPrice = null, maxPrice = null),
-        draftCurrency = "Any",
-        draftMinPriceText = "",
-        draftMaxPriceText = "",
-        isFilterSheetVisible = false
-      )
-    }
-    simulateLoading(durationMs = 350)
-  }
-
-  fun refresh() {
-    simulateLoading(durationMs = 750)
-  }
-
-  fun simulateLoading(durationMs: Long = 700) {
-    loadJob?.cancel()
-    loadJob = viewModelScope.launch {
-      _uiState.update { it.copy(isLoading = true) }
-      delay(durationMs)
-      _uiState.update { it.copy(isLoading = false) }
-    }
-  }
-
-  fun selectOffer(offer: Offer?) {
-    _uiState.update { it.copy(selectedOffer = offer) }
-  }
-
-  fun selectTab(tab: OffersTab) {
-    _uiState.update { it.copy(activeTab = tab) }
+    _uiState.update { it.copy(query = OffersQuery(), isFilterSheetVisible = false,
+      draftCurrency = "Any", draftMinPriceText = "", draftMaxPriceText = "") }
+    refresh()
   }
 }

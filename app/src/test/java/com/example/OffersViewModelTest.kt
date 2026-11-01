@@ -1,0 +1,109 @@
+package com.example
+
+import com.example.data.FeedCategory
+import com.example.data.FeedOffer
+import com.example.data.HavenOffersRepository
+import com.example.data.OffersPage
+import com.example.data.OffersQuery
+import com.example.data.OffersRepository
+import com.example.ui.model.OffersViewModel
+import java.io.IOException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
+class OffersViewModelTest {
+  private val dispatcher = StandardTestDispatcher()
+  @Before fun setup() { Dispatchers.setMain(dispatcher) }
+  @After fun teardown() { Dispatchers.resetMain() }
+
+  private fun offer(id: String) = FeedOffer(id, "offer-$id", "Server title $id", "Real maker", "Free", null)
+  private fun page(items: List<FeedOffer>, next: String? = null) = OffersPage(items,
+    listOf(FeedCategory("food-groceries", "Food & groceries")), listOf("NGN"), next)
+
+  @Test fun `server order and cursors are preserved without local search filtering`() = runTest(dispatcher) {
+    val requests = mutableListOf<OffersQuery>()
+    val model = OffersViewModel(OffersRepository { query ->
+      requests += query
+      if (query.after == null) page(listOf(offer("2"), offer("1")), "next-page")
+      else page(listOf(offer("3")))
+    })
+    advanceUntilIdle()
+    assertEquals(listOf("2", "1"), model.uiState.value.items.map { it.id })
+    model.loadMore()
+    advanceUntilIdle()
+    assertEquals("next-page", requests.last().after)
+    assertEquals(listOf("2", "1", "3"), model.uiState.value.items.map { it.id })
+    model.onSearchQueryChange("another title")
+    advanceUntilIdle()
+    assertEquals("another title", requests.last().search)
+    assertNull(requests.last().after)
+    assertEquals(2, model.uiState.value.items.size)
+  }
+
+  @Test fun `a failed request leaves no sample results and can be retried`() = runTest(dispatcher) {
+    var fail = true
+    val model = OffersViewModel(OffersRepository {
+      if (fail) throw IOException("offline")
+      page(listOf(offer("real")))
+    })
+    advanceUntilIdle()
+    assertTrue(model.uiState.value.items.isEmpty())
+    assertNotNull(model.uiState.value.error)
+    assertFalse(model.uiState.value.isLoading)
+    fail = false
+    model.refresh()
+    advanceUntilIdle()
+    assertEquals("real", model.uiState.value.items.single().id)
+    assertNull(model.uiState.value.error)
+  }
+
+  @Test fun `changing criteria cancels the old request and resets paging`() = runTest(dispatcher) {
+    val oldPage = CompletableDeferred<OffersPage>()
+    val model = OffersViewModel(OffersRepository { query ->
+      if (query.category.isEmpty()) oldPage.await() else page(listOf(offer("new")))
+    })
+    testScheduler.runCurrent()
+    model.selectCategory("food-groceries")
+    advanceUntilIdle()
+    oldPage.complete(page(listOf(offer("stale"))))
+    advanceUntilIdle()
+    assertEquals("new", model.uiState.value.items.single().id)
+  }
+
+  @Test fun `invalid price range never makes a request or claims filtered results`() = runTest(dispatcher) {
+    var calls = 0
+    val model = OffersViewModel(OffersRepository { calls++; page(emptyList()) })
+    advanceUntilIdle()
+    model.onDraftCurrencyChange("NGN")
+    model.onDraftMinPriceChange("20")
+    model.onDraftMaxPriceChange("10")
+    model.applyFilters()
+    advanceUntilIdle()
+    assertEquals(1, calls)
+    assertNotNull(model.uiState.value.error)
+    assertNull(model.uiState.value.query.minPrice)
+  }
+
+  @Test fun `parser uses backend price display and accepts a missing cover without dummy images`() {
+    val page = HavenOffersRepository.parsePage("""{"items":[{"id":"real","slug":"real-offer","title":"An offer","maker_name":"A person","price_display":"100 NGN","cover_url":null}],"categories":[],"currencies":["NGN"],"next_cursor":null}""")
+    assertEquals("100 NGN", page.items.single().priceDisplay)
+    assertNull(page.items.single().coverUrl)
+    assertNull(page.nextCursor)
+  }
+}
