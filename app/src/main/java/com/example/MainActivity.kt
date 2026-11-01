@@ -86,10 +86,16 @@ class MainActivity : ComponentActivity() {
   private fun handleCallback(callback: Intent) {
     val uri = callback.data ?: return
     lifecycleScope.launch {
-      val ok = withContext(Dispatchers.IO) {
-        try { auth.finishAuthorization(uri) } catch (_: Exception) { false }
+      val errorMsg = withContext(Dispatchers.IO) {
+        try {
+          auth.completeAuthorization(uri)
+        } catch (e: Exception) {
+          "Sign-in failed: ${e.message ?: "unexpected error"}"
+        }
       }
-      if (!ok) signInViewModel.onAuthError("Sign-in could not be completed. Please try again.")
+      if (errorMsg != null) {
+        signInViewModel.onAuthError(errorMsg)
+      }
     }
   }
 

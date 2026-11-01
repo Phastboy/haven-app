@@ -40,17 +40,56 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   fun acceptsCallback(uri: Uri?): Boolean = uri?.scheme == "https" &&
     uri.host == HOST && uri.path == "/auth/callback"
 
-  /** Returns true only after the code is exchanged and /me confirms the person. */
-  fun finishAuthorization(uri: Uri): Boolean {
-    if (!acceptsCallback(uri)) return false
-    val state = uri.getQueryParameter("state") ?: return false
-    val verifier = store.consumePending(state) ?: return false
-    val code = uri.getQueryParameter("code") ?: return false
-    val response = request("POST", "/api/v1/auth/exchange", JSONObject()
+  /** Returns null on success, or an explicit failure message identifying the exact failing step. */
+  fun completeAuthorization(uri: Uri): String? {
+    if (!acceptsCallback(uri)) {
+      return "Invalid callback URL: ${uri.scheme}://${uri.host}${uri.path}"
+    }
+    uri.getQueryParameter("error")?.let { err ->
+      return when (err) {
+        "google_cancelled" -> "Google sign-in was cancelled."
+        "access_denied" -> "Access was denied by Google."
+        else -> "Authentication failed: $err"
+      }
+    }
+    val state = uri.getQueryParameter("state")
+      ?: return "Callback missing OAuth state parameter."
+    val verifier = store.consumePending(state)
+      ?: return "OAuth state mismatch or expired request. Please try again."
+    val code = uri.getQueryParameter("code")
+      ?: return "Callback missing authorization code."
+
+    val exchangeResponse = request("POST", "/api/v1/auth/exchange", JSONObject()
       .put("code", code).put("code_verifier", verifier))
-    if (response.first != 200) return false
-    return acceptTokens(JSONObject(response.second))
+    if (exchangeResponse.first != 200) {
+      val snippet = exchangeResponse.second.take(120).trim()
+      return "PKCE token exchange failed (HTTP ${exchangeResponse.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+    }
+
+    return try {
+      val tokens = JSONObject(exchangeResponse.second)
+      val access = tokens.getString("access_token")
+      val refresh = tokens.getString("refresh_token")
+      store.refreshToken = refresh
+      accessToken = access
+
+      val me = request("GET", "/api/v1/me", null, access)
+      if (me.first != 200) {
+        val snippet = me.second.take(120).trim()
+        return "Identity verification (/api/v1/me) failed (HTTP ${me.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+      }
+      val profile = JSONObject(me.second)
+      SessionManager.signInPerson(
+        profile.getString("id"), profile.getString("display_name"), profile.getString("handle")
+      )
+      null
+    } catch (e: Exception) {
+      "Failed to parse server authentication response: ${e.message}"
+    }
   }
+
+  /** Returns true only after the code is exchanged and /me confirms the person. */
+  fun finishAuthorization(uri: Uri): Boolean = completeAuthorization(uri) == null
 
   /** Restores a session by rotating the stored refresh token, then checking /me. */
   fun restore(): Boolean {
