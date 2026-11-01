@@ -35,11 +35,11 @@ import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.model.MessagesInboxUiState
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun MessagesInboxScreen(
@@ -136,13 +136,30 @@ private fun InboxConversationRow(item: InboxConversation, onClick: () -> Unit) {
   }
 }
 
-internal fun inboxTimeLabel(raw: String, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): String {
-  val messageTime = runCatching { Instant.parse(raw).atZone(zone) }.getOrNull() ?: return ""
-  val today = now.atZone(zone).toLocalDate()
-  val date = messageTime.toLocalDate()
-  return when (date) {
-    today -> messageTime.format(DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
-    today.minusDays(1) -> "Yesterday"
-    else -> messageTime.format(DateTimeFormatter.ofPattern(if (date.year == today.year) "MMM d" else "MMM d, yyyy", Locale.getDefault()))
+internal fun inboxTimeLabel(
+  raw: String,
+  nowMillis: Long = System.currentTimeMillis(),
+  timeZone: TimeZone = TimeZone.getDefault()
+): String {
+  val normalized = raw.replace(Regex("\\.\\d+(?=(?:Z|[+-]\\d{2}:?\\d{2})$)"), "")
+  val messageDate = runCatching {
+    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply { this.timeZone = TimeZone.getTimeZone("UTC") }
+      .parse(normalized)
+  }.getOrNull() ?: return ""
+  val messageCalendar = Calendar.getInstance(timeZone, Locale.getDefault()).apply { time = messageDate }
+  val today = Calendar.getInstance(timeZone, Locale.getDefault()).apply { timeInMillis = nowMillis }
+  if (sameLocalDay(messageCalendar, today)) {
+    return formatInboxDate("h:mm a", messageDate, timeZone)
   }
+  val yesterday = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+  if (sameLocalDay(messageCalendar, yesterday)) return "Yesterday"
+  val pattern = if (messageCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR)) "MMM d" else "MMM d, yyyy"
+  return formatInboxDate(pattern, messageDate, timeZone)
 }
+
+private fun sameLocalDay(left: Calendar, right: Calendar) =
+  left.get(Calendar.YEAR) == right.get(Calendar.YEAR) &&
+    left.get(Calendar.DAY_OF_YEAR) == right.get(Calendar.DAY_OF_YEAR)
+
+private fun formatInboxDate(pattern: String, date: Date, timeZone: TimeZone) =
+  SimpleDateFormat(pattern, Locale.getDefault()).apply { this.timeZone = timeZone }.format(date)
