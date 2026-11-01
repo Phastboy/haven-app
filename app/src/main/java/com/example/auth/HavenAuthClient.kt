@@ -46,7 +46,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   fun acceptsCallback(uri: Uri?): Boolean = uri?.scheme == "https" &&
-    uri.host == HOST && uri.path == "/auth/callback"
+    uri.host == HOST && (uri.path == "/auth/callback" || uri.path == "/auth/callback/")
 
   /** Returns null on success, or an explicit failure message identifying the exact failing step. */
   @Synchronized

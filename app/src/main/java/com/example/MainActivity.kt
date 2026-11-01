@@ -85,13 +85,17 @@ class MainActivity : ComponentActivity() {
         ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
         ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
       }
-      CustomTabsIntent.Builder()
+      val customTabsIntent = CustomTabsIntent.Builder()
         .setShowTitle(true)
         .setColorScheme(scheme)
         .build()
-        .launchUrl(this, auth.beginAuthorization())
+      customTabsIntent.launchUrl(this, auth.beginAuthorization())
     } catch (_: Exception) {
-      signInViewModel.onAuthError("Could not open your browser. Please try again.")
+      try {
+        startActivity(Intent(Intent.ACTION_VIEW, auth.beginAuthorization()))
+      } catch (_: Exception) {
+        signInViewModel.onAuthError("Could not open your browser. Please try again.")
+      }
     }
   }
 

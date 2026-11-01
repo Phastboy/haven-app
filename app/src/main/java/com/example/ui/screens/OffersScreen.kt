@@ -229,7 +229,8 @@ private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) 
 
 @Composable
 private fun FeedNavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
-  Column(Modifier.clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 8.dp),
+  val tag = "nav_tab_${label.lowercase().replace(" ", "_")}"
+  Column(Modifier.clickable(onClick = onClick).testTag(tag).padding(horizontal = 20.dp, vertical = 8.dp),
     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
     val color = if (selected) HavenColors.Primary else HavenColors.TextSecondary
     Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
