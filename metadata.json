@@ -1,6 +1,6 @@
 {
   "name": "Haven",
-  "description": "Exchange offers directly on Haven. Onboarding and passwordless sign-in with clean monastic design.",
+  "description": "Native Android prototype for Haven: discover offers, know the people behind them, and start non-binding conversations. Built with Kotlin and Jetpack Compose; currently uses sample data and local state.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
