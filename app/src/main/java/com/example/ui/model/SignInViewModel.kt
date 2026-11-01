@@ -66,6 +66,7 @@ class SignInViewModel(
           successEmail = currentEmail
         )
       }
+      SessionManager.signIn(currentEmail)
     }
   }
 
@@ -85,6 +86,7 @@ class SignInViewModel(
   }
 
   fun onResetSuccess() {
+    SessionManager.signOut()
     _uiState.update { current ->
       current.copy(
         isSuccess = false,

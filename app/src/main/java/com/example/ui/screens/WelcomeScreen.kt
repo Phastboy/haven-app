@@ -8,21 +8,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -32,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.ui.components.HavenInsets
 import com.example.ui.components.HavenPrimaryButton
 import com.example.ui.components.HavenSecondaryButton
 import com.example.ui.theme.HavenColors
@@ -44,20 +43,22 @@ import com.example.ui.theme.InterFontFamily
  * - 3-photo documentary craft collage (272dp height, 16dp radii)
  * - Copy block: "Exchange offers directly"
  * - Action buttons: "Browse offers" and "Sign in"
+ *
+ * Safe Area & Inset Handling:
+ * - Safe top status bar and camera punch-hole clearance
+ * - Safe bottom system navigation bar / gesture pill clearance
+ * - Scrollable container for compact screens and foldables
  */
 @Composable
 fun WelcomeScreen(
   onNavigateToSignIn: () -> Unit,
+  onNavigateToOffers: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var showOffersSheet by remember { mutableStateOf(false) }
-
   Box(
     modifier = modifier
       .fillMaxSize()
       .background(HavenColors.Canvas)
-      .statusBarsPadding()
-      .navigationBarsPadding()
       .testTag("welcome_screen")
   ) {
     Column(
@@ -67,8 +68,11 @@ fun WelcomeScreen(
         .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.SpaceBetween
     ) {
-      // Top Wordmark
+      // Top Section: Wordmark and Content
       Column {
+        // Dynamic status bar and camera cutout inset clearance
+        Spacer(modifier = Modifier.windowInsetsTopHeight(HavenInsets.statusBarsAndCutouts))
+
         Box(
           modifier = Modifier
             .fillMaxWidth()
@@ -182,16 +186,17 @@ fun WelcomeScreen(
         )
       }
 
-      // Bottom Action Buttons
+      // Bottom Action Buttons with navigation bar safe padding
       Column(
         modifier = Modifier
           .fillMaxWidth()
+          .windowInsetsPadding(HavenInsets.navigationBars.only(WindowInsetsSides.Bottom))
           .padding(top = 32.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
         HavenPrimaryButton(
           text = "Browse offers",
-          onClick = { showOffersSheet = true },
+          onClick = onNavigateToOffers,
           testTag = "browse_offers_button"
         )
 
@@ -202,9 +207,5 @@ fun WelcomeScreen(
         )
       }
     }
-  }
-
-  if (showOffersSheet) {
-    OffersBottomSheet(onDismiss = { showOffersSheet = false })
   }
 }
