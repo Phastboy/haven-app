@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en" data-preview="true">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offers · Haven</title>
+<style>
+/* Foundation */
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:white;color:#111827;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit;color:inherit}button{border:0;background:transparent;cursor:pointer}button,a,input{-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #111827;outline-offset:3px}[hidden]{display:none!important}svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}button svg{pointer-events:none}:root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);--safe-right:env(safe-area-inset-right,0px)}html[data-preview="true"]{--safe-top:47px;--safe-bottom:34px;--safe-left:0px;--safe-right:0px}.app{height:100vh;height:100dvh;display:flex;flex-direction:column;background:white;overflow:hidden}
+/* Discovery controls */
+.header-pinned{flex:none;padding-top:var(--safe-top);background:white}.search-row{display:flex;gap:8px;align-items:center;padding:8px max(16px,var(--safe-right)) 8px max(16px,var(--safe-left))}.search-wrapper{display:flex;align-items:center;flex:1;min-width:0;background:#f3f4f6;border-radius:24px}.search-icon{margin-left:14px;color:#6b7280}.search-input{min-width:0;width:100%;min-height:46px;padding:10px;font-size:16px;border:0;background:transparent;border-radius:24px}.filter-btn{flex-shrink:0;min-height:44px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:24px;background:#f3f4f6;font-size:13px}.proximity-banner{margin:0 16px 4px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}.proximity-info{min-width:0;flex:1;display:flex;align-items:center;gap:7px}.proximity-pin-icon{display:none}.proximity-texts{min-width:0}.proximity-status-tag{display:flex;align-items:center;gap:5px;font-size:11px;color:#6b7280}.proximity-status-dot{width:5px;height:5px;background:#111827;border-radius:50%;flex:none}.proximity-location-name{font-size:13px;font-weight:500;margin:2px 0;overflow-wrap:anywhere}.proximity-controls{display:flex;gap:4px;margin-left:auto}.proximity-off-btn{min-height:44px;padding:8px;font-size:12px}.proximity-off-btn{display:flex;align-items:center;gap:2px}.proximity-off-btn svg{width:14px;height:14px}.category-rail{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 10px;scrollbar-width:none}.category-chip{flex:none;min-height:44px;border-radius:24px;background:#f3f4f6;color:#4b5563;padding:10px 14px;font-size:13px}.category-chip[aria-pressed="true"]{background:#111827;color:white}.location-btn{flex:none;width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:#f3f4f6;color:#4b5563}.location-btn[data-active="true"]{background:#111827;color:white}
+/* Feed layout */
+.content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px max(16px,var(--safe-right)) 20px max(16px,var(--safe-left))}.feed-meta{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:space-between;margin-bottom:16px;color:#6b7280;font-size:12px}.feed-count{font-weight:500}.offers-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px;align-items:stretch}.empty{grid-column:1/-1;text-align:center;padding:32px 0;font-size:14px;color:#6b7280}
+/* OfferCard owns its image, three text lines, and independent save control. */
+.offer-card{position:relative;min-width:0;background:white}.offer-link{display:block;color:inherit;text-decoration:none;border-radius:12px}.offer-thumb{width:100%;aspect-ratio:1;display:grid;place-items:center;background:#f3f4f6;color:#9ca3af;border-radius:12px;overflow:hidden}.offer-thumb svg{width:30px;height:30px}.offer-copy{padding-top:10px;display:grid;gap:4px;min-width:0}.offer-title{font-size:14px;line-height:20px;font-weight:500;margin:0;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.offer-detail{margin:0;font-size:13px;line-height:19px;font-weight:400;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.offer-price{margin:0;font-size:14px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.offer-save-btn{position:absolute;z-index:1;right:4px;top:4px;width:44px;height:44px;padding:0;display:grid;place-items:center;border-radius:50%;background:#fff;color:#111827}.offer-save-btn svg{width:20px;height:20px}.offer-save-btn[aria-pressed="true"] svg{fill:currentColor}
+@supports ((backdrop-filter:blur(12px)) or (-webkit-backdrop-filter:blur(12px))){.offer-save-btn{background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}}
+@media(prefers-reduced-transparency:reduce){.offer-save-btn{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
+/* Local dialogs: native focus containment and Escape dismissal. */
+dialog{position:fixed;color:#111827;background:white;border:0;max-width:480px;width:100%;padding:20px;max-height:calc(100dvh - var(--safe-top) - 12px);overflow:auto}dialog::backdrop{background:rgba(0,0,0,.4)}.filter-sheet{inset:auto 0 0;margin:0 auto;border-radius:20px 20px 0 0;padding-bottom:calc(var(--safe-bottom) + 20px)}.auth-modal{inset:0;margin:auto;width:calc(100% - 32px);max-width:360px;border-radius:20px}.dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.dialog-header h2{font-size:20px;margin:0;font-weight:600}.dialog-close{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;background:#f3f4f6}.dialog-copy{font-size:14px;color:#6b7280;line-height:1.5;margin:12px 0 20px}.filter-fields{display:grid;gap:16px;margin:16px 0}.filter-fields label{display:grid;gap:7px;font-size:13px;font-weight:500}.filter-fields select,.filter-fields input{width:100%;min-width:0;min-height:48px;border:1px solid #d1d5db;border-radius:8px;padding:10px;background:white;color:#111827;font:inherit;font-size:16px}.filter-fields input:disabled{background:#f3f4f6;color:#6b7280}.price-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dialog-actions{display:flex;gap:10px}.dialog-actions button{min-height:48px;border-radius:8px;padding:12px 16px;background:#f3f4f6}.dialog-actions .primary{flex:1;background:#111827;color:white}.auth-modal .dialog-actions{flex-direction:column}.field-error{font-size:13px;color:#b91c1c;line-height:1.5}.filter-badge{font-size:11px;min-width:16px}.filter-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 16px 8px;font-size:12px;color:#6b7280}.filter-summary button{min-height:44px;text-decoration:underline;flex:none}
+/* Sheet grip: a 44px target, separate from the scrolling form. */
+.sheet-handle{display:flex;align-items:center;justify-content:center;width:88px;min-height:44px;margin:-14px auto 0;padding:0;touch-action:none;cursor:grab;user-select:none;border-radius:12px;background:transparent}.sheet-handle::before{content:"";display:block;width:36px;height:4px;background:#9ca3af;border-radius:2px}.filter-sheet{transition:transform .18s ease-out}.filter-sheet[data-dragging="true"]{transition:none}.filter-sheet[data-dragging="true"] .sheet-handle{cursor:grabbing}
+/* Navigation and feedback */
+.bottom-nav {
+  position: relative;
+  flex: none;
+  background: #ffffff;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  padding: 6px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 6px) max(16px, var(--safe-left));
+  z-index: 20;
+}
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  gap: 3px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  position: relative;
+}
+.nav-tab.active {
+  color: #111827;
+  font-weight: 600;
+}
+.nav-tab.active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 2px;
+  background: #111827;
+  border-radius: 1px;
+}
+.nav-tab svg {
+  width: 20px;
+  height: 20px;
+}
+.toast{position:fixed;z-index:100;top:calc(var(--safe-top) + 10px);left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);width:max-content;padding:12px 16px;border-radius:12px;background:#111827;color:white;font-size:13px;pointer-events:none}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}@media(max-height:500px){html[data-preview="true"]{--safe-top:0px;--safe-bottom:0px}}
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 3-3 6 6"/></symbol>
+    <symbol id="i-offers" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-messages" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-navigation" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol>
+  </defs>
+</svg>
+<div class="app" id="app">
+  <!-- Pinned Discovery Header -->
+  <header class="header-pinned" id="header-pinned">
+    <!-- Search and Filter Bar -->
+    <div class="search-row">
+      <div class="search-wrapper">
+        <svg class="search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-input"
+          placeholder="Search offer titles"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search offers"
+        >
+      </div>
+      <button type="button" class="filter-btn" id="filter-btn" aria-haspopup="dialog" aria-controls="filter-sheet" aria-label="Open discovery filters">
+        <svg aria-hidden="true"><use href="#i-filter"/></svg>
+        <span>Filters</span><span class="filter-badge" id="filter-badge" hidden></span>
+      </button>
+      <button type="button" class="location-btn" id="location-btn" data-active="true" aria-label="Change reference location" title="Change reference location"><svg aria-hidden="true"><use href="#i-pin"/></svg></button>
+    </div>
+    <!-- Active Proximity Indicator Banner -->
+    <div class="proximity-banner" id="proximity-banner" role="region" aria-label="Active reference location proximity">
+      <div class="proximity-info">
+        <div class="proximity-pin-icon" aria-hidden="true">
+          <svg><use href="#i-pin"/></svg>
+        </div>
+        <div class="proximity-texts">
+          <div class="proximity-status-tag">
+            <span class="proximity-status-dot" aria-hidden="true"></span>
+            <span id="proximity-status-label">Proximity active</span>
+          </div>
+          <p class="proximity-location-name" id="proximity-place-name">Loom Square · Demo City</p>
+        </div>
+      </div>
+      <div class="proximity-controls">
+        <button type="button" class="proximity-off-btn" id="deactivate-proximity-btn" aria-label="Turn off proximity and return to general discovery">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+          <span>Turn off</span>
+        </button>
+      </div>
+    </div>
+    <div class="filter-summary" id="filter-summary" hidden><span id="filter-summary-text"></span><button type="button" id="clear-filters">Clear filters</button></div>
+    <!-- Category Filter Rail -->
+    <div class="category-rail" id="category-rail" role="group" aria-label="Filter by category">
+      <button type="button" class="category-chip" data-category="all" aria-pressed="true">All</button>
+      <button type="button" class="category-chip" data-category="Craft & Making" aria-pressed="false">Craft &amp; Making</button>
+      <button type="button" class="category-chip" data-category="Home & Living" aria-pressed="false">Home &amp; Living</button>
+      <button type="button" class="category-chip" data-category="Produce & Harvest" aria-pressed="false">Produce &amp; Harvest</button>
+      <button type="button" class="category-chip" data-category="Design & Print" aria-pressed="false">Design &amp; Print</button>
+      <button type="button" class="category-chip" data-category="Music & Acoustic" aria-pressed="false">Music &amp; Acoustic</button>
+    </div>
+  </header>
+  <!-- Scrollable Offers List ranked by proximity -->
+  <main class="content" id="feed-content" tabindex="-1">
+    <div class="feed-meta">
+      <span class="feed-count" id="feed-count">6 offers</span>
+      <span class="feed-ordering-note">General discovery</span>
+    </div>
+    <div class="offers-grid" id="offers-grid" aria-label="Available offers">
+<article class="offer-card" data-offer-id="aso-oke"><a class="offer-link" href="haven-offer-detail.html?offerId=aso-oke" aria-label="View Hand-woven Aso Oke textile, by Olumide Adeleke"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Hand-woven Aso Oke textile">Hand-woven Aso Oke textile</h2><p class="offer-detail" title="Olumide Adeleke · 0.3 km">Olumide Adeleke · 0.3 km</p><p class="offer-price">120 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Hand-woven Aso Oke textile" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="stoneware-pottery"><a class="offer-link" href="haven-offer-detail.html?offerId=stoneware-pottery" aria-label="View Minimalist stoneware vase, by Amaya Chen"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Minimalist stoneware vase">Minimalist stoneware vase</h2><p class="offer-detail" title="Amaya Chen · 1.8 km">Amaya Chen · 1.8 km</p><p class="offer-price">45 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Minimalist stoneware vase" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="loomed-linen"><a class="offer-link" href="haven-offer-detail.html?offerId=loomed-linen" aria-label="View Natural raw loomed linen runner, by Sören Lindqvist"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Natural raw loomed linen runner">Natural raw loomed linen runner</h2><p class="offer-detail" title="Sören Lindqvist · 3.4 km">Sören Lindqvist · 3.4 km</p><p class="offer-price">60 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Natural raw loomed linen runner" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="washi-lantern"><a class="offer-link" href="haven-offer-detail.html?offerId=washi-lantern" aria-label="View Handcrafted washi paper lantern, by Kenji Sato"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Handcrafted washi paper lantern">Handcrafted washi paper lantern</h2><p class="offer-detail" title="Kenji Sato · 5.2 km">Kenji Sato · 5.2 km</p><p class="offer-price">85 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Handcrafted washi paper lantern" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="harvest-basket"><a class="offer-link" href="haven-offer-detail.html?offerId=harvest-basket" aria-label="View Heirloom farm greens &amp; vegetables, by Chidi Okafor"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Heirloom farm greens &amp; vegetables">Heirloom farm greens &amp; vegetables</h2><p class="offer-detail" title="Chidi Okafor · 12 km">Chidi Okafor · 12 km</p><p class="offer-price">28 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Heirloom farm greens &amp; vegetables" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="acoustic-guitar-setup"><a class="offer-link" href="haven-offer-detail.html?offerId=acoustic-guitar-setup" aria-label="View Acoustic lutherie &amp; fret dressing, by Elena Rostova"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Acoustic lutherie &amp; fret dressing">Acoustic lutherie &amp; fret dressing</h2><p class="offer-detail" title="Elena Rostova · 18.5 km">Elena Rostova · 18.5 km</p><p class="offer-price">90 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Save Acoustic lutherie &amp; fret dressing" aria-pressed="false"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article>
+    </div>
+  </main>
+  <!-- Bottom Tab Navigation -->
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button type="button" class="nav-tab active" id="tab-offers" aria-current="page">
+      <svg aria-hidden="true"><use href="#i-offers"/></svg>
+      <span>Offers</span>
+    </button>
+    <button type="button" class="nav-tab" id="tab-messages">
+      <svg aria-hidden="true"><use href="#i-messages"/></svg>
+      <span>Messages</span>
+    </button>
+    <button type="button" class="nav-tab" id="tab-profile">
+      <svg aria-hidden="true"><use href="#i-user"/></svg>
+      <span id="tab-profile-label">Log in</span>
+    </button>
+  </nav>
+</div>
+<dialog class="filter-sheet" id="filter-sheet" aria-labelledby="filter-title">
+ <button type="button" class="sheet-handle" id="filter-handle" aria-label="Close filters" title="Drag down or tap to close filters"></button>
+ <div class="dialog-header"><h2 id="filter-title">Filter offers</h2><button type="button" class="dialog-close" id="close-filters" aria-label="Close filters"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+ <form id="filter-form" novalidate>
+  <div class="filter-fields"><label for="currency-select">Currency<select id="currency-select"><option value="ALL">Any currency</option></select></label>
+  <p class="dialog-copy" id="price-help">Choose a currency to set a price range. Prices in different currencies are not compared. Set maximum to 0 for free offers in that currency.</p>
+  <div class="price-fields"><label for="min-price">Minimum price<input type="number" id="min-price" min="0" step="any" inputmode="decimal" placeholder="No minimum" aria-describedby="price-help filter-error"></label><label for="max-price">Maximum price<input type="number" id="max-price" min="0" step="any" inputmode="decimal" placeholder="No maximum" aria-describedby="price-help filter-error"></label></div></div>
+  <p class="field-error" id="filter-error" role="alert" hidden></p>
+  <div class="dialog-actions"><button type="button" id="reset-filters">Reset</button><button class="primary" type="submit">Apply filters</button></div>
+ </form>
+</dialog>
+<dialog aria-describedby="auth-description" aria-labelledby="auth-title" class="auth-modal" id="auth-dialog">
+<div class="dialog-header"><h2 id="auth-title">Sign in to save offers</h2><button aria-label="Close sign-in prompt" class="dialog-close" id="close-auth" type="button"><svg aria-hidden="true"><use href="#i-close"></use></svg></button></div>
+<p class="dialog-copy" id="auth-description">Save offers and return to them with your Haven account.</p>
+<div class="dialog-actions"><button class="primary" id="auth-signin" type="button">Sign in</button><button id="auth-cancel" type="button">Continue browsing</button></div>
+</dialog>
+<!-- Accessible Toast Notification -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<noscript><p style="padding:16px">Offer preview shown. Open this HTML in a browser with JavaScript enabled to use its controls.</p></noscript>
+<script>
+/* Host Contract: HavenPrototype {
+   proximityActive: true,
+   referenceLocation: { id, name, area, city, country },
+   offers?: Array<Offer>,
+   navigate(detail): boolean
+}
+Principle: "General discovery by default. Local relevance on request. Identity always visible."
+*/
+(()=>{
+'use strict';
+const host = window.HavenPrototype || {};
+const $ = id => document.getElementById(id);
+const key = 'haven:proximity:v1';
+// Default active reference location (confirmed in previous step)
+const defaultReference = {
+  id: 'demo-loom',
+  name: 'Loom Square',
+  area: 'North Quarter',
+  city: 'Demo City',
+  country: 'Fictional place'
+};
+// A standalone fixture illustrates an already-confirmed proximity session. It never
+// persists activation. Any host state or saved explicit opt-out overrides this fixture.
+let stored=null;try{stored=JSON.parse(localStorage.getItem(key));}catch{}
+const standalone=!Object.prototype.hasOwnProperty.call(window,'HavenPrototype');
+const state=standalone?(stored||{proximityActive:true,referenceLocation:defaultReference}):host;
+let reference=state.referenceLocation||null;
+let proximityActive=state.proximityActive===true&&!!reference?.id;
+// Sample offers with individual associated locations and calculated distances
+const sampleOffers = [
+  {
+    id: 'aso-oke',
+    title: 'Hand-woven Aso Oke textile',
+    category: 'Craft & Making',
+    price: 120,
+    currency: 'USD',
+    provider: { id: 'olumide-adeleke', name: 'Olumide Adeleke', initials: 'OA' },
+    location: { name: 'Loom Square Workshops', area: 'Old Town Quarter', city: 'Central Haven' },
+    distanceKm: 0.3
+  },
+  {
+    id: 'stoneware-pottery',
+    title: 'Minimalist stoneware vase',
+    category: 'Home & Living',
+    price: 45,
+    currency: 'USD',
+    provider: { id: 'amaya-chen', name: 'Amaya Chen', initials: 'AC' },
+    location: { name: 'Market Cross Studios', area: 'Civic Exchange', city: 'Upper Haven' },
+    distanceKm: 1.8
+  },
+  {
+    id: 'loomed-linen',
+    title: 'Natural raw loomed linen runner',
+    category: 'Craft & Making',
+    price: 60,
+    currency: 'USD',
+    provider: { id: 'soren-lindqvist', name: 'Sören Lindqvist', initials: 'SL' },
+    location: { name: 'Harbour Gardens Arcade', area: 'South Basin', city: 'Central Haven' },
+    distanceKm: 3.4
+  },
+  {
+    id: 'washi-lantern',
+    title: 'Handcrafted washi paper lantern',
+    category: 'Home & Living',
+    price: 85,
+    currency: 'USD',
+    provider: { id: 'kenji-sato', name: 'Kenji Sato', initials: 'KS' },
+    location: { name: 'Hillview Quarter Terrace', area: 'Highland Ridge', city: 'Outer Haven' },
+    distanceKm: 5.2
+  },
+  {
+    id: 'harvest-basket',
+    title: 'Heirloom farm greens & vegetables',
+    category: 'Produce & Harvest',
+    price: 28,
+    currency: 'USD',
+    provider: { id: 'chidi-okafor', name: 'Chidi Okafor', initials: 'CO' },
+    location: { name: 'Valley Brook Allotments', area: 'River Valley', city: 'North District' },
+    distanceKm: 12.0
+  },
+  {
+    id: 'acoustic-guitar-setup',
+    title: 'Acoustic lutherie & fret dressing',
+    category: 'Music & Acoustic',
+    price: 90,
+    currency: 'USD',
+    provider: { id: 'elena-rostova', name: 'Elena Rostova', initials: 'ER' },
+    location: { name: 'Timber Mill Enclave', area: 'Lumber Guilds', city: 'West Quarter' },
+    distanceKm: 18.5
+  }
+];
+const offers=host.offers||sampleOffers;
+let selectedCategory = 'all';
+let searchQuery = '';
+let user=host.user||null,pendingSave=null;
+let authIntent = 'save';
+let filters={currency:'ALL',min:null,max:null};
+let timer;
+function notify(message) {
+  clearTimeout(timer);
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  timer = setTimeout(() => { toast.hidden = true; }, 3600);
+}
+function route(destination, extra = {}) {
+  const detail = {
+    destination,
+    proximityActive,
+    referenceLocation: proximityActive ? reference : null,
+    returnTo: 'offers-feed',
+    ...extra
+  };
+  try {
+    if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+    const event = new CustomEvent('haven:navigate', { detail, cancelable: true });
+    if (!window.dispatchEvent(event)) return true;
+  } catch (err) {
+    console.error('Haven navigation failed', err);
+    notify('Navigation failed. Please try again.');
+    return false;
+  }
+  const destinationNames = {
+    'offers-feed': 'General discovery Offers feed',
+    'reference-location': 'Choose a reference location',
+    'offer-detail': 'Offer detail',
+    'messages': 'Messages',
+    'my-profile': 'Your profile',
+    'sign-in': 'Sign in screen',
+    'signin': 'Sign in screen'
+  };
+  notify((destinationNames[destination] || 'This screen') + ' is ready to connect in the prototype.');
+  return false;
+}
+function deactivateProximity() {
+  proximityActive=false;reference=null;
+  try{localStorage.setItem(key,JSON.stringify({proximityActive:false,referenceLocation:null}));}catch{}
+  updateDiscoveryUI();renderFeed();
+  window.dispatchEvent(new CustomEvent('haven:reference-location-change',{detail:{proximityActive:false,referenceLocation:null}}));
+  if(!route('offers-feed',{intent:'deactivate-proximity'}))notify('Proximity is off. General discovery is shown locally; navigation awaits connection.');
+}
+function distanceFor(offer){
+  const distance=offer.distancesByReference?.[reference?.id]??(!host.offers&&reference?.id==='demo-loom'?offer.distanceKm:undefined);
+  return typeof distance==='number'&&Number.isFinite(distance)&&distance>=0?distance:Infinity;
+}
+function visibleOffers(){
+  const results=offers.filter(o=>(selectedCategory==='all'||o.category===selectedCategory)&&(!searchQuery||o.title.toLocaleLowerCase().includes(searchQuery))&&matchesPrice(o));
+  return proximityActive?results.sort((a,b)=>distanceFor(a)-distanceFor(b)):results;
+}
+function updateDiscoveryUI(){
+  $('proximity-banner').hidden=!proximityActive;
+  const locationButton=$('location-btn');
+  locationButton.dataset.active=String(proximityActive);
+  locationButton.setAttribute('aria-label',proximityActive?'Change reference location':'Choose reference location');
+  locationButton.title=proximityActive?'Change reference location':'Choose reference location';
+  $('proximity-status-label').textContent='Proximity active';
+  $('proximity-place-name').textContent=reference?[reference.name,reference.city].filter(Boolean).join(' · '):'';
+  document.querySelector('.feed-ordering-note').textContent=proximityActive?'Nearest to farthest · All distances included':'General discovery';
+}
+function createOfferCard(offer,ctx={}){
+  const card=document.createElement('article');card.className='offer-card';card.dataset.offerId=offer.id;
+  const link=document.createElement('a');link.className='offer-link';link.href='haven-offer-detail.html?offerId='+encodeURIComponent(offer.id);link.setAttribute('aria-label','View '+offer.title+', by '+offer.provider.name);
+  link.onclick=e=>{if(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;e.preventDefault();route('offer-detail',{offerId:offer.id,providerId:offer.provider.id});};
+  const image=document.createElement('div');image.className='offer-thumb';image.setAttribute('aria-hidden','true');image.innerHTML='<svg><use href="#i-image"/></svg>';
+  const copy=document.createElement('div');copy.className='offer-copy';
+  const title=document.createElement('h2');title.className='offer-title';title.textContent=offer.title;title.title=offer.title;
+  const detail=document.createElement('p');detail.className='offer-detail';
+  const distance=Number.isFinite(ctx.distanceKm)&&ctx.distanceKm>=0?' · '+new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(ctx.distanceKm)+' km':'';
+  detail.textContent=offer.provider.name+distance;detail.title=detail.textContent;
+  const price=document.createElement('p');price.className='offer-price';price.textContent=new Intl.NumberFormat('en',{maximumFractionDigits:2}).format(offer.price)+' '+offer.currency;
+  copy.append(title,detail,price);link.append(image,copy);
+  const save=document.createElement('button');save.type='button';save.className='offer-save-btn';save.setAttribute('aria-label',(isSaved(offer.id)?'Unsave ':'Save ')+offer.title);save.setAttribute('aria-pressed',String(isSaved(offer.id)));save.innerHTML='<svg aria-hidden="true"><use href="#i-heart"/></svg>';
+  save.onclick=()=>{
+    if(!user?.id){
+      pendingSave=offer.id;
+      authIntent='save';
+      $('auth-title').textContent='Sign in to save offers';
+      $('auth-description').textContent='Save offers and return to them with your Haven account.';
+      openDialog($('auth-dialog'),save);
+      return;
+    }
+    saveOffer(offer.id,!isSaved(offer.id));
+  };
+  card.append(link,save);return card;
+}
+function renderFeed(){
+  const visible=visibleOffers(),fragment=document.createDocumentFragment();
+  $('feed-count').textContent=visible.length+' '+(visible.length===1?'offer':'offers');
+  for(const offer of visible)fragment.append(createOfferCard(offer,proximityActive?{distanceKm:distanceFor(offer)}:{}));
+  if(!visible.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='No offers match your search or filters.';fragment.append(empty);}
+  $('offers-grid').replaceChildren(fragment);
+}
+// Event Listeners
+$('deactivate-proximity-btn').onclick = deactivateProximity;
+$('location-btn').onclick=()=>route('reference-location',{intent:proximityActive?'change-reference-location':'activate-proximity'});
+$('search-input').oninput = (e) => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  renderFeed();
+};
+// Category Rail
+const categoryChips = document.querySelectorAll('.category-chip');
+categoryChips.forEach(chip => {
+  chip.onclick = () => {
+    categoryChips.forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    selectedCategory = chip.dataset.category;
+    renderFeed();
+  };
+});
+// Bottom tabs navigation
+$('tab-offers').onclick = () => notify('You are already viewing Offers.');
+$('tab-messages').onclick = () => {
+  if (!user?.id) {
+    authIntent = 'messages';
+    pendingSave = null;
+    $('auth-title').textContent = 'Sign in to view messages';
+    $('auth-description').textContent = 'Sign in to view and reply to messages, message providers, and keep conversations in sync.';
+    openDialog($('auth-dialog'), $('tab-messages'));
+    return;
+  }
+  route('messages');
+};
+$('tab-profile').onclick = () => {
+  if (!user?.id) {
+    authIntent = 'profile';
+    pendingSave = null;
+    $('auth-title').textContent = 'Sign in to your profile';
+    $('auth-description').textContent = 'Sign in to manage your profile, view saved offers, and customize your activity.';
+    openDialog($('auth-dialog'), $('tab-profile'));
+    return;
+  }
+  route('my-profile');
+};
+function updateNavigation(){ $('tab-profile-label').textContent = user?.id ? 'Profile' : 'Log in'; }
+$('filter-btn').onclick=openFilters;
+// Shared dialog lifecycle: native modal focus trap, Escape, backdrop dismissal,
+// and explicit focus return. Closing the filter sheet discards its draft.
+const dialogTriggers=new WeakMap();
+function openDialog(dialog,trigger){dialogTriggers.set(dialog,trigger);dialog.showModal();}
+function closeDialog(dialog){dialog.close();}
+for(const dialog of [$('filter-sheet'),$('auth-dialog')]){
+ dialog.addEventListener('close',()=>{const trigger=dialogTriggers.get(dialog);if(trigger?.isConnected)trigger.focus();});
+ dialog.addEventListener('click',e=>{if(e.target!==dialog)return;const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){if(dialog.id==='auth-dialog'){pendingSave=null;authIntent='save';}closeDialog(dialog);}});
+}
+$('auth-dialog').addEventListener('cancel',()=>pendingSave=null);
+function cancelAuth(){pendingSave=null;authIntent='save';closeDialog($('auth-dialog'));}
+$('auth-cancel').onclick=cancelAuth;$('close-auth').onclick=cancelAuth;
+$('auth-signin').onclick=()=>{
+  const offerId=pendingSave;
+  const currentIntent=authIntent;
+  const destinationAfterAuth=currentIntent==='messages'?'messages':currentIntent==='profile'?'my-profile':undefined;
+  if(route('sign-in',{intent:currentIntent,offerId,returnTo:'offers-feed',destinationAfterAuth})){
+    pendingSave=null;
+    authIntent='save';
+    closeDialog($('auth-dialog'));
+  }
+};
+function isSaved(id){if(!user?.id)return false;try{return host.getSaved?!!host.getSaved(id,user.id):localStorage.getItem(`haven:saved:${user.id}:${id}`)==='true';}catch{return false;}}
+function updateSaves(){for(const card of $('offers-grid').children){const button=card.querySelector('.offer-save-btn');if(!button)continue;const saved=isSaved(card.dataset.offerId),offer=offers.find(o=>o.id===card.dataset.offerId);button.setAttribute('aria-pressed',String(saved));button.setAttribute('aria-label',(saved?'Unsave ':'Save ')+offer.title);}}
+function saveOffer(id,value){if(!user?.id)return;try{if(host.setSaved)host.setSaved(id,user.id,value);else localStorage.setItem(`haven:saved:${user.id}:${id}`,String(value));updateSaves();window.dispatchEvent(new CustomEvent('haven:saved-change',{detail:{offerId:id,userId:user.id,saved:value}}));notify(value?'Offer saved.':'Removed from saved offers.');}catch{notify('Unable to update saved offers. Please try again.');}}
+window.addEventListener('storage',updateSaves);window.addEventListener('haven:saved-change',updateSaves);
+function matchesPrice(offer){return (filters.currency==='ALL'||offer.currency===filters.currency)&&(filters.min===null||offer.price>=filters.min)&&(filters.max===null||offer.price<=filters.max);}
+const currencies=[...new Set(offers.map(o=>o.currency).filter(Boolean))].sort();
+for(const currency of currencies){const option=document.createElement('option');option.value=currency;option.textContent=currency;$('currency-select').append(option);}
+function syncPriceInputs(){const disabled=$('currency-select').value==='ALL';$('min-price').disabled=disabled;$('max-price').disabled=disabled;if(disabled){$('min-price').value='';$('max-price').value='';}}
+function openFilters(){$('currency-select').value=filters.currency;$('min-price').value=filters.min??'';$('max-price').value=filters.max??'';$('filter-error').hidden=true;syncPriceInputs();openDialog($('filter-sheet'),$('filter-btn'));}
+$('currency-select').onchange=syncPriceInputs;
+$('close-filters').onclick=()=>closeDialog($('filter-sheet'));
+// Drag only from the grip, so scrolling and editing the form stay native.
+const filterSheet=$('filter-sheet'),grip=$('filter-handle');
+let drag=null,ignoreGripClick=false;
+function resetGrip(){const pointerId=drag?.id;drag=null;delete filterSheet.dataset.dragging;filterSheet.style.removeProperty('transform');if(pointerId!==undefined&&grip.hasPointerCapture?.(pointerId))grip.releasePointerCapture(pointerId);}
+grip.addEventListener('pointerdown',event=>{if(!event.isPrimary||event.button!==0||!filterSheet.open)return;ignoreGripClick=false;drag={id:event.pointerId,startY:event.clientY,offset:0};filterSheet.dataset.dragging='true';try{grip.setPointerCapture(event.pointerId);}catch{}});
+grip.addEventListener('pointermove',event=>{if(drag?.id!==event.pointerId)return;drag.offset=Math.max(0,event.clientY-drag.startY);if(Math.abs(event.clientY-drag.startY)>8)ignoreGripClick=true;filterSheet.style.transform=`translateY(${drag.offset}px)`;});
+grip.addEventListener('pointerup',event=>{if(drag?.id!==event.pointerId)return;const offset=Math.max(0,event.clientY-drag.startY),threshold=Math.min(96,Math.max(56,filterSheet.getBoundingClientRect().height*.2));if(offset>8)ignoreGripClick=true;resetGrip();if(offset>=threshold)closeDialog(filterSheet);});
+grip.addEventListener('pointercancel',()=>{ignoreGripClick=true;resetGrip();});
+grip.addEventListener('lostpointercapture',()=>{if(drag){ignoreGripClick=true;resetGrip();}});
+grip.addEventListener('click',event=>{if(event.detail!==0&&ignoreGripClick){ignoreGripClick=false;return;}closeDialog(filterSheet);});
+filterSheet.addEventListener('close',resetGrip);
+$('reset-filters').onclick=()=>{$('currency-select').value='ALL';syncPriceInputs();$('filter-error').hidden=true;};
+function updateFilterSummary(){const active=filters.currency!=='ALL',parts=[];if(active)parts.push(filters.currency);if(filters.min!==null)parts.push('Min '+filters.min);if(filters.max!==null)parts.push('Max '+filters.max);$('filter-summary').hidden=!active;$('filter-summary-text').textContent=parts.join(' · ');const count=Number(active)+Number(filters.min!==null)+Number(filters.max!==null);$('filter-badge').hidden=!count;$('filter-badge').textContent=count;$('filter-btn').setAttribute('aria-label',count?'Open discovery filters, '+count+' active':'Open discovery filters');}
+$('filter-form').onsubmit=e=>{e.preventDefault();const currency=$('currency-select').value,inputs=[$('min-price'),$('max-price')];
+ const values=inputs.map(input=>input.value===''?null:input.valueAsNumber);
+ const invalid=inputs.findIndex((input,i)=>input.validity.badInput||(values[i]!==null&&(!Number.isFinite(values[i])||values[i]<0)));
+ const reversed=values[0]!==null&&values[1]!==null&&values[0]>values[1];
+ if(invalid>=0||reversed){$('filter-error').textContent=reversed?'Maximum price must be at least the minimum price.':'Enter a valid price of zero or more.';$('filter-error').hidden=false;inputs[invalid>=0?invalid:1].focus();return;}
+ filters={currency,min:currency==='ALL'?null:values[0],max:currency==='ALL'?null:values[1]};updateFilterSummary();renderFeed();closeDialog($('filter-sheet'));};
+$('clear-filters').onclick=()=>{filters={currency:'ALL',min:null,max:null};updateFilterSummary();renderFeed();$('filter-btn').focus();};
+// Initial render
+updateDiscoveryUI();renderFeed();updateNavigation();
+// Global export for prototype integration
+window.HavenProximityFeed = {
+  setReferenceLocation(loc) {
+    return route('reference-location',{draftLocation:loc});
+  },
+  deactivateProximity,
+  setUser(next){user=next?.id?next:null;updateNavigation();const id=pendingSave;pendingSave=null;authIntent='save';if($('auth-dialog').open)closeDialog($('auth-dialog'));if(user&&id)saveOffer(id,true);else updateSaves();}
+};
+})();
+</script>
+</body>
+</html>

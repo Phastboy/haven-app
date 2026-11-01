@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Manage offer · Haven</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#fff;color:#111827;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;color:inherit;cursor:pointer;border:0;box-shadow:none}button:focus-visible,a:focus-visible{outline:2px solid #111827;outline-offset:3px}button:disabled{cursor:default}svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}button svg{pointer-events:none}[hidden]{display:none!important}
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);--safe-right:env(safe-area-inset-right,0px)}
+/* Explicit 390 × 844 prototype mode. Set data-preview="false" for a device
+   or a host that already reserves status-bar and home-indicator space. */
+html[data-preview="true"]{--safe-top:47px;--safe-bottom:34px;--safe-left:0px;--safe-right:0px}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}.content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;padding-bottom:16px}.hero{position:relative;aspect-ratio:4/3;width:100%;background:#f3f4f6;display:grid;place-items:center}.hero>.placeholder{width:40px;height:40px;color:#9ca3af}.frosted-control{position:absolute;top:calc(var(--safe-top) + 12px);width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:#fff;color:#111827;transition:transform .12s}.frosted-control:active{transform:scale(.95)}.back{left:calc(var(--safe-left) + 12px)}.save{right:calc(var(--safe-right) + 12px)}
+@supports ((backdrop-filter:blur(12px)) or (-webkit-backdrop-filter:blur(12px))){.frosted-control{background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}}
+@media(prefers-reduced-transparency:reduce){.frosted-control{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
+.save[aria-pressed="true"] svg{fill:currentColor}.details{padding:20px max(16px,var(--safe-right)) 0 max(16px,var(--safe-left));display:flex;flex-direction:column;gap:28px}.category{font-size:12px;color:#6b7280;margin:0 0 8px}h1{font-size:24px;line-height:1.3;letter-spacing:-.025em;margin:0;font-weight:600}.price{font-size:23px;font-weight:600;margin:10px 0 0}.currency{font-size:14px;font-weight:500;color:#6b7280;margin-left:6px}.provider{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:#f9fafb;border-radius:12px;padding:12px;min-height:68px}.avatar{height:44px;width:44px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;background:#e5e7eb;font-size:14px;font-weight:600}.provider-copy{min-width:0;flex:1;overflow-wrap:anywhere}.provider-name{font-weight:600;display:block;font-size:16px}.secondary{display:block;font-size:13px;color:#6b7280;margin-top:3px}h2{font-size:14px;font-weight:600;margin:0 0 10px}.description{font-size:16px;line-height:1.65;margin:0;white-space:pre-line;overflow-wrap:anywhere}.location{margin:0;background:#f9fafb;padding:16px;border-radius:12px;display:grid;gap:14px}.location div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}.location dt{font-size:13px;color:#6b7280}.location dd{margin:0;font-size:14px;text-align:right;overflow-wrap:anywhere}.action-area{flex:none;padding:12px max(16px,var(--safe-right)) calc(var(--safe-bottom) + 12px) max(16px,var(--safe-left));background:#fff}.primary{width:100%;min-height:48px;padding:12px 16px;background:#111827;color:white;border-radius:8px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}.primary:active{background:#000}.toast{position:fixed;z-index:100;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);width:max-content;background:#111827;color:white;padding:10px 16px;border-radius:12px;font-size:13px;pointer-events:none}
+dialog{position:fixed;inset:auto 0 0;margin:0 auto;width:100%;max-width:480px;max-height:calc(100dvh - var(--safe-top) - 12px);overflow:auto;border:0;border-radius:20px 20px 0 0;padding:24px 20px calc(var(--safe-bottom) + 16px);color:#111827;background:white}dialog::backdrop{background:rgba(0,0,0,.4)}dialog h2{font-size:20px}dialog p{font-size:15px;color:#6b7280;line-height:1.5;margin:0 0 24px}.cancel{width:100%;min-height:44px;background:#f3f4f6;border-radius:8px;margin-top:10px}.sheet-actions{display:flex;flex-direction:column;gap:0}@media(max-width:340px){.location div{grid-template-columns:1fr;gap:4px}.location dd{text-align:left}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.hero{display:block;overflow:hidden}.gallery-track{position:absolute;inset:0;height:100%;width:100%;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}.gallery-track::-webkit-scrollbar{display:none}.gallery-track:focus-visible{outline:2px solid #111827;outline-offset:-3px}.gallery-slide{margin:0;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start;display:grid;place-items:center;background:#f3f4f6}.gallery-slide img{width:100%;height:100%;min-height:0;object-fit:contain;display:block}.gallery-slide .placeholder{width:40px;height:40px;color:#9ca3af}.gallery-arrow{top:50%;transform:translateY(-50%);z-index:1}.gallery-arrow:active{transform:translateY(-50%) scale(.95)}.gallery-arrow[aria-disabled="true"]{opacity:.4;cursor:default}.gallery-prev{left:12px}.gallery-next{right:12px}.gallery-count{position:absolute;right:12px;bottom:12px;padding:6px 10px;border-radius:20px;background:rgba(255,255,255,.9);font-size:12px;color:#111827;pointer-events:none}.hero>.back,.hero>.save{z-index:2}
+.manage-header{flex:none;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:calc(var(--safe-top) + 8px) 16px 10px;background:#fff;border-bottom:1px solid #f3f4f6}.manage-header h1{font-size:15px;text-align:center;letter-spacing:-.01em}.header-back{width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:transparent}.manage-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.manage-actions #edit{grid-column:1/-1}.view-public{min-height:48px;display:flex;align-items:center;justify-content:center}.delete-offer{min-height:48px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;color:#b42318;font-weight:500}.delete-offer:hover{background:#fef3f2}.delete-dialog{position:fixed;inset:auto 0 0;margin:0 auto;width:100%;max-width:480px;padding:24px 20px calc(var(--safe-bottom) + 16px);border:0;border-radius:20px 20px 0 0;color:#111827;background:#fff}.delete-dialog::backdrop{background:rgba(0,0,0,.4)}.delete-dialog h2{font-size:20px;margin:0 0 8px}.delete-dialog p{font-size:14px;line-height:1.55;color:#6b7280;margin:0 0 20px}.delete-dialog-actions{display:flex;gap:8px}.delete-dialog-actions button{flex:1;min-height:48px;border-radius:8px;padding:10px}.keep-delete{background:#f3f4f6}.confirm-delete{background:#b42318;color:#fff}.view-public{min-height:44px;padding:10px 16px;background:#fff;border-radius:8px;font-weight:500}.access-state{flex:1;padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}.access-state h2{font-size:20px;margin:0}.access-state p{font-size:14px;color:#6b7280;line-height:1.6;margin:0;max-width:300px}.access-state button{max-width:300px}.preview-note{font-size:12px;color:#6b7280;margin:0 0 8px}</style>
+</head>
+<body>
+<svg aria-hidden="true" hidden=""><defs>
+<symbol id="i-back" viewbox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-heart" viewbox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"></path></symbol>
+<symbol id="i-image" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8" cy="8" r="1"></circle><path d="m3 17 5-5 4 4 3-3 6 6"></path></symbol>
+<symbol id="i-chevron" viewbox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="m16 3 5 5M4 20l4-1 13-13a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></symbol>
+<symbol id="i-message" viewbox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8v.5Z"></path></symbol>
+</defs></svg>
+<div class="app" id="app">
+<header class="manage-header"><button type="button" id="back" class="header-back" aria-label="Back"><svg aria-hidden="true"><use href="#i-back"/></svg></button><h1>Manage offer</h1><span aria-hidden="true"></span></header>
+<section class="access-state" id="access-state" hidden><h2 id="access-title"></h2><p id="access-copy"></p><button class="primary" id="access-action" type="button"></button></section>
+<main hidden aria-label="Your offer details" class="content" id="offer-content" tabindex="-1">
+<section class="hero" aria-label="Offer images" aria-roledescription="carousel">
+<div class="gallery-track" id="gallery-track" tabindex="0" aria-label="Offer images. Use left and right arrow keys to browse."></div>
+<button type="button" class="frosted-control gallery-arrow gallery-prev" id="gallery-prev" aria-label="Previous image" aria-controls="gallery-track" hidden><svg aria-hidden="true"><use href="#i-back"></use></svg></button>
+<button type="button" class="frosted-control gallery-arrow gallery-next" id="gallery-next" aria-label="Next image" aria-controls="gallery-track" hidden><svg aria-hidden="true"><use href="#i-chevron"></use></svg></button>
+<span class="gallery-count" id="gallery-count" role="status" aria-live="polite" aria-atomic="true" hidden></span>
+</section>
+<div class="details">
+<section aria-labelledby="offer-title"><p class="category" id="category"></p><h1 id="offer-title"></h1><p class="price"><span id="price"></span><span class="currency" id="currency"></span></p></section>
+<button class="provider" id="provider"><span aria-hidden="true" class="avatar" id="initials"></span><span class="provider-copy"><span class="provider-name" id="provider-name"></span><span class="secondary">Your profile</span></span><svg aria-hidden="true"><use href="#i-chevron"></use></svg></button>
+<section aria-labelledby="about-heading"><h2 id="about-heading">About this offer</h2><p class="description" id="description"></p></section>
+<section aria-labelledby="location-heading"><h2 id="location-heading">Offer location</h2><dl class="location" id="location"></dl></section>
+</div>
+</main>
+<footer class="action-area manage-actions" id="manage-actions" hidden><button type="button" class="primary" id="edit"><svg aria-hidden="true"><use href="#i-edit"/></svg>Edit offer</button><button type="button" class="view-public" id="view-public">View public</button><button type="button" class="delete-offer" id="delete">Delete</button></footer>
+</div>
+<dialog class="delete-dialog" id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-copy"><h2 id="delete-title">Delete this offer?</h2><p id="delete-copy">This will remove the offer from your Haven listings. This action can’t be undone.</p><div class="delete-dialog-actions"><button type="button" class="keep-delete" id="keep-offer">Keep offer</button><button type="button" class="confirm-delete" id="confirm-delete">Delete offer</button></div></dialog>
+<div aria-atomic="true" aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
+<script>
+(()=>{'use strict';
+const hosted=!!window.HavenPrototype,host=window.HavenPrototype||{},$=id=>document.getElementById(id);
+const sample={id:'aso-oke',title:'Hand-woven Aso Oke textile',category:'Craft & Making',price:120,currency:'USD',provider:{id:'olumide-adeleke',name:'Olumide Adeleke'},description:'Authentic hand-loomed Aso Oke strip-woven cotton and wild silk textile from Western Nigeria. Crafted using heritage loom techniques with subtle geometric motifs. Ideal for wall hangings, upholstery, or tailored garments.',location:[['Neighbourhood','Yaba Art District'],['City','Lagos'],['Country','Nigeria']]};
+const offer=hosted?(host.offer||null):sample;
+let user=hosted?(host.user||null):{id:sample.provider.id,name:sample.provider.name},timer;
+const content=$('offer-content');
+const gallery=$('gallery-track'),images=Array.isArray(offer?.images)?offer.images.slice(0,5):[];
+let imageIndex=0;
+function placeholder(){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('placeholder');svg.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#i-image');svg.append(use);return svg;}
+function renderGallery(){
+  gallery.replaceChildren();
+  const count=images.length;
+  for(let index=0;index<Math.max(1,count);index++){
+    const slide=document.createElement('figure');slide.className='gallery-slide';slide.setAttribute('role','group');slide.setAttribute('aria-roledescription','slide');slide.setAttribute('aria-label',count?`Image ${index+1} of ${count}`:'No images provided');
+    const item=images[index],url=typeof item==='string'?item:item?.url||item?.src||'';
+    if(/^(https?:|data:image\/|blob:|\/)/i.test(url)){
+      const img=document.createElement('img');img.src=url;img.alt=item?.alt||`${offer.title}, image ${index+1} of ${count}`;img.draggable=false;
+      img.onerror=()=>{img.replaceWith(placeholder());slide.setAttribute('aria-label',`Image ${index+1} of ${count} unavailable`);};slide.append(img);
+    }else slide.append(placeholder());
+    gallery.append(slide);
+  }
+  const multiple=count>1;gallery.tabIndex=multiple?0:-1;
+  gallery.setAttribute('aria-label',multiple?'Offer images. Swipe or use left and right arrow keys to browse.':count?'Offer image':'No offer images provided');
+  $('gallery-prev').hidden=!multiple;$('gallery-next').hidden=!multiple;$('gallery-count').hidden=!multiple;updateGallery();
+}
+function updateGallery(){
+  $('gallery-count').textContent=`${imageIndex+1} / ${images.length}`;
+  // Keep both controls focusable at the endpoints so browsing does not lose focus.
+  $('gallery-prev').setAttribute('aria-disabled',String(imageIndex===0));
+  $('gallery-next').setAttribute('aria-disabled',String(imageIndex>=images.length-1));
+}
+function selectImage(index){imageIndex=Math.max(0,Math.min(images.length-1,index));updateGallery();gallery.scrollTo({left:imageIndex*gallery.clientWidth,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+$('gallery-prev').onclick=()=>selectImage(imageIndex-1);$('gallery-next').onclick=()=>selectImage(imageIndex+1);
+gallery.addEventListener('keydown',event=>{if(images.length<2)return;let target;if(event.key==='ArrowLeft')target=imageIndex-1;else if(event.key==='ArrowRight')target=imageIndex+1;else if(event.key==='Home')target=0;else if(event.key==='End')target=images.length-1;else return;event.preventDefault();selectImage(target);});
+gallery.addEventListener('scroll',()=>{if(!gallery.clientWidth||images.length<2)return;const next=Math.max(0,Math.min(images.length-1,Math.round(gallery.scrollLeft/gallery.clientWidth)));if(next!==imageIndex){imageIndex=next;updateGallery();}},{passive:true});
+window.addEventListener('resize',()=>{gallery.scrollTo({left:imageIndex*gallery.clientWidth,behavior:'instant'});});
+function ownsOffer(){return !!user?.id&&!!offer?.id&&user.id===offer.provider?.id;}
+function notify(text){clearTimeout(timer);$('toast').textContent=text;$('toast').hidden=false;timer=setTimeout(()=>{$('toast').hidden=true},3200);}
+function route(destination,extra={}){const detail={destination,offerId:offer?.id,returnTo:'manage-offer',...extra};try{if(host.navigate?.(detail)===true)return true;if(!window.dispatchEvent(new CustomEvent('haven:navigate',{detail,cancelable:true})))return true;}catch{notify('Unable to open this screen. Please try again.');return false;}notify('This screen is awaiting a prototype connection.');return false;}
+function render(){
+ const allowed=ownsOffer();content.hidden=!allowed;$('manage-actions').hidden=!allowed;$('access-state').hidden=allowed;
+ for(const id of ['offer-title','category','price','currency','provider-name','initials','description'])$(id).textContent='';$('location').replaceChildren();gallery.replaceChildren();
+ if(!allowed){$('access-title').textContent=!offer?'Offer unavailable':!user?'Sign in to manage your offer':'This offer belongs to someone else';$('access-copy').textContent=!offer?'The offer could not be found.':!user?'Use the account that owns this offer.':'You can view the public offer, but only its owner can manage it.';$('access-action').textContent=!offer?'Back':!user?'Sign in':'View public offer';return;}
+ renderGallery();$('offer-title').textContent=offer.title;$('category').textContent=offer.category;$('price').textContent=offer.price===0?'Free':new Intl.NumberFormat('en',{maximumFractionDigits:2}).format(offer.price);$('currency').textContent=offer.price===0?'':offer.currency;$('provider-name').textContent=offer.provider.name;$('provider').setAttribute('aria-label','Open your profile');$('initials').textContent=offer.provider.name.split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('');$('description').textContent=offer.description||'';
+ const entries=(offer.location||[]).filter(entry=>entry[1]);if(entries.length){for(const [label,value]of entries){const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;row.append(dt,dd);$('location').append(row);}}else $('location').textContent='Location information has not been provided.';
+}
+const deleteDialog=$('delete-dialog');$('delete').onclick=()=>{if(!ownsOffer())return;deleteDialog.showModal();$('keep-offer').focus();};$('keep-offer').onclick=()=>deleteDialog.close();deleteDialog.addEventListener('click',e=>{if(e.target===deleteDialog){const r=deleteDialog.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)deleteDialog.close();}});$('confirm-delete').onclick=()=>{if(!ownsOffer())return;const confirmed=route('delete-offer',{confirmed:true,userId:user.id});if(!confirmed)notify('Deletion is awaiting a prototype connection. Your offer is still here.');deleteDialog.close();};$('back').onclick=()=>route('back');$('edit').onclick=()=>{if(ownsOffer())route('edit-offer')};$('view-public').onclick=()=>{if(ownsOffer())route('offer-detail')};$('provider').onclick=()=>{if(ownsOffer())route('my-profile')};$('access-action').onclick=()=>!offer?route('back'):!user?route('sign-in',{intent:'manage-offer'}):route('offer-detail');
+window.HavenManageOffer={setUser(next){user=next||null;if(deleteDialog.open)deleteDialog.close();render();},offerDeleted(id){if(id===offer?.id){notify('Offer deleted.');route('my-offers',{intent:'deleted-offer'});}},getContext(){return {offerId:offer?.id,scrollTop:content.scrollTop,imageIndex}},restoreContext(context){if(ownsOffer()&&context?.offerId===offer.id){content.scrollTop=context.scrollTop||0;if(images.length)selectImage(context.imageIndex||0);}}};render();
+})();
+</script></body></html>

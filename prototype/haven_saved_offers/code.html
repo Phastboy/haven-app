@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en" data-preview="true">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saved offers · Haven</title>
+<style>
+/* Foundation */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 prototype mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+}
+/* Header */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 10px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-back {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-back:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+}
+.header-spacer {
+  width: 44px;
+  margin-right: -8px;
+}
+/* Scrollable Content */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 24px) max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+}
+.content > * { flex-shrink:0; }
+/* Grid layout matching Haven feed */
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 12px;
+  align-items: stretch;
+}
+/* OfferCard owns its image, three text lines, and independent save control */
+.offer-card {
+  position: relative;
+  min-width: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.offer-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 12px;
+}
+.offer-link:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 4px;
+}
+.offer-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.offer-thumb svg {
+  width: 30px;
+  height: 30px;
+}
+.offer-copy {
+  padding-top: 10px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.offer-title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  margin: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  color: #111827;
+}
+.offer-detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 400;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.offer-price {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Frosted-glass heart button */
+.offer-save-btn {
+  position: absolute;
+  z-index: 2;
+  right: 4px;
+  top: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #111827;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.offer-save-btn:active {
+  transform: scale(0.92);
+}
+.offer-save-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+.offer-save-btn[aria-pressed="false"] svg {
+  fill: none;
+}
+@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+  .offer-save-btn {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .offer-save-btn {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 20px;
+  margin: auto 0;
+  gap: 16px;
+}
+.empty-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+.empty-icon-wrap svg {
+  width: 26px;
+  height: 26px;
+}
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin: 0;
+}
+.empty-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin: 0;
+  max-width: 280px;
+}
+.explore-btn {
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 12px 24px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+.explore-btn:active {
+  background: #000000;
+  transform: scale(0.98);
+}
+/* Toast */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+/* Accessibility live region */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 3-3 6 6"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></symbol>
+  </defs>
+</svg>
+<div class="app" id="app">
+  <!-- Pinned Safe-Area Header -->
+  <header class="header">
+    <button class="header-back" id="back-btn" aria-label="Back to Offers feed">
+      <svg aria-hidden="true"><use href="#i-back"/></svg>
+    </button>
+    <div class="header-center">
+      <h1 class="header-title" style="margin:0">Saved offers</h1>
+      <span class="header-count" id="header-count">5 offers</span>
+    </div>
+    <div class="header-spacer" aria-hidden="true"></div>
+  </header>
+  <!-- Scrollable Collection Grid -->
+  <main class="content" id="main-content" tabindex="-1">
+    <div class="saved-grid" id="saved-grid" role="region" aria-label="Saved offers collection">
+      <article class="offer-card" data-offer-id="aso-oke"><a class="offer-link" href="haven-offer-detail.html?offerId=aso-oke" aria-label="View Hand-woven Aso Oke textile, by Olumide Adeleke"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Hand-woven Aso Oke textile">Hand-woven Aso Oke textile</h2><p class="offer-detail" title="Olumide Adeleke">Olumide Adeleke</p><p class="offer-price">120 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Remove Hand-woven Aso Oke textile from saved offers" aria-pressed="true"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="stoneware-pottery"><a class="offer-link" href="haven-offer-detail.html?offerId=stoneware-pottery" aria-label="View Minimalist stoneware vase, by Amaya Chen"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Minimalist stoneware vase">Minimalist stoneware vase</h2><p class="offer-detail" title="Amaya Chen">Amaya Chen</p><p class="offer-price">45 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Remove Minimalist stoneware vase from saved offers" aria-pressed="true"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="loomed-linen"><a class="offer-link" href="haven-offer-detail.html?offerId=loomed-linen" aria-label="View Natural raw loomed linen runner, by Sören Lindqvist"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Natural raw loomed linen runner">Natural raw loomed linen runner</h2><p class="offer-detail" title="Sören Lindqvist">Sören Lindqvist</p><p class="offer-price">60 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Remove Natural raw loomed linen runner from saved offers" aria-pressed="true"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="washi-lantern"><a class="offer-link" href="haven-offer-detail.html?offerId=washi-lantern" aria-label="View Handcrafted washi paper lantern, by Kenji Sato"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Handcrafted washi paper lantern">Handcrafted washi paper lantern</h2><p class="offer-detail" title="Kenji Sato">Kenji Sato</p><p class="offer-price">85 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Remove Handcrafted washi paper lantern from saved offers" aria-pressed="true"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article><article class="offer-card" data-offer-id="harvest-basket"><a class="offer-link" href="haven-offer-detail.html?offerId=harvest-basket" aria-label="View Heirloom farm greens &amp; vegetables, by Chidi Okafor"><div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"></use></svg></div><div class="offer-copy"><h2 class="offer-title" title="Heirloom farm greens &amp; vegetables">Heirloom farm greens &amp; vegetables</h2><p class="offer-detail" title="Chidi Okafor">Chidi Okafor</p><p class="offer-price">28 USD</p></div></a><button type="button" class="offer-save-btn" aria-label="Remove Heirloom farm greens &amp; vegetables from saved offers" aria-pressed="true"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button></article>
+    </div>
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" hidden>
+      <div class="empty-icon-wrap" aria-hidden="true">
+        <svg><use href="#i-heart"/></svg>
+      </div>
+      <h2 class="empty-title" id="empty-title">No saved offers yet</h2>
+      <p class="empty-description">
+        Offers you save while browsing will appear here so you can return to them.
+      </p>
+      <button type="button" class="explore-btn" id="explore-btn">
+        <svg aria-hidden="true"><use href="#i-compass"/></svg>
+        <span>Explore offers</span>
+      </button>
+    </div>
+  </main>
+</div>
+<!-- Accessible Toast & Live Region -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<script>
+(()=>{
+'use strict';
+/* Host supplies savedOffers (complete saved collection) or offers plus getSaved,
+   user, getSaved/setSaved, and navigate. Same account-specific keys/events as feed.
+   No host: isolated signed-in presentation fixture; no real account is fabricated. */
+const standalone=!Object.prototype.hasOwnProperty.call(window,'HavenPrototype');
+const host = window.HavenPrototype || {};
+const $ = id => document.getElementById(id);
+// Initial collection with authentic sample data adhering strictly to instructions:
+// Includes "Hand-woven Aso Oke textile," by "Olumide Adeleke," priced at "120 USD,"
+// alongside consistent fictional sample offers.
+const sampleOffers=[
+ {id:'aso-oke',title:'Hand-woven Aso Oke textile',provider:{id:'olumide-adeleke',name:'Olumide Adeleke'},price:120,currency:'USD'},
+ {id:'stoneware-pottery',title:'Minimalist stoneware vase',provider:{id:'amaya-chen',name:'Amaya Chen'},price:45,currency:'USD'},
+ {id:'loomed-linen',title:'Natural raw loomed linen runner',provider:{id:'soren-lindqvist',name:'Sören Lindqvist'},price:60,currency:'USD'},
+ {id:'washi-lantern',title:'Handcrafted washi paper lantern',provider:{id:'kenji-sato',name:'Kenji Sato'},price:85,currency:'USD'},
+ {id:'harvest-basket',title:'Heirloom farm greens & vegetables',provider:{id:'chidi-okafor',name:'Chidi Okafor'},price:28,currency:'USD'}
+];
+let user=host.user||null;
+let source=structuredClone(host.savedOffers||host.offers||(standalone?sampleOffers:[]));
+const explicitlySaved=new Set((host.savedOffers||[]).map(o=>o.id));
+const localOverrides=new Map();
+let demoSaved=new Set(sampleOffers.map(o=>o.id));
+function isSaved(id){
+ if(standalone)return demoSaved.has(id);
+ if(!user)return false;
+ if(host.getSaved)return !!host.getSaved(id,user.id);
+ if(localOverrides.has(id))return localOverrides.get(id);
+ try{const value=localStorage.getItem(`haven:saved:${user.id}:${id}`);if(value!==null)return value==='true';}catch{}
+ return explicitlySaved.has(id);
+}
+function collection(){return source.filter(o=>isSaved(o.id));}
+let timer;
+function notify(message) {
+  clearTimeout(timer);
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  timer = setTimeout(() => { toast.hidden = true; }, 3600);
+}
+function route(destination, extra = {}) {
+  const detail = {
+    destination,
+    returnTo: 'saved-offers',
+    ...extra
+  };
+  try {
+    if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+    const event = new CustomEvent('haven:navigate', { detail, cancelable: true });
+    if (!window.dispatchEvent(event)) return true;
+  } catch (err) {
+    console.error('Haven navigation failed', err);
+    notify('Navigation failed. Please try again.');
+    return false;
+  }
+  const destinationNames = {
+    'back': 'Back navigation',
+    'offers-feed': 'Offers feed',
+    'offer-detail': 'Offer detail',
+    'signin': 'Sign in'
+  };
+  notify((destinationNames[destination] || destination) + ' is awaiting a prototype connection.');
+  return false;
+}
+function removeOffer(offerId,triggerBtn){
+ const offers=collection(),index=offers.findIndex(o=>o.id===offerId);if(index<0)return;
+ const removed=offers[index],hadFocus=triggerBtn===document.activeElement;
+ try{
+  if(standalone)demoSaved.delete(offerId);
+  else {if(!user)return;if(host.setSaved)host.setSaved(offerId,user.id,false);else localStorage.setItem(`haven:saved:${user.id}:${offerId}`,'false');localOverrides.set(offerId,false);}
+ }catch{notify('Unable to remove this offer. Please try again.');return;}
+ renderCollection();
+ if(hadFocus){const buttons=$('saved-grid').querySelectorAll('.offer-save-btn');const target=buttons[Math.min(index,buttons.length-1)]||$('explore-btn');target.focus();}
+ notify(`Removed “${removed.title}” from saved offers. ${collection().length} remaining.`);
+ if(!standalone)window.dispatchEvent(new CustomEvent('haven:saved-change',{detail:{offerId,userId:user.id,saved:false}}));
+}
+function createCardElement(offer) {
+  const card = document.createElement('article');
+  card.className = 'offer-card';
+  card.dataset.offerId = offer.id;
+  // Detail link
+  const link = document.createElement('a');
+  link.className = 'offer-link';
+  link.href = `haven-offer-detail.html?offerId=${encodeURIComponent(offer.id)}`;
+  link.setAttribute('aria-label', `View ${offer.title}, by ${offer.provider.name}`);
+  link.onclick = e => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    route('offer-detail', { offerId: offer.id, providerId: offer.provider.id });
+  };
+  // Image placeholder
+  const thumb = document.createElement('div');
+  thumb.className = 'offer-thumb';
+  thumb.setAttribute('aria-hidden', 'true');
+  thumb.innerHTML = '<svg><use href="#i-image"/></svg>';
+  // Text copy
+  const copy = document.createElement('div');
+  copy.className = 'offer-copy';
+  const title = document.createElement('h2');
+  title.className = 'offer-title';
+  title.textContent = offer.title;
+  title.title = offer.title;
+  const provider = document.createElement('p');
+  provider.className = 'offer-detail';
+  provider.textContent = offer.provider.name;
+  provider.title = offer.provider.name;
+  const price = document.createElement('p');
+  price.className = 'offer-price';
+  price.textContent = offer.price===0?'Free':new Intl.NumberFormat('en',{maximumFractionDigits:2}).format(offer.price)+' '+offer.currency;
+  copy.append(title, provider, price);
+  link.append(thumb, copy);
+  // Independent frosted-glass save toggle (removes from saved)
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'offer-save-btn';
+  saveBtn.setAttribute('aria-label', `Remove ${offer.title} from saved offers`);
+  saveBtn.setAttribute('aria-pressed', 'true');
+  saveBtn.innerHTML = '<svg aria-hidden="true"><use href="#i-heart"/></svg>';
+  saveBtn.onclick = e => {
+    e.stopPropagation();
+    removeOffer(offer.id, saveBtn);
+  };
+  card.append(link, saveBtn);
+  return card;
+}
+function renderCollection() {
+  const grid = $('saved-grid');
+  const emptyState = $('empty-state');
+  const countEl = $('header-count');
+  const offers=collection();
+  const guest=!standalone&&!user;
+  const count = offers.length;
+  $('empty-title').textContent=guest?'Sign in to view saved offers':'No saved offers yet';
+  document.querySelector('.empty-description').textContent=guest?'Your saved offers belong to your Haven account.':'Offers you save while browsing will appear here so you can return to them.';
+  $('explore-btn').querySelector('span').textContent=guest?'Sign in':'Explore offers';
+  countEl.textContent = count === 1 ? '1 offer' : `${count} offers`;
+  if (count === 0) {
+    grid.hidden = true;
+    emptyState.hidden = false;
+    grid.replaceChildren();
+  } else {
+    grid.hidden = false;
+    emptyState.hidden = true;
+    const fragment = document.createDocumentFragment();
+    for (const offer of offers) {
+      fragment.append(createCardElement(offer));
+    }
+    grid.replaceChildren(fragment);
+  }
+}
+// Global actions
+$('back-btn').onclick = () => route('back', { intent: 'back-to-feed' });
+$('explore-btn').onclick=()=>!standalone&&!user?route('signin',{intent:'view-saved-offers'}):route('offers-feed',{intent:'explore-offers'});
+// Synchronize account-specific changes without switching discovery mode.
+function refresh(event){if(event?.detail?.userId&&event.detail.userId!==user?.id)return;const focus=document.activeElement,card=focus?.closest?.('.offer-card'),id=card?.dataset.offerId,index=card?[...$('saved-grid').children].indexOf(card):-1;
+ if(event?.detail?.offerId)localOverrides.set(event.detail.offerId,event.detail.saved);
+ renderCollection();
+ if(id){const cards=[...$('saved-grid').children];const target=cards.find(c=>c.dataset.offerId===id)||cards[Math.min(index,cards.length-1)];(target?.querySelector(focus.classList.contains('.offer-save-btn')?'.offer-save-btn':'.offer-link')||$('explore-btn')).focus();}}
+window.addEventListener('haven:saved-change',refresh);
+window.addEventListener('storage',event=>{if(user&&(!event.key||event.key.startsWith(`haven:saved:${user.id}:`))){localOverrides.clear();refresh();}});
+window.HavenSavedOffers={
+ getOffers:()=>structuredClone(collection()),
+ removeOffer(id){const card=[...$('saved-grid').children].find(c=>c.dataset.offerId===id);if(card)removeOffer(id,card.querySelector('.offer-save-btn'));},
+ setUser(next,nextSavedOffers=[]){user=next;source=structuredClone(nextSavedOffers);explicitlySaved.clear();nextSavedOffers.forEach(o=>explicitlySaved.add(o.id));localOverrides.clear();renderCollection();},
+ setOffers(next){source=structuredClone(next);explicitlySaved.clear();next.forEach(o=>explicitlySaved.add(o.id));renderCollection();},
+ reset(){if(!standalone)return;demoSaved=new Set(sampleOffers.map(o=>o.id));source=structuredClone(sampleOffers);renderCollection();}
+};
+renderCollection();
+})();
+</script>
+</body>
+</html>

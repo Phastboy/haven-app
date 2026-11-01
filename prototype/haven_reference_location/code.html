@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Choose reference location · Haven</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Explicit 390 × 844 prototype mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+
+.app {
+  max-width: 390px;
+  margin: 0 auto;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.05);
+}
+
+/* Header */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 8px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-back {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-back:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.header-spacer {
+  width: 44px;
+  margin-right: -8px;
+}
+
+/* Scrollable Content */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  padding: 20px max(16px, var(--safe-right)) 24px max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Narrative / Educational Card */
+.explainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin: 0;
+}
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0;
+  color: #111827;
+}
+.description {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #4b5563;
+  margin: 4px 0 0 0;
+}
+.privacy-callout {
+  margin-top: 4px;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #374151;
+}
+.privacy-callout svg {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+  margin-top: 1px;
+}
+
+/* Search Form Section */
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.input-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.search-wrapper:focus-within {
+  border-color: #111827;
+  background: #ffffff;
+}
+.search-icon {
+  margin-left: 14px;
+  color: #6b7280;
+  pointer-events: none;
+}
+.search-input {
+  flex: 1;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 12px 12px 10px;
+  font-size: 15px;
+  color: #111827;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.search-input::placeholder {
+  color: #9ca3af;
+}
+.clear-btn {
+  width: 44px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: #6b7280;
+  border-radius: 0 10px 10px 0;
+}
+.clear-btn:hover, .clear-btn:active {
+  color: #111827;
+}
+
+/* Selected Location Preview Badge */
+.selected-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #111827;
+}
+.selected-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.selected-pin-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #111827;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.selected-pin-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.selected-text {
+  min-width: 0;
+}
+.selected-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.selected-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+}
+.remove-selection-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  border-radius: 6px;
+}
+.remove-selection-btn:active {
+  color: #111827;
+  background: #e5e7eb;
+}
+
+/* Results / Suggestions Section */
+.results-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.results-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.results-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+}
+.locations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.location-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f9fafb;
+  text-align: left;
+  transition: background-color 0.12s ease, transform 0.1s ease;
+}
+.location-item:active {
+  background: #f3f4f6;
+  transform: scale(0.99);
+}
+.location-item[aria-selected="true"] {
+  background: #111827;
+  color: #ffffff;
+}
+.location-item-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.location-glyph {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eceff1;
+  color: #4b5563;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.location-item[aria-selected="true"] .location-glyph {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+.location-texts {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.location-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.location-subtitle {
+  font-size: 12px;
+  margin: 0;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.location-item[aria-selected="true"] .location-subtitle {
+  color: #d1d5db;
+}
+.check-indicator {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: none;
+}
+.location-item[aria-selected="true"] .check-indicator {
+  display: block;
+}
+
+.empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+/* Anchored Action Area */
+.action-area {
+  flex: none;
+  padding: 12px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 12px) max(16px, var(--safe-left));
+  background: #ffffff;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+.primary-btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.12s ease;
+}
+.primary-btn:active:not(:disabled) {
+  background: #000000;
+}
+.secondary-btn {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.secondary-btn:active {
+  color: #111827;
+  background: #f9fafb;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" hidden="">
+<defs>
+<symbol id="i-back" viewbox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-search" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></symbol>
+<symbol id="i-pin" viewbox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></symbol>
+<symbol id="i-shield" viewbox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></symbol>
+<symbol id="i-check" viewbox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+<symbol id="i-cross" viewbox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+<symbol id="i-compass" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></symbol>
+</defs>
+</svg>
+<div class="app" id="app">
+<!-- Pinned Safe-Area Header -->
+<header class="header">
+<button aria-label="Back to Offers feed" class="header-back" id="back-btn">
+<svg aria-hidden="true"><use href="#i-back"></use></svg>
+</button>
+<span class="header-title">Reference location</span>
+<div aria-hidden="true" class="header-spacer"></div>
+</header>
+<!-- Scrollable Main Form -->
+<main class="content" id="main-content" tabindex="-1">
+<!-- Explainer / Principle Introduction -->
+<section aria-labelledby="heading-title" class="explainer">
+<p class="eyebrow">Local relevance on request</p>
+<h1 class="page-title" id="heading-title">Choose a reference location</h1>
+<p class="description">
+        Haven orders offers from nearest to farthest relative to the place you specify below. Distant offers remain visible and fully accessible.
+      </p>
+<div class="privacy-callout" role="note">
+<svg aria-hidden="true"><use href="#i-shield"></use></svg>
+<div>
+<strong>Privacy first:</strong> We never track or query your device’s physical GPS location. You decide the single reference point used for discovery.
+        </div>
+</div>
+</section>
+<!-- Place Search Input -->
+<section aria-labelledby="search-label" class="search-section">
+<label class="input-label" for="location-search" id="search-label">Find a neighbourhood or district</label>
+<div class="search-wrapper">
+<svg aria-hidden="true" class="search-icon"><use href="#i-search"></use></svg>
+<input aria-autocomplete="list" aria-controls="locations-list" autocomplete="off" class="search-input" id="location-search" placeholder="e.g. Loom Square, Old Town" spellcheck="false" type="search"/>
+<button aria-label="Clear location search" class="clear-btn" hidden="" id="clear-btn" type="button">
+<svg aria-hidden="true"><use href="#i-cross"></use></svg>
+</button>
+</div>
+</section>
+<!-- Currently Selected Location Card (Dynamic) -->
+<div class="selected-card" hidden="" id="selection-card">
+<div class="selected-info">
+<div aria-hidden="true" class="selected-pin-icon">
+<svg><use href="#i-pin"></use></svg>
+</div>
+<div class="selected-text">
+<p class="selected-name" id="selected-name-label"></p>
+<p class="selected-meta" id="selected-meta-label">Selected reference location</p>
+</div>
+</div>
+<button aria-label="Clear selected location" class="remove-selection-btn" id="remove-selection-btn" type="button">
+        Change
+      </button>
+</div>
+<!-- Suggested / Searched Locations List -->
+<section aria-labelledby="results-title" class="results-section">
+<div class="results-header">
+<h2 class="results-title" id="results-title">Available reference locations</h2>
+<span aria-live="polite" class="eyebrow" id="results-count">4 places</span>
+</div>
+<div aria-label="Reference locations" class="locations-list" id="locations-list" role="listbox">
+<!-- Sample locations rendered dynamically -->
+</div>
+<div class="empty-state" hidden="" id="empty-state">
+        No reference locations found matching your search. Try searching for "Loom", "Harbour", or "Market".
+      </div>
+</section>
+</main>
+<!-- Anchored Action Area -->
+<footer class="action-area">
+<button aria-disabled="true" class="primary-btn" disabled="" id="confirm-btn" type="button">
+<svg aria-hidden="true"><use href="#i-compass"></use></svg>
+<span id="confirm-label">Select a location to activate</span>
+</button>
+<button class="secondary-btn" id="reset-discovery-btn" type="button">
+      Keep general discovery (no reference)
+    </button>
+</footer>
+</div>
+<!-- Accessible Toast Notification for Prototype Destinations -->
+<div aria-atomic="true" aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
+<script>
+/* HOST INTEGRATION
+   window.HavenPrototype = {
+     referenceLocation: null | { id, name, area, city, country },
+     navigate: (detail) => boolean,
+     origin: 'offers-feed'
+   }
+*/
+(() => {
+  'use strict';
+
+  const host = window.HavenPrototype || {};
+  const $ = id => document.getElementById(id);
+
+  // Available reference locations matching user specification
+  const SAMPLE_LOCATIONS = [
+    {
+      id: 'loom-square',
+      name: 'Loom Square',
+      area: 'Old Town Quarter',
+      city: 'Central Haven',
+      country: 'Haven Territory',
+      note: 'Textile artisans, weavers, and handcrafted tapestries'
+    },
+    {
+      id: 'harbour-gardens',
+      name: 'Harbour Gardens',
+      area: 'Waterfront Floral District',
+      city: 'South Basin',
+      country: 'Haven Territory',
+      note: 'Coastal botanicals, herbalists, and tea makers'
+    },
+    {
+      id: 'market-cross',
+      name: 'Market Cross',
+      area: 'Civic Exchange & Arcade',
+      city: 'Upper Haven',
+      country: 'Haven Territory',
+      note: 'Fresh seasonal harvests, ceramicists, and bakers'
+    },
+    {
+      id: 'hillview-quarter',
+      name: 'Hillview Quarter',
+      area: 'Northern Terraces',
+      city: 'Highland Ridge',
+      country: 'Haven Territory',
+      note: 'Woodworking ateliers, joinery, and stoneware studios'
+    }
+  ];
+
+  let selectedLocation = host.referenceLocation || null;
+  let timer;
+
+  const searchInput = $('location-search');
+  const clearBtn = $('clear-btn');
+  const locationsList = $('locations-list');
+  const emptyState = $('empty-state');
+  const resultsCount = $('results-count');
+  const confirmBtn = $('confirm-btn');
+  const confirmLabel = $('confirm-label');
+  const resetBtn = $('reset-discovery-btn');
+  const selectionCard = $('selection-card');
+  const selectedNameLabel = $('selected-name-label');
+  const removeSelectionBtn = $('remove-selection-btn');
+  const backBtn = $('back-btn');
+
+  function notify(text) {
+    clearTimeout(timer);
+    $('toast').textContent = text;
+    $('toast').hidden = false;
+    timer = setTimeout(() => { $('toast').hidden = true; }, 3400);
+  }
+
+  function route(destination, extra = {}) {
+    const detail = {
+      destination,
+      referenceLocation: selectedLocation,
+      proximityActive: !!selectedLocation,
+      returnTo: host.origin || 'offers-feed',
+      ...extra
+    };
+
+    try {
+      if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+      const event = new CustomEvent('haven:navigate', { detail, cancelable: true });
+      if (!window.dispatchEvent(event)) return true;
+    } catch (error) {
+      console.error('Haven navigation error', error);
+      notify('Unable to complete navigation.');
+      return false;
+    }
+
+    const labels = {
+      'offers-feed': 'The Offers feed',
+      'back': 'Back navigation'
+    };
+    notify((labels[destination] || 'The destination screen') + ' is ready to connect in the prototype.');
+    return false;
+  }
+
+  function renderLocations(query = '') {
+    const clean = query.trim().toLowerCase();
+    const filtered = SAMPLE_LOCATIONS.filter(item => {
+      if (!clean) return true;
+      return item.name.toLowerCase().includes(clean) ||
+             item.area.toLowerCase().includes(clean) ||
+             item.city.toLowerCase().includes(clean) ||
+             item.note.toLowerCase().includes(clean);
+    });
+
+    locationsList.replaceChildren();
+
+    if (filtered.length === 0) {
+      emptyState.hidden = false;
+      resultsCount.textContent = '0 results';
+      return;
+    }
+
+    emptyState.hidden = true;
+    resultsCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'place' : 'places'}`;
+
+    filtered.forEach(loc => {
+      const isSelected = selectedLocation && selectedLocation.id === loc.id;
+      const itemBtn = document.createElement('button');
+      itemBtn.type = 'button';
+      itemBtn.className = 'location-item';
+      itemBtn.setAttribute('role', 'option');
+      itemBtn.setAttribute('aria-selected', String(isSelected));
+      itemBtn.dataset.id = loc.id;
+
+      itemBtn.innerHTML = `
+        <div class="location-item-main">
+          <div class="location-glyph" aria-hidden="true">
+            <svg><use href="#i-pin"/></svg>
+          </div>
+          <div class="location-texts">
+            <p class="location-title">${escapeHtml(loc.name)}</p>
+            <p class="location-subtitle">${escapeHtml(loc.area)} · ${escapeHtml(loc.city)}</p>
+          </div>
+        </div>
+        <svg class="check-indicator" aria-hidden="true"><use href="#i-check"/></svg>
+      `;
+
+      itemBtn.onclick = () => {
+        selectLocation(loc);
+      };
+
+      locationsList.appendChild(itemBtn);
+    });
+  }
+
+  function selectLocation(loc) {
+    selectedLocation = loc;
+    updateState();
+    notify(`Selected ${loc.name}`);
+  }
+
+  function clearSelectedLocation() {
+    selectedLocation = null;
+    updateState();
+    searchInput.focus();
+  }
+
+  function updateState() {
+    if (selectedLocation) {
+      selectionCard.hidden = false;
+      selectedNameLabel.textContent = `${selectedLocation.name} (${selectedLocation.city})`;
+      confirmBtn.disabled = false;
+      confirmBtn.setAttribute('aria-disabled', 'false');
+      confirmLabel.textContent = `Activate proximity for ${selectedLocation.name}`;
+    } else {
+      selectionCard.hidden = true;
+      confirmBtn.disabled = true;
+      confirmBtn.setAttribute('aria-disabled', 'true');
+      confirmLabel.textContent = 'Select a location to activate';
+    }
+
+    // Refresh selections in the list
+    renderLocations(searchInput.value);
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+  }
+
+  // Event Listeners
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value;
+    clearBtn.hidden = val.length === 0;
+    renderLocations(val);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.hidden = true;
+    renderLocations('');
+    searchInput.focus();
+  });
+
+  removeSelectionBtn.addEventListener('click', () => {
+    clearSelectedLocation();
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    if (!selectedLocation) return;
+    try {
+      localStorage.setItem('haven:referenceLocation', JSON.stringify(selectedLocation));
+      window.dispatchEvent(new CustomEvent('haven:reference-location-change', {
+        detail: { referenceLocation: selectedLocation, proximityActive: true }
+      }));
+    } catch (e) {}
+
+    route('offers-feed', {
+      intent: 'activate-proximity',
+      referenceLocation: selectedLocation
+    });
+  });
+
+  resetBtn.addEventListener('click', () => {
+    try {
+      localStorage.removeItem('haven:referenceLocation');
+      window.dispatchEvent(new CustomEvent('haven:reference-location-change', {
+        detail: { referenceLocation: null, proximityActive: false }
+      }));
+    } catch (e) {}
+
+    selectedLocation = null;
+    updateState();
+    notify('General discovery restored (no proximity ordering)');
+    setTimeout(() => {
+      route('offers-feed', {
+        intent: 'deactivate-proximity',
+        referenceLocation: null
+      });
+    }, 400);
+  });
+
+  backBtn.addEventListener('click', () => {
+    route('back');
+  });
+
+  // Global Prototype Controller
+  window.HavenReferenceLocation = {
+    getLocation: () => selectedLocation,
+    setLocation: (loc) => {
+      selectedLocation = loc;
+      updateState();
+    },
+    reset: () => {
+      selectedLocation = null;
+      updateState();
+    }
+  };
+
+  // Initial load check from localStorage if host has none
+  if (!selectedLocation) {
+    try {
+      const stored = localStorage.getItem('haven:referenceLocation');
+      if (stored) selectedLocation = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  updateState();
+})();
+</script>
+</body></html>

@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="en" data-preview="true">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Profile · Haven</title>
+<style>
+/* Foundation & Design Tokens */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 Mobile Prototype Mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+/* Header */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 10px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  margin: 0;
+}
+.header-view-public {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.header-view-public:active {
+  background: #f9fafb;
+  color: #111827;
+}
+/* Scrollable Content Container */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  width: 100%;
+  max-width: 512px;
+  align-self: center;
+  padding: 24px max(16px, var(--safe-right)) 24px max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+}
+/* Profile Identity Header Section */
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.avatar-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  position: relative;
+}
+.avatar-wrap svg {
+  width: 36px;
+  height: 36px;
+}
+.profile-name {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin: 0 0 4px;
+}
+.profile-handle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 10px;
+}
+.profile-bio {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+  max-width: 310px;
+  margin: 0 0 16px;
+}
+.edit-profile-btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 19px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.edit-profile-btn:active {
+  transform: scale(0.97);
+  background: #f3f4f6;
+}
+.edit-profile-btn svg {
+  width: 14px;
+  height: 14px;
+}
+/* Compact Quick Navigation Rows */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #f3f4f6;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+.nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 0 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #f9fafb;
+  text-decoration: none;
+  color: #111827;
+  transition: background-color 0.15s ease;
+}
+.nav-row:last-child {
+  border-bottom: 0;
+}
+.nav-row:active {
+  background: #f9fafb;
+}
+.nav-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nav-row-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #4b5563;
+  display: grid;
+  place-items: center;
+}
+.nav-row-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.nav-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+.nav-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+}
+.nav-row-count {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+}
+.nav-row-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+/* Section Header for Offers */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  margin: 0;
+}
+.section-link {
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.section-link:active {
+  color: #111827;
+}
+/* Fixed 2-Column Offers Grid */
+.offers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 12px;
+  align-items: stretch;
+}
+.offer-card {
+  position: relative;
+  min-width: 0;
+  background: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.12s ease;
+}
+.offer-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 12px;
+}
+.offer-card:active {
+  transform: scale(0.98);
+}
+.offer-card:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 4px;
+}
+.offer-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: #f3f4f6;
+  border: 1px solid #f3f4f6;
+  color: #9ca3af;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  position: relative;
+}
+.offer-thumb svg {
+  width: 32px;
+  height: 32px;
+}
+.offer-copy {
+  padding-top: 8px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.offer-title {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.offer-provider {
+  font-size: 13px;
+  line-height: 16px;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.offer-price {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Empty State (When zero offers) */
+.empty-offers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 16px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px dashed #e5e7eb;
+}
+.empty-offers-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+.empty-offers-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.empty-offers-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px;
+}
+.empty-offers-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6b7280;
+  margin: 0 0 16px;
+  max-width: 240px;
+}
+.btn-create-offer {
+  min-height: 44px;
+  padding: 0 18px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.btn-create-offer:active {
+  background: #000000;
+  transform: scale(0.97);
+}
+.btn-create-offer svg {
+  width: 16px;
+  height: 16px;
+}
+/* Signed-Out State */
+.signed-out-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 20px;
+  margin: auto 0;
+  gap: 16px;
+}
+.signed-out-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+.signed-out-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.signed-out-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin: 0;
+}
+.signed-out-desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin: 0;
+  max-width: 280px;
+}
+.btn-signin {
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 12px 28px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+.btn-signin:active {
+  background: #000000;
+  transform: scale(0.98);
+}
+/* Bottom Tab Navigation Bar */
+.bottom-nav {
+  position: relative;
+  flex: none;
+  background: #ffffff;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  padding: 6px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 6px) max(16px, var(--safe-left));
+  z-index: 20;
+}
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  gap: 3px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  position: relative;
+}
+.nav-tab.active {
+  color: #111827;
+  font-weight: 600;
+}
+.nav-tab.active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 2px;
+  background: #111827;
+  border-radius: 1px;
+}
+.nav-tab svg {
+  width: 20px;
+  height: 20px;
+}
+/* Accessible Toast */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+</style>
+</head>
+<body>
+<!-- Vector Icons -->
+<svg hidden aria-hidden="true">
+  <defs>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 3-3 6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-offers" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-messages" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-signin" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
+  </defs>
+</svg>
+<div class="app" id="app">
+  <!-- Pinned Header -->
+  <header class="header">
+    <h1 class="header-title">My profile</h1>
+    <button type="button" class="header-view-public" id="btn-view-public" aria-label="View public profile">
+      <span>Public view</span>
+      <svg aria-hidden="true"><use href="#i-external"/></svg>
+    </button>
+  </header>
+  <!-- Scrollable Main View -->
+  <main class="content" id="main-content" tabindex="-1">
+    <!-- Authenticated State -->
+    <div id="auth-state" class="auth-container">
+      <!-- Profile Hero -->
+      <section class="profile-hero">
+        <div class="avatar-wrap" aria-hidden="true">
+          <svg><use href="#i-user"/></svg>
+        </div>
+        <h2 class="profile-name" id="profile-name">Olumide Adeleke</h2>
+        <p class="profile-bio" id="profile-bio">
+          Master weaver specializing in traditional Nigerian Aso Oke strip cloth, natural indigo dyeing, and heritage loom restoration.
+        </p>
+        <button type="button" class="edit-profile-btn" id="btn-edit-profile" aria-label="Edit your profile details">
+          <svg aria-hidden="true"><use href="#i-edit"/></svg>
+          <span>Edit profile</span>
+        </button>
+      </section>
+      <!-- Compact Navigation Rows -->
+      <section class="nav-group" aria-label="Profile navigation links">
+        <button type="button" class="nav-row" id="row-my-offers" aria-label="Open My offers">
+          <div class="nav-row-left">
+            <div class="nav-row-icon"><svg aria-hidden="true"><use href="#i-tag"/></svg></div>
+            <span class="nav-row-label">My offers</span>
+          </div>
+          <div class="nav-row-right">
+            <span class="nav-row-count" id="count-my-offers">3 offers</span>
+            <div class="nav-row-chevron"><svg aria-hidden="true"><use href="#i-chevron-right"/></svg></div>
+          </div>
+        </button>
+        <button type="button" class="nav-row" id="row-saved-offers" aria-label="Open Saved offers">
+          <div class="nav-row-left">
+            <div class="nav-row-icon"><svg aria-hidden="true"><use href="#i-heart"/></svg></div>
+            <span class="nav-row-label">Saved offers</span>
+          </div>
+          <div class="nav-row-right">
+            <span class="nav-row-count" id="count-saved-offers">5 saved</span>
+            <div class="nav-row-chevron"><svg aria-hidden="true"><use href="#i-chevron-right"/></svg></div>
+          </div>
+        </button>
+        <button type="button" class="nav-row" id="row-following" aria-label="Open People you follow">
+          <div class="nav-row-left">
+            <div class="nav-row-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div>
+            <span class="nav-row-label">Following</span>
+          </div>
+          <div class="nav-row-right">
+            <span class="nav-row-count" id="count-following">5 people</span>
+            <div class="nav-row-chevron"><svg aria-hidden="true"><use href="#i-chevron-right"/></svg></div>
+          </div>
+        </button>
+      </section>
+      <!-- Your Offers Section -->
+      <section class="offers-section" aria-label="Your offers">
+        <div class="section-header">
+          <h3 class="section-title">Your offers</h3>
+          <button type="button" class="section-link" id="link-manage-offers" aria-label="Manage your offers">
+            <span>Manage</span>
+            <svg aria-hidden="true"><use href="#i-chevron-right"/></svg>
+          </button>
+        </div>
+        <!-- 2-Column Offers Grid -->
+        <div class="offers-grid" id="offers-grid">
+          <!-- Card 1 -->
+          <article class="offer-card" data-offer-id="aso-oke">
+            <a class="offer-card-link" href="haven-offer-detail.html?offerId=aso-oke" aria-label="View Hand-woven Aso Oke textile details">
+              <div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"/></svg></div>
+              <div class="offer-copy">
+                <h4 class="offer-title" title="Hand-woven Aso Oke textile">Hand-woven Aso Oke textile</h4>
+                <p class="offer-provider">Olumide Adeleke</p>
+                <p class="offer-price">120 USD</p>
+              </div>
+            </a>
+          </article>
+          <!-- Card 2 -->
+          <article class="offer-card" data-offer-id="ceremonial-cloth">
+            <a class="offer-card-link" href="haven-offer-detail.html?offerId=ceremonial-cloth" aria-label="View Ceremonial Yoruba weave sash details">
+              <div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"/></svg></div>
+              <div class="offer-copy">
+                <h4 class="offer-title" title="Ceremonial Yoruba weave sash">Ceremonial Yoruba weave sash</h4>
+                <p class="offer-provider">Olumide Adeleke</p>
+                <p class="offer-price">65 USD</p>
+              </div>
+            </a>
+          </article>
+          <!-- Card 3 (Odd final card naturally in column 1) -->
+          <article class="offer-card" data-offer-id="loom-workshop">
+            <a class="offer-card-link" href="haven-offer-detail.html?offerId=loom-workshop" aria-label="View Private backstrap loom lesson details">
+              <div class="offer-thumb" aria-hidden="true"><svg><use href="#i-image"/></svg></div>
+              <div class="offer-copy">
+                <h4 class="offer-title" title="Private backstrap loom lesson">Private backstrap loom lesson</h4>
+                <p class="offer-provider">Olumide Adeleke</p>
+                <p class="offer-price">45 USD</p>
+              </div>
+            </a>
+          </article>
+        </div>
+        <!-- Empty Offers State -->
+        <div class="empty-offers" id="empty-offers" hidden>
+          <div class="empty-offers-icon" aria-hidden="true">
+            <svg><use href="#i-tag"/></svg>
+          </div>
+          <h4 class="empty-offers-title">You haven’t listed any offers</h4>
+          <p class="empty-offers-desc">Create your first offer to show what you provide.</p>
+          <button type="button" class="btn-create-offer" id="btn-create-offer">
+            <svg aria-hidden="true"><use href="#i-plus"/></svg>
+            <span>Create offer</span>
+          </button>
+        </div>
+      </section>
+    </div>
+    <!-- Signed-Out Guest State -->
+    <div id="signed-out-state" class="signed-out-container" hidden>
+      <div class="signed-out-icon" aria-hidden="true">
+        <svg><use href="#i-user"/></svg>
+      </div>
+      <h2 class="signed-out-title">Sign in to your profile</h2>
+      <p class="signed-out-desc">
+        Manage your profile, offers, saved offers, and people you follow.
+      </p>
+      <button type="button" class="btn-signin" id="btn-guest-signin">
+        <svg aria-hidden="true"><use href="#i-signin"/></svg>
+        <span>Sign in</span>
+      </button>
+    </div>
+  </main>
+  <!-- Bottom Navigation Bar with Profile Selected -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation">
+    <button type="button" class="nav-tab" id="tab-offers">
+      <svg aria-hidden="true"><use href="#i-offers"/></svg>
+      <span>Offers</span>
+    </button>
+    <button type="button" class="nav-tab" id="tab-messages">
+      <svg aria-hidden="true"><use href="#i-messages"/></svg>
+      <span>Messages</span>
+    </button>
+    <button type="button" class="nav-tab active" id="tab-profile" aria-current="page">
+      <svg aria-hidden="true"><use href="#i-user"/></svg>
+      <span id="tab-profile-label">Profile</span>
+    </button>
+  </nav>
+</div>
+<!-- Accessible Toast Notification -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<script>
+(()=>{
+'use strict';
+const hosted = !!window.HavenPrototype;
+const host = window.HavenPrototype || {};
+const $ = id => document.getElementById(id);
+// Established sample identity: Olumide Adeleke
+const sampleProfile = {
+  id: 'olumide-adeleke',
+  name: 'Olumide Adeleke',
+  bio: 'Master weaver specializing in traditional Nigerian Aso Oke strip cloth, natural indigo dyeing, and heritage loom restoration.'
+};
+// Established sample offers (odd count 3)
+const initialOffers = [
+  {
+    id: 'aso-oke',
+    title: 'Hand-woven Aso Oke textile',
+    provider: {id:'olumide-adeleke',name:'Olumide Adeleke'},
+    price: 120,
+    currency: 'USD'
+  },
+  {
+    id: 'ceremonial-cloth',
+    title: 'Ceremonial Yoruba weave sash',
+    provider: {id:'olumide-adeleke',name:'Olumide Adeleke'},
+    price: 65,
+    currency: 'USD'
+  },
+  {
+    id: 'loom-workshop',
+    title: 'Private backstrap loom lesson',
+    provider: {id:'olumide-adeleke',name:'Olumide Adeleke'},
+    price: 45,
+    currency: 'USD'
+  }
+];
+// Profile state
+let user = hosted ? structuredClone(host.user || null) : structuredClone(sampleProfile);
+let offers = hosted ? (host.myOffers || host.offers || []) : structuredClone(initialOffers);
+let savedOffersCount = hosted ? (host.savedOffersCount ?? host.savedOffers?.length ?? null) : 5;
+let followingCount = hosted ? (host.followingCount ?? host.followedProviders?.length ?? null) : 5;
+let toastTimer;
+function notify(message) {
+  clearTimeout(toastTimer);
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 3800);
+}
+function route(destination, extra = {}) {
+  const detail = {
+    destination,
+    userId: user?.id || null,
+    returnTo: 'my-profile',
+    ...extra
+  };
+  try {
+    if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+    const event = new CustomEvent('haven:navigate', { detail, cancelable: true });
+    if (!window.dispatchEvent(event)) return true;
+  } catch (err) {
+    console.error('Haven navigation failed', err);
+    notify('Navigation failed. Please try again.');
+    return false;
+  }
+  const destinationMap = {
+    'profile': 'Public provider profile',
+    'edit-profile': 'Edit profile',
+    'my-offers': 'My offers',
+    'saved-offers': 'Saved offers',
+    'following': 'Following',
+    'offer-detail': 'Offer detail',
+    'create-offer': 'Create offer',
+    'offers-feed': 'Offers feed',
+    'messages': 'Messages',
+    'sign-in': 'Sign in'
+  };
+  notify((destinationMap[destination] || destination) + ' is awaiting a prototype connection.');
+  return false;
+}
+function createOfferCard(offer) {
+  const card = document.createElement('article');
+  card.className = 'offer-card';
+  card.dataset.offerId = offer.id;
+  const link = document.createElement('a');
+  link.className = 'offer-card-link';
+  link.href = `haven-offer-detail.html?offerId=${encodeURIComponent(offer.id)}`;
+  link.setAttribute('aria-label', `View ${offer.title} details`);
+  link.onclick = e => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    route('offer-detail', { offerId: offer.id });
+  };
+  const thumb = document.createElement('div');
+  thumb.className = 'offer-thumb';
+  thumb.setAttribute('aria-hidden', 'true');
+  thumb.innerHTML = '<svg><use href="#i-image"/></svg>';
+  const copy = document.createElement('div');
+  copy.className = 'offer-copy';
+  const title = document.createElement('h4');
+  title.className = 'offer-title';
+  title.textContent = offer.title;
+  title.title = offer.title;
+  const provider = document.createElement('p');
+  provider.className = 'offer-provider';
+  provider.textContent = offer.provider?.name || user?.name || '';
+  const price = document.createElement('p');
+  price.className = 'offer-price';
+  price.textContent = offer.price === 0 ? 'Free' : typeof offer.price==='number' && Number.isFinite(offer.price) && offer.price>=0 && offer.currency ? `${new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(offer.price)} ${offer.currency}` : '';
+  copy.append(title, provider, price);
+  link.append(thumb, copy);
+  card.append(link);
+  return card;
+}
+function ownOffers(){return offers.filter(o=>o?.id&&(o.provider?.id||o.providerId||o.userId||o.ownerId)===user?.id);}
+function showCount(id,value,label){const el=$(id);el.hidden=!Number.isInteger(value)||value<0;el.textContent=el.hidden?'':`${value} ${label}`;}
+function renderUI() {
+  const visibleOffers=ownOffers();
+  const focusedId=document.activeElement.closest?.('[data-offer-id]')?.dataset.offerId;
+  const isAuth = !!user?.id;
+  $('auth-state').hidden = !isAuth;
+  $('signed-out-state').hidden = isAuth;
+  $('btn-view-public').hidden = !isAuth;
+  $('tab-profile-label').textContent = isAuth ? 'Profile' : 'Log in';
+  if (!isAuth) { $('profile-name').textContent='';$('profile-bio').textContent='';$('offers-grid').replaceChildren();return; }
+  // Profile data
+  $('profile-name').textContent = user.name || 'Account owner';
+  $('profile-bio').textContent = user.bio || '';
+  $('profile-bio').hidden=!user.bio;
+  // Navigation rows count indicators
+  $('count-my-offers').textContent = `${visibleOffers.length} ${visibleOffers.length === 1 ? 'offer' : 'offers'}`;
+  showCount('count-saved-offers',savedOffersCount,'saved');
+  showCount('count-following',followingCount,followingCount===1?'person':'people');
+  // Offers Grid & Empty state
+  const grid = $('offers-grid');
+  const empty = $('empty-offers');
+  if (visibleOffers.length === 0) {
+    grid.hidden = true;
+    empty.hidden = false;
+    grid.replaceChildren();
+  } else {
+    grid.hidden = false;
+    empty.hidden = true;
+    const fragment = document.createDocumentFragment();
+    for (const offer of visibleOffers) {
+      fragment.append(createOfferCard(offer));
+    }
+    grid.replaceChildren(fragment);
+  }
+  if(focusedId){const card=Array.from(grid.children).find(c=>c.dataset.offerId===focusedId);(card?.querySelector('a')||(!visibleOffers.length?$('btn-create-offer'):$('link-manage-offers'))).focus();}
+}
+// Event Bindings
+$('btn-view-public').onclick = () => route('profile', { providerId: user?.id });
+$('btn-edit-profile').onclick = () => route('edit-profile', { userId: user?.id });
+$('row-my-offers').onclick = () => route('my-offers');
+$('row-saved-offers').onclick = () => route('saved-offers');
+$('row-following').onclick = () => route('following');
+$('link-manage-offers').onclick = () => route('my-offers');
+$('btn-create-offer').onclick = () => route('create-offer', { source: 'profile-empty' });
+$('btn-guest-signin').onclick = () => route('sign-in', { intent: 'profile-signin' });
+// Bottom Tab Navigation
+$('tab-offers').onclick = () => route('offers-feed');
+$('tab-messages').onclick = () => route('messages');
+$('tab-profile').onclick = () => {
+  if (!user?.id) route('sign-in', { intent: 'tab-login' });
+  else $('main-content').scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth' });
+};
+// Global Controller API for Prototype & Tests
+window.HavenMyProfile = {
+  getUser: () => (user ? structuredClone(user) : null),
+  setUser: (next,nextOffers,counts) => {
+    const changed=(next?.id||null)!==(user?.id||null);
+    user=next?structuredClone(next):null;
+    if(changed){offers=[];savedOffersCount=null;followingCount=null;$('main-content').scrollTop=0;}
+    if(nextOffers!==undefined)offers=structuredClone(nextOffers||[]);
+    if(counts){savedOffersCount=counts.savedOffersCount??null;followingCount=counts.followingCount??null;}
+    renderUI();
+  },
+  setOffers: next => {
+    offers = structuredClone(next || []);
+    renderUI();
+  },
+  setCounts: (saved, following) => {
+    if (saved !== undefined) savedOffersCount = saved;
+    if (following !== undefined) followingCount = following;
+    renderUI();
+  },
+  reset: () => {
+    if(hosted){notify('Demo reset is only available in the standalone preview.');return;}
+    user = structuredClone(sampleProfile);
+    offers = structuredClone(initialOffers);
+    savedOffersCount = 5;
+    followingCount = 5;
+    renderUI();
+  }
+};
+for(const eventName of [name='haven:offer-created','haven:offer-updated'])window.addEventListener(eventName,e=>{
+  const d=e.detail;if(!user?.id||d?.userId!==user.id||!d.offer?.id)return;
+  const offer=structuredClone(d.offer);const index=offers.findIndex(o=>o.id===offer.id);
+  if(index>=0)offers[index]=offer;else offers.push(offer);renderUI();
+});
+renderUI();
+})();
+</script>
+</body>
+</html>

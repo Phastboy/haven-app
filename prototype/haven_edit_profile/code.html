@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en" data-preview="true">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Edit profile · Haven</title>
+<style>
+/* Foundation & Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input, textarea {
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+button svg {
+  pointer-events: none;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+/* Explicit 390 × 844 Mobile Prototype Mode */
+html[data-preview="true"] {
+  --safe-top: 47px;
+  --safe-bottom: 34px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+}
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+/* Header */
+.header {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--safe-top) + 8px) max(16px, var(--safe-right)) 10px max(16px, var(--safe-left));
+  background: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  z-index: 10;
+}
+.header-close {
+  justify-self: start;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #111827;
+  margin-left: -8px;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+.header-close:active {
+  transform: scale(0.96);
+  background: #f9fafb;
+}
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.header-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+}
+.header-spacer {
+  justify-self: end;
+  width: 44px;
+  margin-right: -8px;
+}
+/* Scrollable Main Content */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px max(16px, var(--safe-right)) 32px max(16px, var(--safe-left));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.form-container {
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Avatar Visual Cue */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.avatar-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.avatar-wrap svg {
+  width: 36px;
+  height: 36px;
+}
+.avatar-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+/* Form Field Anatomy */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+.field-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+.field-counter {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.field-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+.input-control {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #111827;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-control::placeholder {
+  color: #9ca3af;
+}
+.input-control:focus {
+  border-color: #111827;
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+.input-control.has-error {
+  border-color: #111827;
+}
+.textarea-control {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+/* Error Feedback */
+.field-error {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.field-error svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+/* Status Hint in Form */
+.form-status {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.4;
+}
+/* Anchored Bottom Bar */
+.bottom-bar {
+  position: relative;
+  flex: none;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid #f3f4f6;
+  padding: 12px max(16px, var(--safe-right)) calc(var(--safe-bottom) + 12px) max(16px, var(--safe-left));
+  display: flex;
+  justify-content: center;
+}
+.bottom-bar-inner {
+  max-width: 480px;
+  width: 100%;
+}
+.save-btn {
+  width: 100%;
+  min-height: 48px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.save-btn:active:not(:disabled) {
+  background: #000000;
+  transform: scale(0.98);
+}
+.save-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+/* Discard Changes Bottom Sheet Modal */
+.modal-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - var(--safe-top) - 12px);
+  overflow: auto;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(var(--safe-bottom) + 20px);
+  background: white;
+  color: #111827;
+  transition: transform .18s ease-out;
+}
+.modal-sheet::backdrop {
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal-sheet[data-dragging="true"] {
+  transition: none;
+}
+.modal-handle {
+  width: 88px;
+  min-height: 44px;
+  padding: 0;
+  margin: -12px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.modal-handle::before {
+  content: "";
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #9ca3af;
+}
+.modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.modal-desc {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #6b7280;
+  margin: 8px 0 0;
+}
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-btn-keep {
+  min-height: 46px;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.modal-btn-keep:active {
+  background: #000000;
+}
+.modal-btn-discard {
+  min-height: 44px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 0;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.modal-btn-discard:active {
+  background: #f3f4f6;
+}
+/* Signed-Out State */
+.signed-out-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 20px;
+  margin: auto 0;
+  gap: 16px;
+}
+.signed-out-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+.signed-out-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.signed-out-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin: 0;
+}
+.signed-out-desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin: 0;
+  max-width: 280px;
+}
+.btn-signin {
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 12px 28px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+.btn-signin:active {
+  background: #000000;
+  transform: scale(0.98);
+}
+/* Accessible Toast Notification */
+.toast {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  width: max-content;
+  background: #111827;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  box-shadow: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+</style>
+</head>
+<body>
+<!-- Vector Icons -->
+<svg hidden aria-hidden="true">
+  <defs>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-signin" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
+  </defs>
+</svg>
+<div class="app" id="app">
+  <!-- Pinned Safe-Area Header -->
+  <header class="header">
+    <button class="header-close" id="close-btn" aria-label="Leave Edit profile">
+      <svg aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+    <div class="header-center">
+      <h1 class="header-title">Edit profile</h1>
+      <span class="header-subtitle" id="profile-status-subtitle">Preview · sample identity</span>
+    </div>
+    <div class="header-spacer" aria-hidden="true"></div>
+  </header>
+  <!-- Scrollable Form Content -->
+  <main class="content" id="main-content" tabindex="-1">
+    <!-- Authenticated State -->
+    <div id="auth-state" class="form-container">
+      <!-- Avatar Placeholder Visual Cue -->
+      <section class="avatar-section" aria-label="Profile photo">
+        <div class="avatar-wrap" aria-hidden="true">
+          <svg><use href="#i-user"/></svg>
+        </div>
+        <p class="avatar-hint">Account avatar</p>
+      </section>
+      <form id="edit-profile-form" class="form-container" novalidate>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        <noscript><p>Enable JavaScript to edit your profile.</p></noscript>
+        <!-- Name Field (Required) -->
+        <div class="form-field" id="field-name">
+          <div class="field-header">
+            <label class="field-label" for="profile-name">Name</label>
+            <span class="field-counter" id="name-counter">14/50</span>
+          </div>
+          <input
+            type="text"
+            id="profile-name"
+            name="name"
+            class="input-control"
+            placeholder="Your full name"
+            maxlength="50"
+            value="Olumide Adeleke"
+            required
+            autocomplete="name"
+            aria-describedby="name-hint name-error"
+          >
+          <p class="field-hint" id="name-hint">The name displayed on your offers and profile.</p>
+          <div class="field-error" id="name-error" hidden>
+            <svg aria-hidden="true"><use href="#i-alert"/></svg>
+            <span class="error-text">Enter a name of 1–50 characters.</span>
+          </div>
+        </div>
+        <!-- Bio Field (Optional, 0–240 chars) -->
+        <div class="form-field" id="field-bio">
+          <div class="field-header">
+            <label class="field-label" for="profile-bio">Bio</label>
+            <span class="field-counter" id="bio-counter">122/240</span>
+          </div>
+          <textarea
+            id="profile-bio"
+            name="bio"
+            class="input-control textarea-control"
+            placeholder="Introduce yourself, your craft, or what you share…"
+            maxlength="240"
+            rows="4"
+            aria-describedby="bio-hint bio-error"
+          >Master weaver specializing in traditional Nigerian Aso Oke strip cloth, natural indigo dyeing, and heritage loom restoration.</textarea>
+          <p class="field-hint" id="bio-hint">A brief note about yourself (optional).</p>
+          <div class="field-error" id="bio-error" hidden>
+            <svg aria-hidden="true"><use href="#i-alert"/></svg>
+            <span class="error-text">Bio must be 240 characters or fewer.</span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <!-- Signed-Out Guest State -->
+    <div id="signed-out-state" class="signed-out-container" hidden>
+      <div class="signed-out-icon" aria-hidden="true">
+        <svg><use href="#i-user"/></svg>
+      </div>
+      <h2 class="signed-out-title">Sign in to edit your profile</h2>
+      <p class="signed-out-desc">
+        You need to be signed in to change your name and bio.
+      </p>
+      <button type="button" class="btn-signin" id="btn-guest-signin">
+        <svg aria-hidden="true"><use href="#i-signin"/></svg>
+        <span>Sign in</span>
+      </button>
+    </div>
+  </main>
+  <!-- Anchored Bottom Save Bar (safe area accounted) -->
+  <footer class="bottom-bar" id="bottom-bar">
+    <div class="bottom-bar-inner">
+      <button type="submit" form="edit-profile-form" class="save-btn" id="save-btn" disabled>
+        <span>Save changes</span>
+      </button>
+    </div>
+  </footer>
+  <!-- Discard Changes Confirmation Dialog Sheet -->
+  <dialog class="modal-sheet" id="leave-modal" aria-labelledby="leave-modal-title" aria-describedby="leave-modal-desc">
+    <button type="button" class="modal-handle" id="leave-handle" aria-label="Keep editing and close sheet" title="Drag down or tap to close"></button>
+    <h3 class="modal-title" id="leave-modal-title">Discard changes?</h3>
+    <p class="modal-desc" id="leave-modal-desc">
+      You have unsaved edits to your profile. Leaving now will discard your changes.
+    </p>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-keep" id="modal-keep-btn">Keep editing</button>
+      <button type="button" class="modal-btn-discard" id="modal-discard-btn">Discard changes</button>
+    </div>
+  </dialog>
+</div>
+<!-- Accessible Toast & Live Region -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<script>
+(()=>{
+'use strict';
+const hosted = !!window.HavenPrototype;
+const host = window.HavenPrototype || {};
+const $ = id => document.getElementById(id);
+const form = $('edit-profile-form');
+const nameInput = $('profile-name');
+const bioTextarea = $('profile-bio');
+const saveBtn = $('save-btn');
+const closeBtn = $('close-btn');
+const leaveModal = $('leave-modal');
+const modalKeepBtn = $('modal-keep-btn');
+const modalDiscardBtn = $('modal-discard-btn');
+const leaveHandle = $('leave-handle');
+// Established sample identity: Olumide Adeleke
+const sampleProfile = {
+  id: 'olumide-adeleke',
+  name: 'Olumide Adeleke',
+  bio: 'Master weaver specializing in traditional Nigerian Aso Oke strip cloth, natural indigo dyeing, and heritage loom restoration.'
+};
+let user = hosted ? (host.user ? structuredClone(host.user) : null) : structuredClone(sampleProfile);
+let currentProfile = user ? structuredClone(user) : null;
+let busy = false;
+let saved = false;
+let toastTimer;
+let revision = 0;
+// Baseline state string for tracking modifications
+let baseline;
+function getDraft() {
+  return {
+    id: currentProfile?.id || user?.id,
+    name: nameInput.value.trim(),
+    bio: bioTextarea.value.trim()
+  };
+}
+function getSnapshot() {
+  return JSON.stringify({
+    name: nameInput.value,
+    bio: bioTextarea.value
+  });
+}
+function hasChanges() {
+  return getSnapshot() !== baseline;
+}
+function notify(message) {
+  clearTimeout(toastTimer);
+  const toast = $('toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 4200);
+}
+function route(destination, extra = {}) {
+  const detail = {
+    destination,
+    userId: currentProfile?.id || user?.id || null,
+    returnTo: 'edit-profile',
+    ...extra
+  };
+  try {
+    if (typeof host.navigate === 'function' && host.navigate(detail) === true) return true;
+    if (!window.dispatchEvent(new CustomEvent('haven:navigate', { detail, cancelable: true }))) return true;
+  } catch {
+    notify('Could not open that screen. Please try again.');
+    return false;
+  }
+  const destinationMap = {
+    'my-profile': 'My profile',
+    'sign-in': 'Sign in'
+  };
+  notify((destinationMap[destination] || destination) + ' is awaiting a prototype connection.');
+  return false;
+}
+function checkValidity() {
+  const rawName = nameInput.value.trim();
+  const isNameValid = rawName.length > 0 && nameInput.value.length <= 50;
+  const isBioValid = bioTextarea.value.length <= 240;
+  return isNameValid && isBioValid;
+}
+function validateField(name) {
+  if (name === 'name') {
+    const raw = nameInput.value.trim();
+    const valid = raw.length > 0 && nameInput.value.length <= 50;
+    $('name-error').hidden = valid;
+    nameInput.classList.toggle('has-error', !valid);
+    nameInput.setAttribute('aria-invalid', String(!valid));
+    return valid;
+  }
+  if (name === 'bio') {
+    const valid = bioTextarea.value.length <= 240;
+    $('bio-error').hidden = valid;
+    bioTextarea.classList.toggle('has-error', !valid);
+    bioTextarea.setAttribute('aria-invalid', String(!valid));
+    return valid;
+  }
+  return true;
+}
+function isAuthenticated(){return !!user?.id && currentProfile?.id===user.id;}
+function sync() {
+  const isAuth=isAuthenticated();
+  $('auth-state').hidden=!isAuth;
+  $('signed-out-state').hidden=isAuth;
+  $('bottom-bar').hidden=!isAuth;
+  closeBtn.disabled=busy;
+  nameInput.disabled=busy||!isAuth;
+  bioTextarea.disabled=busy||!isAuth;
+  form.setAttribute('aria-busy',String(busy));
+  if(!isAuth){
+    saveBtn.disabled=true;
+    $('profile-status-subtitle').textContent='';
+    return;
+  }
+  const modified = hasChanges();
+  const isValid = checkValidity();
+  const canSave = modified && isValid && !busy;
+  saveBtn.disabled = !canSave;
+  saveBtn.querySelector('span').textContent = busy ? 'Saving…' : saved ? 'Changes saved' : 'Save changes';
+  closeBtn.disabled = busy;
+  nameInput.disabled = busy;
+  bioTextarea.disabled = busy;
+  $('name-counter').textContent = `${nameInput.value.length}/50`;
+  $('bio-counter').textContent = `${bioTextarea.value.length}/240`;
+  form.setAttribute('aria-busy', String(busy));
+  $('profile-status-subtitle').textContent = hosted ? (currentProfile?.name || 'Account owner') : 'Preview · sample identity';
+}
+function populateForm(profile) {
+  revision++;
+  busy = false;
+  saved = false;
+  if (leaveModal.open) leaveModal.close();
+  currentProfile = profile && user?.id && profile.id===user.id ? structuredClone(profile) : null;
+  nameInput.value = currentProfile?.name || '';
+  bioTextarea.value = currentProfile?.bio || '';
+  for (const el of form.querySelectorAll('[aria-invalid]')) el.removeAttribute('aria-invalid');
+  for (const el of form.querySelectorAll('.has-error')) el.classList.remove('has-error');
+  for (const el of form.querySelectorAll('.field-error')) el.hidden = true;
+  $('form-status').textContent = '';
+  baseline = getSnapshot();
+  sync();
+}
+// Input listeners
+nameInput.addEventListener('blur', () => {
+  if (hasChanges()) validateField('name');
+  sync();
+});
+nameInput.addEventListener('input', () => {
+  saved = false;
+  sync();
+  if (nameInput.getAttribute('aria-invalid') === 'true') {
+    validateField('name');
+  }
+});
+bioTextarea.addEventListener('blur', () => {
+  if (hasChanges()) validateField('bio');
+  sync();
+});
+bioTextarea.addEventListener('input', () => {
+  saved = false;
+  sync();
+  if (bioTextarea.getAttribute('aria-invalid') === 'true') {
+    validateField('bio');
+  }
+});
+// Initial Population
+populateForm(currentProfile);
+// Form submission handler
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const isAuth = isAuthenticated();
+  if (busy || !isAuth) return;
+  const validName = validateField('name');
+  const validBio = validateField('bio');
+  if (!validName || !validBio) {
+    notify('Please check the highlighted fields.');
+    const firstInvalid = form.querySelector('[aria-invalid="true"]');
+    if (firstInvalid) firstInvalid.focus();
+    return;
+  }
+  if (!hasChanges()) {
+    notify('No changes detected.');
+    return;
+  }
+  const updatedProfile = {
+    name: nameInput.value.trim(),
+    bio: bioTextarea.value.trim()
+  };
+  // Connected mode check
+  if (typeof host.updateProfile === 'function' || typeof host.updateUser === 'function') {
+    const updateFn = host.updateProfile || host.updateUser;
+    const token = ++revision;
+    busy = true;
+    sync();
+    try {
+      const result = await updateFn.call(host, updatedProfile, user.id);
+      if (token !== revision) return;
+      const confirmed = result?.user || result?.profile || result;
+      if (!confirmed || typeof confirmed!=='object' || confirmed.id!==user.id) throw new Error('Update was not confirmed for this account');
+      const savedUser = { ...currentProfile, ...updatedProfile, ...confirmed };
+      user=structuredClone(savedUser);
+      populateForm(savedUser);
+      saved = true;
+      sync();
+      $('form-status').textContent = 'Your profile has been updated.';
+      window.dispatchEvent(new CustomEvent('haven:profile-updated', {
+        detail: { user: structuredClone(savedUser), userId: savedUser.id }
+      }));
+      route('my-profile', { intent: 'updated-profile', userId: savedUser.id });
+    } catch (err) {
+      if (token === revision) {
+        notify('Could not save changes. Your edits are still here. Please try again.');
+      }
+    } finally {
+      if (token === revision) {
+        busy = false;
+        sync();
+      }
+    }
+  } else {
+    // Unconnected prototype preview: retain all edits and inform the user
+    notify('Saving is awaiting a prototype connection. Your edits have been retained.');
+    sync();
+  }
+});
+// Close button logic
+closeBtn.addEventListener('click', () => {
+  if (busy) return;
+  if (isAuthenticated() && hasChanges()) {
+    leaveModal.showModal();
+    modalKeepBtn.focus();
+  } else {
+    route('my-profile', { intent: 'cancelled' });
+  }
+});
+modalKeepBtn.addEventListener('click', () => {
+  leaveModal.close();
+});
+modalDiscardBtn.addEventListener('click', () => {
+  leaveModal.close();
+  populateForm(currentProfile);
+  route('my-profile', { intent: 'discarded' });
+});
+// Guard browser navigation if unsaved edits exist
+window.addEventListener('beforeunload', e => {
+  if (isAuthenticated() && hasChanges()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+// Modal click outside to dismiss
+leaveModal.addEventListener('click', e => {
+  if (e.target !== leaveModal) return;
+  const r = leaveModal.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+    leaveModal.close();
+  }
+});
+// Modal drag handle
+let drag = null;
+let ignoreClick = false;
+function resetGrip() {
+  const id = drag?.id;
+  drag = null;
+  leaveModal.style.removeProperty('transform');
+  delete leaveModal.dataset.dragging;
+  if (id !== undefined && leaveHandle.hasPointerCapture?.(id)) {
+    leaveHandle.releasePointerCapture(id);
+  }
+}
+leaveHandle.onpointerdown = e => {
+  if (!e.isPrimary || e.button !== 0) return;
+  ignoreClick = false;
+  drag = { id: e.pointerId, y: e.clientY };
+  leaveModal.dataset.dragging = 'true';
+  try { leaveHandle.setPointerCapture(e.pointerId); } catch {}
+};
+leaveHandle.onpointermove = e => {
+  if (drag?.id !== e.pointerId) return;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dy) > 8) ignoreClick = true;
+  leaveModal.style.transform = `translateY(${Math.max(0, dy)}px)`;
+};
+leaveHandle.onpointerup = e => {
+  if (drag?.id !== e.pointerId) return;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dy) > 8) ignoreClick = true;
+  resetGrip();
+  if (dy >= 72) leaveModal.close();
+};
+leaveHandle.onpointercancel = () => { ignoreClick = true; resetGrip(); };
+leaveHandle.onclick = e => {
+  if (e.detail !== 0 && ignoreClick) { ignoreClick = false; return; }
+  leaveModal.close();
+};
+leaveModal.addEventListener('close', resetGrip);
+// Guest sign in button
+$('btn-guest-signin').onclick = () => route('sign-in', { intent: 'edit-profile' });
+// Global prototype controller
+window.HavenEditProfile = {
+  getDraft,
+  hasChanges,
+  setProfile: next => { if(next?.id!==user?.id)return;populateForm(next); },
+  reset: () => populateForm(currentProfile),
+  setUser: next => {
+    clearTimeout(toastTimer);$('toast').hidden=true;
+    const changed=(next?.id||null)!==(user?.id||null);
+    user = next ? structuredClone(next) : null;
+    populateForm(user);
+    if(changed){$('main-content').scrollTop=0;(user?.id?nameInput:$('btn-guest-signin')).focus();}
+  }
+};
+})();
+</script>
+</body>
+</html>

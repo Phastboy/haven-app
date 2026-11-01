@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html data-preview="true" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Offer detail · Haven</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#fff;color:#111827;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;color:inherit;cursor:pointer;border:0;box-shadow:none}button:focus-visible,a:focus-visible{outline:2px solid #111827;outline-offset:3px}button:disabled{cursor:default}svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}button svg{pointer-events:none}[hidden]{display:none!important}
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);--safe-right:env(safe-area-inset-right,0px)}
+/* Explicit 390 × 844 prototype mode. Set data-preview="false" for a device
+   or a host that already reserves status-bar and home-indicator space. */
+html[data-preview="true"]{--safe-top:47px;--safe-bottom:34px;--safe-left:0px;--safe-right:0px}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}.content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;padding-bottom:16px}.hero{position:relative;aspect-ratio:4/3;width:100%;background:#f3f4f6;display:grid;place-items:center}.hero>.placeholder{width:40px;height:40px;color:#9ca3af}.frosted-control{position:absolute;top:calc(var(--safe-top) + 12px);width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:#fff;color:#111827;transition:transform .12s}.frosted-control:active{transform:scale(.95)}.back{left:calc(var(--safe-left) + 12px)}.save{right:calc(var(--safe-right) + 12px)}
+@supports ((backdrop-filter:blur(12px)) or (-webkit-backdrop-filter:blur(12px))){.frosted-control{background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}}
+@media(prefers-reduced-transparency:reduce){.frosted-control{background:#fff;backdrop-filter:none;-webkit-backdrop-filter:none}}
+.save[aria-pressed="true"] svg{fill:currentColor}.details{padding:20px max(16px,var(--safe-right)) 0 max(16px,var(--safe-left));display:flex;flex-direction:column;gap:28px}.category{font-size:12px;color:#6b7280;margin:0 0 8px}h1{font-size:24px;line-height:1.3;letter-spacing:-.025em;margin:0;font-weight:600}.price{font-size:23px;font-weight:600;margin:10px 0 0}.currency{font-size:14px;font-weight:500;color:#6b7280;margin-left:6px}.provider{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:#f9fafb;border-radius:12px;padding:12px;min-height:68px}.avatar{height:44px;width:44px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;background:#e5e7eb;font-size:14px;font-weight:600}.provider-copy{min-width:0;flex:1;overflow-wrap:anywhere}.provider-name{font-weight:600;display:block;font-size:16px}.secondary{display:block;font-size:13px;color:#6b7280;margin-top:3px}h2{font-size:14px;font-weight:600;margin:0 0 10px}.description{font-size:16px;line-height:1.65;margin:0;white-space:pre-line;overflow-wrap:anywhere}.location{margin:0;background:#f9fafb;padding:16px;border-radius:12px;display:grid;gap:14px}.location div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}.location dt{font-size:13px;color:#6b7280}.location dd{margin:0;font-size:14px;text-align:right;overflow-wrap:anywhere}.action-area{flex:none;padding:12px max(16px,var(--safe-right)) calc(var(--safe-bottom) + 12px) max(16px,var(--safe-left));background:#fff}.primary{width:100%;min-height:48px;padding:12px 16px;background:#111827;color:white;border-radius:8px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}.primary:active{background:#000}.toast{position:fixed;z-index:100;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);width:max-content;background:#111827;color:white;padding:10px 16px;border-radius:12px;font-size:13px;pointer-events:none}
+dialog{position:fixed;inset:auto 0 0;margin:0 auto;width:100%;max-width:480px;max-height:calc(100dvh - var(--safe-top) - 12px);overflow:auto;border:0;border-radius:20px 20px 0 0;padding:24px 20px calc(var(--safe-bottom) + 16px);color:#111827;background:white}dialog::backdrop{background:rgba(0,0,0,.4)}dialog h2{font-size:20px}dialog p{font-size:15px;color:#6b7280;line-height:1.5;margin:0 0 24px}.cancel{width:100%;min-height:44px;background:#f3f4f6;border-radius:8px;margin-top:10px}.sheet-actions{display:flex;flex-direction:column;gap:0}@media(max-width:340px){.location div{grid-template-columns:1fr;gap:4px}.location dd{text-align:left}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.hero{display:block;overflow:hidden}.gallery-track{position:absolute;inset:0;height:100%;width:100%;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}.gallery-track::-webkit-scrollbar{display:none}.gallery-track:focus-visible{outline:2px solid #111827;outline-offset:-3px}.gallery-slide{margin:0;flex:0 0 100%;min-width:0;height:100%;scroll-snap-align:start;display:grid;place-items:center;background:#f3f4f6}.gallery-slide img{width:100%;height:100%;min-height:0;object-fit:contain;display:block}.gallery-slide .placeholder{width:40px;height:40px;color:#9ca3af}.gallery-arrow{top:50%;transform:translateY(-50%);z-index:1}.gallery-arrow:active{transform:translateY(-50%) scale(.95)}.gallery-arrow[aria-disabled="true"]{opacity:.4;cursor:default}.gallery-prev{left:12px}.gallery-next{right:12px}.gallery-count{position:absolute;right:12px;bottom:12px;padding:6px 10px;border-radius:20px;background:rgba(255,255,255,.9);font-size:12px;color:#111827;pointer-events:none}.hero>.back,.hero>.save{z-index:2}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" hidden=""><defs>
+<symbol id="i-back" viewbox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+<symbol id="i-heart" viewbox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"></path></symbol>
+<symbol id="i-image" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="8" cy="8" r="1"></circle><path d="m3 17 5-5 4 4 3-3 6 6"></path></symbol>
+<symbol id="i-chevron" viewbox="0 0 24 24"><path d="m9 6 6 6-6 6"></path></symbol>
+<symbol id="i-message" viewbox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8v.5Z"></path></symbol>
+</defs></svg>
+<div class="app" id="app">
+<main aria-label="Offer details" class="content" id="offer-content" tabindex="-1">
+<section aria-label="Offer images" aria-roledescription="carousel" class="hero">
+<div aria-label="Offer images. Use left and right arrow keys to browse." class="gallery-track" id="gallery-track" tabindex="0"></div>
+<button aria-controls="gallery-track" aria-label="Previous image" class="frosted-control gallery-arrow gallery-prev" hidden="" id="gallery-prev" type="button"><svg aria-hidden="true"><use href="#i-back"></use></svg></button>
+<button aria-controls="gallery-track" aria-label="Next image" class="frosted-control gallery-arrow gallery-next" hidden="" id="gallery-next" type="button"><svg aria-hidden="true"><use href="#i-chevron"></use></svg></button>
+<span aria-atomic="true" aria-live="polite" class="gallery-count" hidden="" id="gallery-count" role="status"></span>
+<button aria-label="Back" class="frosted-control back" id="back"><svg aria-hidden="true"><use href="#i-back"></use></svg></button>
+<button aria-label="Save offer" aria-pressed="false" class="frosted-control save" id="save"><svg aria-hidden="true"><use href="#i-heart"></use></svg></button>
+</section>
+<div class="details">
+<section aria-labelledby="offer-title"><p class="category" id="category"></p><h1 id="offer-title"></h1><p class="price"><span id="price"></span><span class="currency" id="currency"></span></p></section>
+<button class="provider" id="provider"><span aria-hidden="true" class="avatar" id="initials"></span><span class="provider-copy"><span class="provider-name" id="provider-name"></span><span class="secondary">Offer provider</span></span><svg aria-hidden="true"><use href="#i-chevron"></use></svg></button>
+<section aria-labelledby="about-heading"><h2 id="about-heading">About this offer</h2><p class="description" id="description"></p></section>
+<section aria-labelledby="location-heading"><h2 id="location-heading">Offer location</h2><dl class="location" id="location"></dl></section>
+</div>
+</main>
+<footer class="action-area"><button class="primary" id="message"><svg aria-hidden="true"><use href="#i-message"></use></svg>Message provider</button></footer>
+</div>
+<dialog aria-describedby="auth-description" aria-labelledby="auth-title" id="auth-dialog"><h2 id="auth-title">Sign in to continue</h2><p id="auth-description"></p><div class="sheet-actions"><button class="primary" id="signin">Sign in</button><button class="cancel" id="cancel">Cancel</button></div></dialog>
+<div aria-atomic="true" aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
+<script>
+(()=>{
+'use strict';
+const host=window.HavenPrototype||{};
+const sample={id:'aso-oke',title:'Hand-woven Aso Oke textile',category:'Craft & Making',price:120,currency:'USD',provider:{id:'olumide-adeleke',name:'Olumide Adeleke'},description:'Authentic hand-loomed Aso Oke strip-woven cotton and wild silk textile from Western Nigeria. Crafted using heritage loom techniques with subtle geometric motifs. Ideal for wall hangings, upholstery, or tailored garments.',location:[['Neighbourhood','Yaba Art District'],['City','Lagos'],['Country','Nigeria']]};
+const offer=host.offer||sample;
+let user=host.user||null,pending=null,lastTrigger=null,timer;
+const $=id=>document.getElementById(id),dialog=$('auth-dialog'),content=$('offer-content');
+const gallery=$('gallery-track'),images=Array.isArray(offer.images)?offer.images.slice(0,5):[];
+let imageIndex=0;
+function placeholder(){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('placeholder');svg.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#i-image');svg.append(use);return svg;}
+function renderGallery(){
+  gallery.replaceChildren();
+  const count=images.length;
+  for(let index=0;index<Math.max(1,count);index++){
+    const slide=document.createElement('figure');slide.className='gallery-slide';slide.setAttribute('role','group');slide.setAttribute('aria-roledescription','slide');slide.setAttribute('aria-label',count?`Image ${index+1} of ${count}`:'No images provided');
+    const item=images[index],url=typeof item==='string'?item:item?.url||item?.src||'';
+    if(/^(https?:|data:image\/|blob:|\/)/i.test(url)){
+      const img=document.createElement('img');img.src=url;img.alt=item?.alt||`${offer.title}, image ${index+1} of ${count}`;img.draggable=false;
+      img.onerror=()=>{img.replaceWith(placeholder());slide.setAttribute('aria-label',`Image ${index+1} of ${count} unavailable`);};slide.append(img);
+    }else slide.append(placeholder());
+    gallery.append(slide);
+  }
+  const multiple=count>1;gallery.tabIndex=multiple?0:-1;
+  gallery.setAttribute('aria-label',multiple?'Offer images. Swipe or use left and right arrow keys to browse.':count?'Offer image':'No offer images provided');
+  $('gallery-prev').hidden=!multiple;$('gallery-next').hidden=!multiple;$('gallery-count').hidden=!multiple;updateGallery();
+}
+function updateGallery(){
+  $('gallery-count').textContent=`${imageIndex+1} / ${images.length}`;
+  // Keep both controls focusable at the endpoints so browsing does not lose focus.
+  $('gallery-prev').setAttribute('aria-disabled',String(imageIndex===0));
+  $('gallery-next').setAttribute('aria-disabled',String(imageIndex>=images.length-1));
+}
+function selectImage(index){imageIndex=Math.max(0,Math.min(images.length-1,index));updateGallery();gallery.scrollTo({left:imageIndex*gallery.clientWidth,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+$('gallery-prev').onclick=()=>selectImage(imageIndex-1);$('gallery-next').onclick=()=>selectImage(imageIndex+1);
+gallery.addEventListener('keydown',event=>{if(images.length<2)return;let target;if(event.key==='ArrowLeft')target=imageIndex-1;else if(event.key==='ArrowRight')target=imageIndex+1;else if(event.key==='Home')target=0;else if(event.key==='End')target=images.length-1;else return;event.preventDefault();selectImage(target);});
+gallery.addEventListener('scroll',()=>{if(!gallery.clientWidth||images.length<2)return;const next=Math.max(0,Math.min(images.length-1,Math.round(gallery.scrollLeft/gallery.clientWidth)));if(next!==imageIndex){imageIndex=next;updateGallery();}},{passive:true});
+window.addEventListener('resize',()=>{gallery.scrollTo({left:imageIndex*gallery.clientWidth,behavior:'instant'});});
+renderGallery();
+function notify(text){clearTimeout(timer);$('toast').textContent=text;$('toast').hidden=false;timer=setTimeout(()=>{$('toast').hidden=true;},3200);}
+function route(destination,extra={}){
+ const detail={destination,offerId:offer.id,providerId:offer.provider.id,intent:null,returnTo:host.origin||'offer-detail',scrollTop:content.scrollTop,...extra};
+ try{if(typeof host.navigate==='function'&&host.navigate(detail)===true)return true;
+ const event=new CustomEvent('haven:navigate',{detail,cancelable:true});
+ if(!window.dispatchEvent(event))return true;
+ }catch(error){console.error('Haven navigation failed',error);notify('Unable to open this screen. Please try again.');return false;}
+ const names={back:'Back navigation',signin:'The Sign in screen',conversation:'The conversation screen',profile:'The provider profile'};
+ notify((names[destination]||'This screen')+' is ready to connect in the prototype.');return false;
+}
+function saved(){if(!user)return false;try{if(host.getSaved)return !!host.getSaved(offer.id,user.id);return localStorage.getItem(`haven:saved:${user.id}:${offer.id}`)==='true';}catch{return false;}}
+function renderSave(){const value=saved();$('save').setAttribute('aria-pressed',String(value));$('save').setAttribute('aria-label',value?'Unsave offer':'Save offer');}
+function save(value){if(!user)return;try{if(host.setSaved)host.setSaved(offer.id,user.id,value);else localStorage.setItem(`haven:saved:${user.id}:${offer.id}`,String(value));renderSave();window.dispatchEvent(new CustomEvent('haven:saved-change',{detail:{offerId:offer.id,userId:user.id,saved:value}}));notify(value?'Offer saved':'Offer removed from saved offers');}catch{notify('Unable to save this offer. Please try again.');}}
+function askSignIn(intent,trigger){pending=intent;lastTrigger=trigger;$('auth-title').textContent=intent==='save'?'Sign in to save this offer':'Sign in to message this provider';$('auth-description').textContent='Continue with your Haven account.';dialog.showModal();$('app').inert=true;$('signin').focus();}
+function dismiss(){dialog.close();}
+dialog.addEventListener('close',()=>{$( 'app').inert=false;lastTrigger?.focus();});
+dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dismiss();});
+$('cancel').onclick=()=>{pending=null;dismiss();};
+dialog.addEventListener('cancel',()=>{pending=null;});
+$('signin').onclick=()=>{const intent=pending;dismiss();route('signin',{intent,returnTo:'offer-detail'});};
+$('save').onclick=()=>user?save(!saved()):askSignIn('save',$('save'));
+$('message').onclick=()=>user?route('conversation'):askSignIn('message',$('message'));
+$('provider').onclick=()=>route('profile');$('back').onclick=()=>route('back');
+$('offer-title').textContent=offer.title;$('category').textContent=offer.category;
+$('price').textContent=offer.price===0?'Free':new Intl.NumberFormat('en',{maximumFractionDigits:2}).format(offer.price);$('currency').textContent=offer.price===0?'':offer.currency;
+$('provider-name').textContent=offer.provider.name;$('provider').setAttribute('aria-label',`View ${offer.provider.name}'s profile`);$('initials').textContent=offer.provider.name.split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('');$('description').textContent=offer.description;
+const entries=(offer.location||[]).filter(entry=>entry[1]);
+if(entries.length){for(const [label,value]of entries){const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;row.append(dt,dd);$('location').append(row);}}else{$('location').textContent='Location information has not been provided.';}
+window.addEventListener('storage',renderSave);window.addEventListener('haven:saved-change',renderSave);
+window.HavenOfferDetail={setUser(nextUser){user=nextUser;renderSave();const action=pending;if(!user)return;pending=null;if(action==='save')save(true);if(action==='message')route('conversation');},getContext(){return{offerId:offer.id,scrollTop:content.scrollTop,imageIndex};},restoreContext(context){if(context?.offerId===offer.id){content.scrollTop=context.scrollTop||0;if(images.length)selectImage(context.imageIndex||0);}}};
+renderSave();if(host.scrollTop)content.scrollTop=host.scrollTop;
+})();
+</script>
+</body></html>
