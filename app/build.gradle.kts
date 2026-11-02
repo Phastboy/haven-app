@@ -16,7 +16,7 @@ android {
     applicationId = "com.aistudio.haven.xvykpt"
     minSdk = 24
     targetSdk = 36
-    versionCode = 7
+    versionCode = 8
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -112,12 +112,11 @@ dependencies {
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
-  // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
-  // Sign-In via Credential Manager:
-  // implementation(libs.firebase.auth)
-  // implementation(libs.androidx.credentials)
-  // implementation(libs.androidx.credentials.play.services)
-  // implementation(libs.googleid)
+  // Native Google sign-in via Credential Manager. The browser PKCE path remains available;
+  // set HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN to false to use it again.
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services)
+  implementation(libs.googleid)
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)

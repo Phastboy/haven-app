@@ -54,7 +54,7 @@ import com.example.ui.theme.InterFontFamily
 
 /**
  * Screen 2: Sign In Screen
- * Matches the sign-in prototype while Haven handles authentication in the browser.
+ * Matches the sign-in prototype. Google uses Credential Manager; email links open the browser.
  *
  * Centralized Insets:
  * - Top bar extends behind the status bar and display cutouts to the top edge.
@@ -65,6 +65,7 @@ import com.example.ui.theme.InterFontFamily
 fun SignInScreen(
   viewModel: SignInViewModel,
   onNavigateBack: () -> Unit,
+  onStartGoogleSignIn: () -> Unit = {},
   onStartBrowserSignIn: () -> Unit = {},
   onNavigateToOffers: () -> Unit = {},
   modifier: Modifier = Modifier
@@ -179,7 +180,7 @@ fun SignInScreen(
             onClick = {
               focusManager.clearFocus()
               viewModel.onGoogleSignInClicked()
-              onStartBrowserSignIn()
+              onStartGoogleSignIn()
             },
             testTag = "google_sign_in_button"
           )
