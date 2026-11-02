@@ -4,10 +4,9 @@
 
 Profile is complete: backend PR #50 shipped v0.8.3 and Android PR #4 is merged.
 Android CI repair PR #5 is merged; its post-merge build/test/lint run passed.
-The active branches are backend `feat/mobile-messages-api` and Android
-`feat/native-messages-inbox`; Android changes are being implemented and CI is
-not yet run for this branch. Read `MOBILE_MESSAGES.md` for scope and API
-contract. The endpoint must deploy before the Android integration is merged.
+Backend PR #51 is merged and v0.8.4 is deployed. The active Android branch is
+`feat/native-messages-inbox`, PR #6; read `MOBILE_MESSAGES.md` for scope and API
+contract. Verify the latest CI and review/device state before merging it.
 
 This slice is the Messages inbox only. It renders real API rows and opens each
 real Haven web thread in a themed Custom Tab. Native thread/send/live updates
@@ -39,7 +38,7 @@ prototype fidelity. Native edit/collections/detail still open real web journeys.
   owner's data budget. Java/Gradle/SDK tools are installed, but project build
   dependencies have not been fully downloaded locally.
 - Each backend API exposure increments the patch release and workspace/lockfile
-  versions. Current live version is **0.8.3**; the next exposure is **0.8.4**.
+  versions. Current live version is **0.8.4**; the next exposure is **0.8.5**.
   Cargo uses three-part versions. Android versionName is independent; it can
   start at `0.0.0`. Keep versionCode increasing for distributed builds.
 
@@ -52,9 +51,10 @@ prototype fidelity. Native edit/collections/detail still open real web journeys.
   `93cc5e72a9d6e0064f2e50dec6144ff64f068681`.
 - Android branch `feat/backend-offers-feed`, PR #2 merged at
   `107ac62494c37f515e5a91d8f9c5518aff3e8096`.
-- Backend release [v0.8.3](https://github.com/Phastboy/haven/releases/tag/v0.8.3)
-  is deployed healthy. It includes the public feed and private profile overview;
-  production checks confirmed unauthenticated profile requests return 401.
+- Backend releases [v0.8.3](https://github.com/Phastboy/haven/releases/tag/v0.8.3)
+  and [v0.8.4](https://github.com/Phastboy/haven/releases/tag/v0.8.4) are deployed.
+  The latter adds the private inbox endpoint; production unauthenticated access
+  returns 401 with `private, no-store`.
 - Backend CI: 254 tests, formatting, Clippy, docs, security, container checks pass.
   Android final feed CI [41296308456](https://github.com/Phastboy/haven-app/actions/runs/41296308456)
   passed build, unit/Robolectric tests, and Android Lint; testing APK is an artifact.
@@ -69,10 +69,9 @@ disabled, so email sign-in is unavailable.
 
 `GET /api/v1/offers` and private profile overview are live. The native profile
 uses the real profile endpoint and persists System/Light/Dark appearance.
-Current Android branch `feat/native-messages-inbox` integrates the private
-conversation inbox against backend PR #51, which must pass CI, merge, and deploy
-as v0.8.4 before the app PR can merge. Native thread/send/live updates, detail,
-and saved-state writes are not integrated. Do not introduce local fake state.
+Android PR #6 integrates the private conversation inbox against the deployed
+v0.8.4 API. Native thread/send/live updates, detail, and saved-state writes are
+not integrated. Do not introduce local fake state.
 
 The owner says the feed does **not** look exactly like its prototype. No device
 screenshot comparison has passed. Source alignment and green CI do not establish
@@ -109,7 +108,7 @@ this backend. Give it precise Android/device tasks; handle backend work here.
 ## Android version and verification
 
 The current branch uses `versionCode` 6; it is independent of backend version
-0.8.3 and Android `versionName` 1.0. Keep incrementing versionCode for future
+0.8.4 and Android `versionName` 1.0. Keep incrementing versionCode for future
 distributed builds. CI is the build/test/lint path; do not download Gradle
 dependencies locally. The AI Studio signer is pinned in the project's debug
 keystore; CI can generate its own temporary debug key when that file is absent.

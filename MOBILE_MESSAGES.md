@@ -1,6 +1,7 @@
 # Native Messages inbox — Android handoff
 
-Backend branch: `feat/mobile-messages-api`, API PR and release v0.8.4 pending.
+Backend PR #51 is merged; release v0.8.4 is deployed. Production returns 401
+with `private, no-store` when `/api/v1/conversations` is requested anonymously.
 Android branch: `feat/native-messages-inbox`.
 
 ## Contract
@@ -25,7 +26,8 @@ Chrome Custom Tab. It does not navigate to `MessagesViewModel`,
 This slice does not provide native thread history, sending, offer attachments,
 read mutation or live updates. Do not describe those as native capabilities.
 The feed/profile theme tokens remain the source of light/dark colors. The
-prototype reference is `prototype/haven_messages/screen.png`.
+prototype reference is `prototype/haven_messages/screen.png`; inbox rows include
+its right chevron, participant initials/avatar, unread marker, preview and time.
 
 ## Verification
 
