@@ -1,136 +1,104 @@
-# Start here — Haven mobile/backend handoff, 2026-11-02
+# Start here — Haven mobile/backend pickup, 2026-11-02
 
-## Latest steering: Messages after Profile
+## Current release and owner direction
 
-Profile is complete: backend PR #50 shipped v0.8.3 and Android PR #4 is merged.
-Backend PR #51 shipped v0.8.4; Android PR #6 is merged at `783ce27`. Its
-post-merge build/test/lint passed in run
-[41369778485](https://github.com/Phastboy/haven-app/actions/runs/41369778485).
-Read `MOBILE_MESSAGES.md` for the inbox contract and current boundary.
+Backend PR #53 merged at `d2c166a56e8e3d87592cbfc0845da12dd9a8db7d`.
+[v0.8.5](https://github.com/Phastboy/haven/releases/tag/v0.8.5) is live.
+Keep backend/Topcoat releases within **v0.8.*** for the coming months.
+The next API exposure increments the patch to 0.8.6; it is not selected yet.
+Google AI Studio should implement the corresponding native pages using
+[`MOBILE_NATIVE_PAGES.md`](MOBILE_NATIVE_PAGES.md). Backend contracts lead;
+no runtime samples, fake timers, simulated success, or local substitute writes.
 
-This slice is the Messages inbox only. It renders real API rows and opens each
-real Haven web thread in a themed Custom Tab. Native thread/send/live updates
-remain later work. No runtime fixture or old demo-thread fallback is permitted.
+Five live screen APIs:
 
-The owner pinned the AI Studio signer to
-`00:27:07:D7:C9:09:36:6B:CE:B9:72:30:95:C9:64:5E:54:4D:E8:FF:3B:74:C8:61:BF:3F:1E:BB:66:36:41:49`.
-Live `assetlinks.json` and Google Digital Asset Links verification currently
-recognize that fingerprint. CI debug APKs use a separate ephemeral key.
+- Public offer detail: `GET /api/v1/offers/{slug}`.
+- Provider profile: `GET /api/v1/profiles/{handle}?after=...`.
+- My published offers: `GET /api/v1/me/offers?after=...`.
+- Available Saved offers: `GET /api/v1/me/saved?after=...`.
+- Following: `GET /api/v1/me/following?after=...`.
 
-Feed and profile now share `FeedOfferCard`, supporting optional real distance.
-Current general API results contain no distance; no distance is invented. CI
-renders card/profile screenshots in both themes and tests foreground pixels.
-Inspect those artifacts and request device comparison before accepting exact
-prototype fidelity. Native edit/collections/detail still open real web journeys.
+One-tap writes use valid native bearer credentials:
+`POST /api/v1/offers/{slug}/saved` and `DELETE` on the same path.
+My offers contains published offers only; Saved omits unavailable offers.
+Follow/unfollow, editing, inquiry/send and native thread/live APIs are outside
+this batch. Existing supported web journeys remain the fallback for those actions.
 
+## Android implementation and next pickup
 
-## Owner decisions
+Android PR #8 merged feed card/category shimmers and profile action placement.
+Appearance is in the profile actions group; Sign out is below the offered cards.
+Android PR #9 merged at `0e011cc` with native detail and feed/detail save wiring.
+Review fixes were committed directly to main at `b0766051d6f9659abe961b913ef71393fcf854c0`
+under an explicit one-time owner exception. All four review threads are resolved:
+backend price_display is preserved, provider opens a real profile, loading/error
+supports visible and system Back, and an unknown outlined Save action explicitly
+saves instead of unexpectedly unsaving. Do not generalize the main-commit exception.
 
-- Backend contracts lead Android development. Expose an existing Haven journey,
-  then integrate its screen using real responses.
-- Once a screen is selected for integration, no runtime dummy rows, fake loading
-  timers, fabricated errors/success, or local-only replacements for server actions.
-  Real empty/error/pending states are required. Fixtures are for tests/previews.
-- Prioritize fast movement and correctness of core journeys. Do not resume
-  deferred performance investigations or chase maximum performance as a gate.
-  Security, data loss, and broken core journeys still need immediate triage.
-- Use CI for builds/tests/lint; local Android dependency downloads exceed the
-  owner's data budget. Java/Gradle/SDK tools are installed, but project build
-  dependencies have not been fully downloaded locally.
-- Each backend API exposure increments the patch release and workspace/lockfile
-  versions. Current live version is **0.8.4**; the next exposure is **0.8.5**.
-  Cargo uses three-part versions. Android versionName is independent; it can
-  start at `0.0.0`. Keep versionCode increasing for distributed builds.
+[Android CI 41419917646](https://github.com/Phastboy/haven-app/actions/runs/41419917646)
+passed build, tests, lint, reports and APK upload, including five review regressions.
+Use CI for builds/tests/lint; local Gradle dependency downloads exceed the owner's
+data budget. Read the actual versionCode before distributing another APK and bump
+it as needed; Android versionName is independent from backend releases.
 
-## Repositories and completed work
+Next AI Studio tasks:
 
-- Backend: `Phastboy/haven`, Rust workspace `expts/rust`.
-- Android: `Phastboy/haven-app`, local checkout
-  `/home/tgenericx/dev/github.com/phastboy/h-mobile`.
-- Backend branch `feat/mobile-offers-feed-api`, PR #48 merged at
-  `93cc5e72a9d6e0064f2e50dec6144ff64f068681`.
-- Android branch `feat/backend-offers-feed`, PR #2 merged at
-  `107ac62494c37f515e5a91d8f9c5518aff3e8096`.
-- Backend releases [v0.8.3](https://github.com/Phastboy/haven/releases/tag/v0.8.3)
-  and [v0.8.4](https://github.com/Phastboy/haven/releases/tag/v0.8.4) are deployed.
-  The latter adds the private inbox endpoint; production unauthenticated access
-  returns 401 with `private, no-store`.
-- Backend CI: 254 tests, formatting, Clippy, docs, security, container checks pass.
-  Android final feed CI [41296308456](https://github.com/Phastboy/haven-app/actions/runs/41296308456)
-  passed build, unit/Robolectric tests, and Android Lint; testing APK is an artifact.
+1. Inspect current native detail/save code before duplicating it. Match
+   `prototype/haven_offer_detail` in light/dark mode, including gallery, identity,
+   location, fixed action, system insets and structure-shaped shimmer loading.
+2. Exercise signed-in production save/unsave from feed and detail, repeat taps,
+   failures, returning to feed, app restart, account change and guest sign-in.
+   Unknown save status is not confirmed unsaved status; a visible Save action
+   must not silently turn into DELETE.
+3. Integrate provider profile, My offers, Saved and Following against the live
+   contracts and their matching prototypes. Use real empty/error/retry/paging
+   states and server responses; keep unsupported writes on real web journeys.
+4. Compare actual device feed/profile with their prototypes. Feed visual fidelity
+   was rejected by the owner; no final device comparison has passed. Green CI
+   and source alignment do not establish visual acceptance.
 
-## Actual integration status
+Feed/profile use shared FeedOfferCard with optional server distance; general feed
+does not provide distance. Never invent it. Integrated Messages inbox opens real
+web threads in themed Custom Tabs; native thread history/send/live remains later.
+Auth uses browser PKCE, rotating refresh tokens and GET /api/v1/me. Owner confirmed
+Google sign-in returning to app; fresh browser-session tracing remains pending.
+Production email sign-in was disabled in the previous verified configuration;
+local file-mail auth checks do not establish production email availability.
 
-Auth uses browser PKCE authorization/code exchange, rotating refresh tokens, and
-`GET /api/v1/me`. The owner confirmed completing Google sign-in and returning to
-the app. Existing browser cookies can make sign-in immediate. Do not claim a
-fresh browser-session test was traced: it remains pending. Email delivery is
-disabled, so email sign-in is unavailable.
+## Evidence and remaining limits
 
-`GET /api/v1/offers` and private profile overview are live. The native profile
-uses the real profile endpoint and persists System/Light/Dark appearance.
-Android PR #6 integrates the private conversation inbox against the deployed
-v0.8.4 API. Native thread/send/live updates, detail, and saved-state writes are
-not integrated. Do not introduce local fake state.
+Production curl smoke on 2026-11-02: feed, `/api/v1/offers/buy-me-623b2271` and
+`/api/v1/profiles/aanusteven8-60ed44` returned 200. The three private lists and both
+save writes returned 401 anonymously. These checks did not mutate production.
+No authenticated production save/unsave or device journey is claimed.
 
-The owner says the feed does **not** look exactly like its prototype. No device
-screenshot comparison has passed. Source alignment and green CI do not establish
-visual fidelity. Resolve this before claiming the feed is visually complete.
+Forty recorded local curl checks passed using a separate native-auth-configured
+server: actual PKCE exchange, private reads, idempotent save, detail readback,
+Saved membership, idempotent unsave and final empty collection. The test actor's
+Saved collection was restored to empty. See the backend report
+`verification/native-api-v085/RESULT.md` for nonempty fixture, pagination,
+second-actor isolation and image-delivery limits. Credentials are not committed.
 
-## Current corrections and next work
+## Identity and repositories
 
-1. Android: auth and web handoffs use Chrome Custom Tabs. The Messages inbox
-   row handoff also uses a themed Custom Tab; check CI/device behavior.
-2. Remove inappropriate underlining of clickable controls. The integrated feed
-   filter sheet had an explicit underline on Clear; clickability alone must not
-   imply underlining. Compare the actual device screen with
-   `prototype/haven_offers_feed`, including light/dark modes, spacing, type,
-   controls, cards, bottom navigation and system insets. Do not redesign by guess.
-3. Messages inbox is integrated. The next native screen/API slice has not been
-   selected. Native thread history/send/live updates still need their own
-   backend contract; until then, inbox rows open the real web thread.
-
-AI Studio can edit/test the Android app in its simulated device. It cannot edit
-this backend. Give it precise Android/device tasks; handle backend work here.
-
-## Deployment and auth identity
-
-- Host: `https://haven-odysseon-d48990aa.koyeb.app`; Koyeb service `haven/web`.
-- Android package: `com.aistudio.haven.xvykpt`.
-- `MOBILE_APP_LINK`: same host with `/auth/callback`.
-- AI Studio APK SHA-256 signer (pinned to workspace debug.keystore via debugConfig):
+- Backend: Phastboy/haven, workspace `expts/rust`.
+- Android: Phastboy/haven-app, local `/home/tgenericx/dev/github.com/phastboy/h-mobile`.
+- Host: `https://haven-odysseon-d48990aa.koyeb.app`, Koyeb `haven/web`.
+- Package: `com.aistudio.haven.xvykpt`; callback is host + `/auth/callback`.
+- Pinned AI Studio signer:
   `00:27:07:D7:C9:09:36:6B:CE:B9:72:30:95:C9:64:5E:54:4D:E8:FF:3B:74:C8:61:BF:3F:1E:BB:66:36:41:49`.
-- Configured via `ANDROID_APP_PACKAGE` and `ANDROID_APP_SHA256_CERT`.
-  `/.well-known/assetlinks.json` returns 200; Google returned `linked: true`.
-  CI debug APKs can have a different signer; do not assume their App Links verify.
-- Tag `v*` triggers backend container publication/deployment. Android release
-  publication currently attaches a debug testing APK, not a production-signed APK.
+  Prior assetlinks/Google verification recognized it. CI debug keys can differ.
+- Tag `v*` triggers backend publication/deployment. Android release artifacts
+  currently use testing debug signing, not production APK signing.
 
-## Android version and verification
+Theme changes use HavenColors/ThemeManager. Match prototypes without arbitrary
+underlining; validate rendered light/dark screens. AI Studio can edit/test Android,
+not this backend; never give it backend credentials.
 
-The current branch uses `versionCode` 6; it is independent of backend version
-0.8.4 and Android `versionName` 1.0. Keep incrementing versionCode for future
-distributed builds. CI is the build/test/lint path; do not download Gradle
-dependencies locally. The AI Studio signer is pinned in the project's debug
-keystore; CI can generate its own temporary debug key when that file is absent.
+## Mobile pickup records
 
-## Theme and design rules
-
-`ui/theme/HavenColors.kt` defines the central light/dark palettes. HavenTheme
-provides them through CompositionLocal; integrated feed and sign-in use those
-tokens, and ThemeManager supports System/Light/Dark. Literal colors belong in
-the palette, not individual product screens. The Google brand mark retains its
-brand colors; system transparent bars are platform chrome. Older prototype files
-still have some literal colors: audit only as each screen is integrated, and do
-not claim the entire repository has passed a theme audit.
-
-Do not underline a control merely because it is clickable. Match the selected
-prototype, validate appropriate affordances, and inspect actual rendered screens
-in both themes. Feed visual fidelity is explicitly NOT accepted by the owner.
-The new correction does not by itself prove the whole feed matches the reference.
-
-Start with this file, `prd.md`, `MOBILE_OFFERS_FEED.md`, and `PROJECT_INFO.md`.
-Historical `AI_STUDIO_AUTH_HANDOFF.md` describes a now-resolved association
-failure; its backend-edit instructions do not apply to AI Studio. Check current
-Git state and CI before continuing, preserve unrelated work, and request no
-backend credentials in Android prompts or commits.
+Start with this file and MOBILE_NATIVE_PAGES.md, then prd.md, PROJECT_INFO.md,
+MOBILE_OFFERS_FEED.md, MOBILE_PROFILE.md and MOBILE_MESSAGES.md. Older contract
+files describe earlier slices; this pickup record governs current integration
+status. Preserve unrelated files such as env_update if present. No additional
+direct-to-main permission is inferred from the previous review-fix exception.
