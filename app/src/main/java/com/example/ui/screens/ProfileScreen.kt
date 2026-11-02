@@ -63,7 +63,12 @@ fun ProfileScreen(
   onRetry: () -> Unit,
   onOpenWeb: (String) -> Unit,
   onSignOut: () -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onOpenMyOffers: (() -> Unit)? = null,
+  onOpenSavedOffers: (() -> Unit)? = null,
+  onOpenFollowing: (() -> Unit)? = null,
+  onOpenOffer: ((String) -> Unit)? = null,
+  onOpenPublicProfile: ((String) -> Unit)? = null
 ) {
   val context = LocalContext.current
   var appearance by remember { mutableStateOf(false) }
@@ -74,7 +79,9 @@ fun ProfileScreen(
       Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text("My profile", fontFamily = InterFontFamily, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        TextButton(enabled = profile != null, onClick = { profile?.let { onOpenWeb("/profiles/${it.handle}") } }) {
+        TextButton(enabled = profile != null, onClick = {
+          profile?.let { onOpenPublicProfile?.invoke(it.handle) ?: onOpenWeb("/profiles/${it.handle}") }
+        }) {
           Text("Public view", color = HavenColors.TextSecondary)
         }
       }
@@ -114,11 +121,17 @@ fun ProfileScreen(
         Spacer(Modifier.height(24.dp))
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
           .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(12.dp))) {
-          ProfileRow("My offers", "${profile.offerCount} ${if (profile.offerCount == 1L) "offer" else "offers"}", Icons.Outlined.GridView) { onOpenWeb("/profile/offers") }
+          ProfileRow("My offers", "${profile.offerCount} ${if (profile.offerCount == 1L) "offer" else "offers"}", Icons.Outlined.GridView) {
+            onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers")
+          }
           HorizontalDivider(color = HavenColors.BorderSubtle)
-          ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) { onOpenWeb("/profile/saved") }
+          ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) {
+            onOpenSavedOffers?.invoke() ?: onOpenWeb("/profile/saved")
+          }
           HorizontalDivider(color = HavenColors.BorderSubtle)
-          ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) { onOpenWeb("/profile/following") }
+          ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) {
+            onOpenFollowing?.invoke() ?: onOpenWeb("/profile/following")
+          }
           HorizontalDivider(color = HavenColors.BorderSubtle)
           ProfileRow("Appearance", ThemeManager.themeMode.title, Icons.Outlined.Palette,
             tag = "profile_link_appearance") { appearance = true }
@@ -126,13 +139,17 @@ fun ProfileScreen(
         Row(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically) {
           Text("Your offers", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
-          TextButton(onClick = { onOpenWeb("/profile/offers") }) { Text("Manage") }
+          TextButton(onClick = { onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers") }) { Text("Manage") }
         }
         if (profile.offers.isEmpty()) Text("No public offers yet.", color = HavenColors.TextSecondary,
           modifier = Modifier.padding(vertical = 16.dp))
         profile.offers.chunked(2).forEach { row ->
           Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            row.forEach { offer -> FeedOfferCard(offer, Modifier.weight(1f)) { onOpenWeb("/offers/${offer.slug}") } }
+            row.forEach { offer ->
+              FeedOfferCard(offer, Modifier.weight(1f)) {
+                onOpenOffer?.invoke(offer.slug) ?: onOpenWeb("/offers/${offer.slug}")
+              }
+            }
             if (row.size == 1) Spacer(Modifier.weight(1f))
           }
         }

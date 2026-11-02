@@ -34,8 +34,15 @@ import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
 @Composable
-fun FeedOfferCard(offer: FeedOffer, modifier: Modifier = Modifier, saved: Boolean = false,
-  saving: Boolean = false, onSave: (() -> Unit)? = null, onOpen: () -> Unit) {
+fun FeedOfferCard(
+  offer: FeedOffer,
+  modifier: Modifier = Modifier,
+  saved: Boolean = false,
+  saving: Boolean = false,
+  onSave: (() -> Unit)? = null,
+  onOpenProvider: ((String) -> Unit)? = null,
+  onOpen: () -> Unit
+) {
   Column(modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("offer_card_${offer.id}")) {
     Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(HavenColors.SurfaceContainer)) {
       SubcomposeAsyncImage(model = offer.coverUrl, contentDescription = offer.title,
@@ -53,8 +60,25 @@ fun FeedOfferCard(offer: FeedOffer, modifier: Modifier = Modifier, saved: Boolea
     Text(offer.title, modifier = Modifier.testTag("offer_title_${offer.id}"), color = HavenColors.TextPrimary, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
       fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     Spacer(Modifier.height(4.dp))
-    Text(listOfNotNull(offer.makerName, offerDistanceLabel(offer.distanceMeters)).joinToString(" · "), fontFamily = InterFontFamily, fontSize = 13.sp, lineHeight = 19.sp,
-      color = HavenColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val providerClickable = onOpenProvider != null && offer.makerHandle.isNotBlank()
+    Text(
+      text = listOfNotNull(offer.makerName, offerDistanceLabel(offer.distanceMeters)).joinToString(" · "),
+      fontFamily = InterFontFamily,
+      fontSize = 13.sp,
+      lineHeight = 19.sp,
+      color = HavenColors.TextSecondary,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier
+        .testTag("offer_maker_${offer.id}")
+        .then(
+          if (providerClickable) {
+            Modifier.clickable { onOpenProvider?.invoke(offer.makerHandle) }
+          } else {
+            Modifier
+          }
+        )
+    )
     Spacer(Modifier.height(4.dp))
     Text(offer.priceDisplay, modifier = Modifier.testTag("offer_price_${offer.id}"), color = HavenColors.TextPrimary, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
       fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -16,7 +16,9 @@ data class FeedOffer(
   val makerName: String,
   val priceDisplay: String,
   val coverUrl: String?,
-  val distanceMeters: Double? = null
+  val distanceMeters: Double? = null,
+  val category: String = "",
+  val makerHandle: String = ""
 )
 
 data class OfferDetail(
@@ -95,7 +97,9 @@ class HavenOffersRepository : OffersRepository {
       item.getString("id"), item.getString("slug"), item.getString("title"),
       item.getString("maker_name"), item.getString("price_display"),
       if (item.isNull("cover_url")) null else item.getString("cover_url"),
-      if (item.isNull("distance_meters")) null else item.getDouble("distance_meters")
+      if (item.isNull("distance_meters")) null else item.getDouble("distance_meters"),
+      if (item.isNull("category")) "" else item.getString("category"),
+      if (item.isNull("maker_handle")) "" else item.getString("maker_handle")
     )
 
     fun parsePage(body: String): OffersPage {

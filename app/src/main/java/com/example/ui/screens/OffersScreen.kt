@@ -48,7 +48,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import com.example.data.HavenOfferDetailRepository
+import com.example.data.HavenNativePagesRepository
 import com.example.data.OfferDetail
+import com.example.data.ProviderProfile
+import com.example.data.PaginatedOffers
+import com.example.data.PaginatedFollowing
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +91,14 @@ import com.example.ui.theme.InterFontFamily
 import com.example.ui.theme.ThemeManager
 import com.example.ui.theme.ThemeMode
 
+sealed interface OffersDestination {
+  data class OfferDetail(val slug: String) : OffersDestination
+  data class ProviderProfile(val handle: String) : OffersDestination
+  data object MyOffers : OffersDestination
+  data object SavedOffers : OffersDestination
+  data object Following : OffersDestination
+}
+
 /** Public discovery from Haven. Adjacent journeys open their real web pages. */
 @Composable
 fun OffersScreen(
@@ -104,8 +116,12 @@ fun OffersScreen(
   var showMessages by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
+  val nativePagesRepo = remember(context.applicationContext) { HavenNativePagesRepository(HavenAuthClient.shared(context.applicationContext)) }
   val scope = rememberCoroutineScope()
-  var selectedSlug by remember { mutableStateOf<String?>(null) }
+  var navStack by remember { mutableStateOf<List<OffersDestination>>(emptyList()) }
+  val currentDestination = navStack.lastOrNull()
+
+  val activeSlug = (currentDestination as? OffersDestination.OfferDetail)?.slug
   var detail by remember(session.personId) { mutableStateOf<OfferDetail?>(null) }
   var detailLoading by remember { mutableStateOf(false) }
   var detailError by remember { mutableStateOf<String?>(null) }
@@ -113,10 +129,55 @@ fun OffersScreen(
   var savedStates by remember(session.personId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
   var savingSlugs by remember(session.personId) { mutableStateOf<Set<String>>(emptySet()) }
   var saveError by remember { mutableStateOf<String?>(null) }
-  LaunchedEffect(selectedSlug, session.personId, detailRetry) {
+
+  // Provider profile state
+  val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
+  var providerProfile by remember { mutableStateOf<ProviderProfile?>(null) }
+  var providerLoading by remember { mutableStateOf(false) }
+  var providerError by remember { mutableStateOf<String?>(null) }
+  var providerRetry by remember { mutableStateOf(0) }
+
+  // My offers state
+  val isMyOffersActive = currentDestination is OffersDestination.MyOffers
+  var myOffers by remember(session.personId) { mutableStateOf<PaginatedOffers?>(null) }
+  var myOffersLoading by remember { mutableStateOf(false) }
+  var myOffersError by remember { mutableStateOf<String?>(null) }
+  var myOffersRetry by remember { mutableStateOf(0) }
+
+  // Saved offers state
+  val isSavedOffersActive = currentDestination is OffersDestination.SavedOffers
+  var savedOffers by remember(session.personId) { mutableStateOf<PaginatedOffers?>(null) }
+  var savedOffersLoading by remember { mutableStateOf(false) }
+  var savedOffersError by remember { mutableStateOf<String?>(null) }
+  var savedOffersRetry by remember { mutableStateOf(0) }
+
+  // Following state
+  val isFollowingActive = currentDestination is OffersDestination.Following
+  var following by remember(session.personId) { mutableStateOf<PaginatedFollowing?>(null) }
+  var followingLoading by remember { mutableStateOf(false) }
+  var followingError by remember { mutableStateOf<String?>(null) }
+  var followingRetry by remember { mutableStateOf(0) }
+
+  var browserError by remember { mutableStateOf<String?>(null) }
+  fun openWeb(path: String) {
+    try {
+      val scheme = when (ThemeManager.themeMode) {
+        ThemeMode.SYSTEM -> CustomTabsIntent.COLOR_SCHEME_SYSTEM
+        ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
+        ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
+      }
+      CustomTabsIntent.Builder().setShowTitle(true).setColorScheme(scheme).build()
+        .launchUrl(context, Uri.parse(base + path))
+    } catch (_: Exception) {
+      try { uriHandler.openUri(base + path) }
+      catch (_: Exception) { browserError = "Couldn’t open your browser. Please try again." }
+    }
+  }
+
+  LaunchedEffect(activeSlug, session.personId, detailRetry) {
     detail = null
     detailError = null
-    val slug = selectedSlug ?: return@LaunchedEffect
+    val slug = activeSlug ?: return@LaunchedEffect
     detailLoading = true
     try {
       val response = detailRepository.load(slug, session.isAuthenticated)
@@ -126,6 +187,54 @@ fun OffersScreen(
     catch (_: Exception) { detailError = "Couldn’t load this offer. Please try again." }
     finally { detailLoading = false }
   }
+
+  LaunchedEffect(activeProviderHandle, session.isAuthenticated, providerRetry) {
+    providerProfile = null
+    providerError = null
+    val handle = activeProviderHandle ?: return@LaunchedEffect
+    providerLoading = true
+    try {
+      providerProfile = nativePagesRepo.getProviderProfile(handle, authenticated = session.isAuthenticated)
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { providerError = "Couldn’t load provider profile. Please try again." }
+    finally { providerLoading = false }
+  }
+
+  LaunchedEffect(isMyOffersActive, session.personId, myOffersRetry) {
+    if (!isMyOffersActive) return@LaunchedEffect
+    myOffersLoading = true
+    myOffersError = null
+    try {
+      myOffers = nativePagesRepo.getMyOffers()
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { myOffersError = "Couldn’t load your offers. Please try again." }
+    finally { myOffersLoading = false }
+  }
+
+  LaunchedEffect(isSavedOffersActive, session.personId, savedOffersRetry) {
+    if (!isSavedOffersActive) return@LaunchedEffect
+    savedOffersLoading = true
+    savedOffersError = null
+    try {
+      val response = nativePagesRepo.getSavedOffers()
+      savedOffers = response
+      savedStates = savedStates + response.items.associate { it.slug to true }
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { savedOffersError = "Couldn’t load saved offers. Please try again." }
+    finally { savedOffersLoading = false }
+  }
+
+  LaunchedEffect(isFollowingActive, session.personId, followingRetry) {
+    if (!isFollowingActive) return@LaunchedEffect
+    followingLoading = true
+    followingError = null
+    try {
+      following = nativePagesRepo.getFollowing()
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { followingError = "Couldn’t load followed providers. Please try again." }
+    finally { followingLoading = false }
+  }
+
   fun saveOffer(slug: String) {
     if (!session.isAuthenticated) { onNavigateToSignIn(); return }
     if (slug in savingSlugs) return
@@ -137,29 +246,164 @@ fun OffersScreen(
         if (SessionManager.session.value.personId == actor) {
           savedStates = savedStates + (slug to confirmed)
           if (detail?.slug == slug) detail = detail?.copy(isSaved = confirmed)
+          if (!confirmed) {
+            savedOffers = savedOffers?.copy(items = (savedOffers?.items ?: emptyList()).filter { it.slug != slug })
+          }
         }
       } catch (cancelled: CancellationException) { throw cancelled }
       catch (_: Exception) { saveError = "Couldn’t update saved offer. Please try again." }
       finally { if (SessionManager.session.value.personId == actor) savingSlugs = savingSlugs - slug }
     }
   }
+
   if (saveError != null) AlertDialog(onDismissRequest = { saveError = null },
     title = { Text("Couldn’t save offer") }, text = { Text(saveError.orEmpty()) },
     confirmButton = { TextButton(onClick = { saveError = null }) { Text("Close") } })
-  selectedSlug?.let { slug ->
-    NativeOfferDetailScreen(detail, detailLoading, detailError, session.isAuthenticated,
-      onBack = { selectedSlug = null }, onRetry = { detailRetry++ },
-      onToggleSave = { saveOffer(slug) },
-      onMessageProvider = { uriHandler.openUri("$base/offers/$slug") },
-      onOpenProvider = { handle ->
-        try {
-          CustomTabsIntent.Builder().setShowTitle(true).build()
-            .launchUrl(context, Uri.parse("$base/profiles/${Uri.encode(handle)}"))
-        } catch (_: Exception) { saveError = "Couldn’t open the provider profile. Please try again." }
-      },
-      onSignInRequested = onNavigateToSignIn, modifier = modifier)
-    return
+
+  if (currentDestination != null) {
+    when (currentDestination) {
+      is OffersDestination.OfferDetail -> {
+        NativeOfferDetailScreen(
+          offer = detail,
+          loading = detailLoading,
+          error = detailError,
+          isAuthenticated = session.isAuthenticated,
+          onBack = { navStack = navStack.dropLast(1) },
+          onRetry = { detailRetry++ },
+          onToggleSave = { saveOffer(currentDestination.slug) },
+          onMessageProvider = { openWeb("/offers/${currentDestination.slug}") },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          onSignInRequested = onNavigateToSignIn,
+          modifier = modifier
+        )
+        return
+      }
+      is OffersDestination.ProviderProfile -> {
+        ProviderProfileScreen(
+          profile = providerProfile,
+          loading = providerLoading,
+          error = providerError,
+          onBack = { navStack = navStack.dropLast(1) },
+          onRetry = { providerRetry++ },
+          onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+          onMessageProvider = { openWeb("/profiles/${Uri.encode(currentDestination.handle)}") },
+          onFollowProvider = { openWeb("/profiles/${Uri.encode(currentDestination.handle)}") },
+          onLoadMore = {
+            providerProfile?.nextCursor?.let { cursor ->
+              scope.launch {
+                try {
+                  val more = nativePagesRepo.getProviderProfile(currentDestination.handle, after = cursor, authenticated = session.isAuthenticated)
+                  providerProfile = providerProfile?.copy(
+                    offers = (providerProfile?.offers ?: emptyList()) + more.offers,
+                    nextCursor = more.nextCursor
+                  )
+                } catch (_: Exception) {}
+              }
+            }
+          },
+          isOwnProfile = (session.personId != null && providerProfile?.person?.id == session.personId),
+          modifier = modifier
+        )
+        return
+      }
+      is OffersDestination.MyOffers -> {
+        if (session.isAuthenticated) {
+          MyOffersScreen(
+            offers = myOffers,
+            loading = myOffersLoading,
+            error = myOffersError,
+            onBack = { navStack = navStack.dropLast(1) },
+            onRetry = { myOffersRetry++ },
+            onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+            onCreateOffer = { openWeb("/offers/new") },
+            onEditOffer = { slug -> openWeb("/offers/$slug/edit") },
+            onLoadMore = {
+              myOffers?.nextCursor?.let { cursor ->
+                scope.launch {
+                  try {
+                    val more = nativePagesRepo.getMyOffers(after = cursor)
+                    myOffers = myOffers?.copy(
+                      items = (myOffers?.items ?: emptyList()) + more.items,
+                      nextCursor = more.nextCursor
+                    )
+                  } catch (_: Exception) {}
+                }
+              }
+            },
+            modifier = modifier
+          )
+          return
+        }
+      }
+      is OffersDestination.SavedOffers -> {
+        if (session.isAuthenticated) {
+          SavedOffersScreen(
+            offers = savedOffers,
+            loading = savedOffersLoading,
+            error = savedOffersError,
+            savingSlugs = savingSlugs,
+            onBack = { navStack = navStack.dropLast(1) },
+            onRetry = { savedOffersRetry++ },
+            onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+            onUnsaveOffer = { slug -> saveOffer(slug) },
+            onBrowseOffers = {
+              navStack = emptyList()
+              showProfile = false
+            },
+            onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+            onLoadMore = {
+              savedOffers?.nextCursor?.let { cursor ->
+                scope.launch {
+                  try {
+                    val more = nativePagesRepo.getSavedOffers(after = cursor)
+                    savedOffers = savedOffers?.copy(
+                      items = (savedOffers?.items ?: emptyList()) + more.items,
+                      nextCursor = more.nextCursor
+                    )
+                  } catch (_: Exception) {}
+                }
+              }
+            },
+            modifier = modifier
+          )
+          return
+        }
+      }
+      is OffersDestination.Following -> {
+        if (session.isAuthenticated) {
+          FollowingScreen(
+            following = following,
+            loading = followingLoading,
+            error = followingError,
+            onBack = { navStack = navStack.dropLast(1) },
+            onRetry = { followingRetry++ },
+            onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+            onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },
+            onDiscoverOffers = {
+              navStack = emptyList()
+              showProfile = false
+            },
+            onLoadMore = {
+              following?.nextCursor?.let { cursor ->
+                scope.launch {
+                  try {
+                    val more = nativePagesRepo.getFollowing(after = cursor)
+                    following = following?.copy(
+                      items = (following?.items ?: emptyList()) + more.items,
+                      nextCursor = more.nextCursor
+                    )
+                  } catch (_: Exception) {}
+                }
+              }
+            },
+            modifier = modifier
+          )
+          return
+        }
+      }
+    }
   }
+
   val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
     ProfileViewModel.factory(context.applicationContext)
   })
@@ -182,13 +426,10 @@ fun OffersScreen(
     if (showProfile) session.personId?.let { profileModel.load(it, force = true) }
     if (showMessages) session.personId?.let { messagesModel.load(it, force = true) }
   }
-  var browserError by remember { mutableStateOf<String?>(null) }
-  fun openWeb(path: String) {
-    try { uriHandler.openUri(base + path) }
-    catch (_: Exception) { browserError = "Couldn’t open your browser. Please try again." }
-  }
+
   BackHandler {
     when {
+      navStack.isNotEmpty() -> navStack = navStack.dropLast(1)
       showProfile -> showProfile = false
       showMessages -> showMessages = false
       else -> onNavigateBack()
@@ -201,7 +442,14 @@ fun OffersScreen(
         com.example.ui.model.ProfileUiState(loading = true) else profileState
       ProfileScreen(visibleProfile,
         onRetry = { session.personId?.let { profileModel.load(it, force = true) } },
-        onOpenWeb = ::openWeb, onSignOut = onSignOut, modifier = Modifier.weight(1f))
+        onOpenWeb = ::openWeb,
+        onSignOut = onSignOut,
+        onOpenMyOffers = { navStack = navStack + OffersDestination.MyOffers },
+        onOpenSavedOffers = { navStack = navStack + OffersDestination.SavedOffers },
+        onOpenFollowing = { navStack = navStack + OffersDestination.Following },
+        onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+        onOpenPublicProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+        modifier = Modifier.weight(1f))
     } else if (showMessages && session.isAuthenticated) {
       MessagesInboxScreen(messagesState,
         onRetry = { session.personId?.let { messagesModel.load(it, force = true) } },
@@ -276,8 +524,14 @@ fun OffersScreen(
           fontSize = 12.sp, fontFamily = InterFontFamily, color = HavenColors.TextSecondary)
       }
       items(state.items, key = { it.id }) { offer ->
-        FeedOfferCard(offer, saved = savedStates[offer.slug] ?: false,
-          saving = offer.slug in savingSlugs, onSave = { saveOffer(offer.slug) }) { selectedSlug = offer.slug }
+        FeedOfferCard(
+          offer = offer,
+          saved = savedStates[offer.slug] ?: false,
+          saving = offer.slug in savingSlugs,
+          onSave = { saveOffer(offer.slug) },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          onOpen = { navStack = navStack + OffersDestination.OfferDetail(offer.slug) }
+        )
       }
       if (state.isLoading && state.items.isEmpty()) {
         items(4) { index -> OfferCardSkeleton(Modifier.testTag("offers_loading_skeleton_$index")) }
