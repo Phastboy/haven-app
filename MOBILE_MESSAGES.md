@@ -31,8 +31,9 @@ its right chevron, participant initials/avatar, unread marker, preview and time.
 
 ## Verification
 
-Unit tests cover response parsing, first/next page behavior, and clearing on
-account exit. Robolectric checks the real-row presentation in both themes and
-captures CI screenshots. Verify CI and compare on the AI Studio device before
-accepting visual fidelity. CI debug signing is separate from the pinned Studio
-signer used for App Links.
+CI run [41366162809](https://github.com/Phastboy/haven-app/actions/runs/41366162809)
+passed build, unit/Robolectric tests, Android Lint, and light/dark screenshots;
+the merged-main run [41369778485](https://github.com/Phastboy/haven-app/actions/runs/41369778485)
+also passed. Compare the full screen on the AI Studio device before claiming
+device-level visual acceptance. CI debug signing is separate from the pinned
+Studio signer used for App Links.

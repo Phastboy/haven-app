@@ -1,12 +1,12 @@
-# Start here — Haven mobile/backend handoff, 2026-11-01
+# Start here — Haven mobile/backend handoff, 2026-11-02
 
 ## Latest steering: Messages after Profile
 
 Profile is complete: backend PR #50 shipped v0.8.3 and Android PR #4 is merged.
-Android CI repair PR #5 is merged; its post-merge build/test/lint run passed.
-Backend PR #51 is merged and v0.8.4 is deployed. The active Android branch is
-`feat/native-messages-inbox`, PR #6; read `MOBILE_MESSAGES.md` for scope and API
-contract. Verify the latest CI and review/device state before merging it.
+Backend PR #51 shipped v0.8.4; Android PR #6 is merged at `783ce27`. Its
+post-merge build/test/lint passed in run
+[41369778485](https://github.com/Phastboy/haven-app/actions/runs/41369778485).
+Read `MOBILE_MESSAGES.md` for the inbox contract and current boundary.
 
 This slice is the Messages inbox only. It renders real API rows and opens each
 real Haven web thread in a themed Custom Tab. Native thread/send/live updates
@@ -86,8 +86,9 @@ visual fidelity. Resolve this before claiming the feed is visually complete.
    imply underlining. Compare the actual device screen with
    `prototype/haven_offers_feed`, including light/dark modes, spacing, type,
    controls, cards, bottom navigation and system insets. Do not redesign by guess.
-3. Finish the **Messages inbox** integration. Keep thread APIs and simulated
-   thread screens out of this slice; selecting a row opens the real web thread.
+3. Messages inbox is integrated. The next native screen/API slice has not been
+   selected. Native thread history/send/live updates still need their own
+   backend contract; until then, inbox rows open the real web thread.
 
 AI Studio can edit/test the Android app in its simulated device. It cannot edit
 this backend. Give it precise Android/device tasks; handle backend work here.

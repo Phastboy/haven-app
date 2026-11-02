@@ -8,7 +8,7 @@
 | Repository | Phastboy/haven-app (local checkout: h-mobile) |
 | Platform | Android |
 | Implementation | Kotlin, Jetpack Compose, Material 3 |
-| Status | Real sign-in/feed/profile; Messages inbox integration in progress; inspect NEXT_AGENT.md and MOBILE_MESSAGES.md |
+| Status | Real sign-in/feed/profile/Messages inbox; native thread integration not yet selected; inspect NEXT_AGENT.md and MOBILE_MESSAGES.md |
 | Parent project | https://github.com/phastboy/haven |
 | Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
 | Android namespace | `com.example` (current scaffold namespace) |
@@ -31,7 +31,7 @@ know the people behind those offers. Browse offers, explore a person's catalogue
 and express interest through private conversation. An inquiry starts a discussion;
 it does not create a commitment, reservation, or agreement.
 
-**Current capability disclosure:** Sign-in, Offers feed, and profile use the live Haven backend. The native Messages inbox is under integration against the pending v0.8.4 private API; selecting a row opens its real web thread. Native thread sending, collection management, and offer detail are not integrated. Remaining prototype files must not be used as runtime fallbacks. Read `NEXT_AGENT.md` first for current scope and outstanding device checks.
+**Current capability disclosure:** Sign-in, Offers feed, profile, and Messages inbox use the live Haven backend. Selecting a conversation opens its real web thread; native thread sending, collection management, and offer detail are not integrated. Remaining prototype files must not be used as runtime fallbacks. Read `NEXT_AGENT.md` first for current scope and outstanding device checks.
 
 The product description is reusable copy, not a claim that every journey is live
 in this prototype. Pair it with the prototype disclosure wherever the app's
@@ -40,7 +40,7 @@ current capabilities are described.
 ## Integration boundaries
 
 - The main Haven repository owns the product roadmap and backend behavior.
-- Live backend: `https://haven-odysseon-d48990aa.koyeb.app`; auth, `/api/v1/me`, and `/api/v1/offers` are integrated.
+- Live backend: `https://haven-odysseon-d48990aa.koyeb.app`; auth, `/api/v1/me`, `/api/v1/offers`, `/api/v1/me/profile`, and `/api/v1/conversations` are integrated.
 - Every screen selected for integration must use verified backend behavior. Samples, fake timers, and fabricated successful writes are forbidden in that runtime path.
 - People search, proximity, agreement/closing, and payments are not current app
   capabilities. Do not advertise them as available.
