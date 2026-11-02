@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.ui.theme.ThemeManager
 import com.example.ui.theme.ThemeMode
 import androidx.activity.viewModels
@@ -29,6 +30,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.auth.HavenAuthClient
+import com.example.auth.NativeGoogleSignIn
 import com.example.auth.SecureAuthStore
 import com.example.ui.model.OffersViewModel
 import com.example.ui.model.SessionManager
@@ -62,6 +64,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       HavenTheme {
         HavenApp(signInViewModel = signInViewModel,
+          onStartGoogleSignIn = ::startSignIn,
           onStartBrowserSignIn = ::startBrowserSignIn,
           onSignOut = ::signOut)
       }
@@ -76,6 +79,31 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     if (auth.acceptsCallback(intent.data)) handleCallback(intent)
+  }
+
+  private fun startSignIn() {
+    if (HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN) startNativeGoogleSignIn() else startBrowserSignIn()
+  }
+
+  private fun startNativeGoogleSignIn() {
+    lifecycleScope.launch {
+      val nonce = auth.beginNativeGoogle()
+      val errorMsg: String? = try {
+        val idToken = NativeGoogleSignIn.idToken(
+          this@MainActivity,
+          HavenAuthClient.GOOGLE_WEB_CLIENT_ID,
+          nonce
+        )
+        withContext(Dispatchers.IO) { auth.completeNativeGoogle(idToken, nonce) }
+      } catch (_: GetCredentialCancellationException) {
+        auth.cancelNativeGoogle()
+        "Google sign-in was cancelled."
+      } catch (e: Exception) {
+        auth.cancelNativeGoogle()
+        "Google sign-in failed: ${e.message ?: "unexpected error"}"
+      }
+      if (errorMsg != null) signInViewModel.onAuthError(errorMsg)
+    }
   }
 
   private fun startBrowserSignIn() {
@@ -124,6 +152,7 @@ class MainActivity : ComponentActivity() {
 fun HavenApp(
   signInViewModel: SignInViewModel = viewModel(),
   offersViewModel: OffersViewModel = viewModel(),
+  onStartGoogleSignIn: () -> Unit = {},
   onStartBrowserSignIn: () -> Unit = {},
   onSignOut: () -> Unit = {}
 ) {
@@ -162,6 +191,7 @@ fun HavenApp(
         SignInScreen(
           viewModel = signInViewModel,
           onNavigateBack = { currentScreen = Screen.WELCOME },
+          onStartGoogleSignIn = onStartGoogleSignIn,
           onStartBrowserSignIn = onStartBrowserSignIn,
           onNavigateToOffers = { currentScreen = Screen.OFFERS }
         )

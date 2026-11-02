@@ -69,6 +69,25 @@ class SecureAuthStore(context: Context) {
     return verifier
   }
 
+  /** Stores the single-use nonce sent with a native Google ID token request. */
+  fun saveNativeNonce(nonce: String) {
+    put("native_nonce", nonce)
+    preferences.edit().putLong("native_nonce_until", System.currentTimeMillis() + 10 * 60 * 1000).apply()
+  }
+
+  /** Returns the pending native nonce once, or null when absent or expired. */
+  fun consumeNativeNonce(): String? {
+    val nonce = get("native_nonce")
+    val valid = nonce != null &&
+      System.currentTimeMillis() <= preferences.getLong("native_nonce_until", 0)
+    preferences.edit().remove("native_nonce").remove("native_nonce_until").apply()
+    return if (valid) nonce else null
+  }
+
+  fun clearNativeNonce() {
+    preferences.edit().remove("native_nonce").remove("native_nonce_until").apply()
+  }
+
   var refreshToken: String?
     get() = get("refresh_token")
     set(value) {

@@ -11,11 +11,22 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import org.json.JSONObject
 
-/** The native half of Haven's browser sign-in and PKCE code exchange. */
+/** The native half of Haven's Google and browser sign-in flows. */
 class HavenAuthClient(private val store: SecureAuthStore) {
   companion object {
     const val HOST = "haven-odysseon-d48990aa.koyeb.app"
     private const val BASE = "https://$HOST"
+
+    /**
+     * Set to false to return the app to browser PKCE sign-in. The backend keeps
+     * both paths available, so reverting needs no server change.
+     */
+    const val USE_NATIVE_GOOGLE_SIGN_IN = true
+
+    /** Web OAuth client ID; also the audience of Google ID tokens. */
+    const val GOOGLE_WEB_CLIENT_ID =
+      "1064336033731-fk1m1vv5q0p0f6j36fhm3iaadcrprtoj.apps.googleusercontent.com"
+
     private var sharedClient: HavenAuthClient? = null
 
     @Synchronized
@@ -47,6 +58,39 @@ class HavenAuthClient(private val store: SecureAuthStore) {
 
   fun acceptsCallback(uri: Uri?): Boolean = uri?.scheme == "https" &&
     uri.host == HOST && (uri.path == "/auth/callback" || uri.path == "/auth/callback/")
+
+  /** Creates and stores the single-use nonce for a native Google request. */
+  fun beginNativeGoogle(): String {
+    val nonce = randomUrlSafe(24)
+    store.saveNativeNonce(nonce)
+    return nonce
+  }
+
+  /** Drops a pending native nonce after cancellation or failure. */
+  fun cancelNativeGoogle() {
+    store.clearNativeNonce()
+  }
+
+  /** Returns null on success, or an explicit failure message identifying the failing step. */
+  @Synchronized
+  fun completeNativeGoogle(idToken: String, nonce: String): String? {
+    val expected = store.consumeNativeNonce()
+      ?: return "Google sign-in request expired. Please try again."
+    if (nonce != expected) return "Google sign-in response did not match this request."
+
+    val response = request("POST", "/api/v1/auth/google", JSONObject()
+      .put("id_token", idToken).put("nonce", nonce))
+    if (response.first != 200) {
+      val snippet = response.second.take(120).trim()
+      return "Google sign-in failed (HTTP ${response.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+    }
+    return try {
+      if (acceptTokens(JSONObject(response.second))) null
+      else "Identity verification (/api/v1/me) failed."
+    } catch (e: Exception) {
+      "Failed to parse server authentication response: ${e.message}"
+    }
+  }
 
   /** Returns null on success, or an explicit failure message identifying the exact failing step. */
   @Synchronized
