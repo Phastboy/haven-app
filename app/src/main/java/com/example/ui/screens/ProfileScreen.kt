@@ -119,6 +119,9 @@ fun ProfileScreen(
           ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) { onOpenWeb("/profile/saved") }
           HorizontalDivider(color = HavenColors.BorderSubtle)
           ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) { onOpenWeb("/profile/following") }
+          HorizontalDivider(color = HavenColors.BorderSubtle)
+          ProfileRow("Appearance", ThemeManager.themeMode.title, Icons.Outlined.Palette,
+            tag = "profile_link_appearance") { appearance = true }
         }
         Row(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically) {
@@ -135,9 +138,8 @@ fun ProfileScreen(
         }
       }
       Spacer(Modifier.height(24.dp))
-      ProfileRow("Appearance", ThemeManager.themeMode.title, Icons.Outlined.Palette,
-        tag = "profile_link_appearance") { appearance = true }
-      TextButton(onClick = { confirmSignOut = true }, modifier = Modifier.fillMaxWidth().testTag("profile_link_sign_out")) {
+      TextButton(onClick = { confirmSignOut = true }, modifier = Modifier.fillMaxWidth()
+        .padding(top = 12.dp).testTag("profile_link_sign_out")) {
         Text("Sign out")
       }
     }
