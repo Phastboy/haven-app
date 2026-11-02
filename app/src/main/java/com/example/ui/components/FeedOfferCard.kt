@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +34,8 @@ import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
 @Composable
-fun FeedOfferCard(offer: FeedOffer, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+fun FeedOfferCard(offer: FeedOffer, modifier: Modifier = Modifier, saved: Boolean = false,
+  saving: Boolean = false, onSave: (() -> Unit)? = null, onOpen: () -> Unit) {
   Column(modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("offer_card_${offer.id}")) {
     Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(HavenColors.SurfaceContainer)) {
       SubcomposeAsyncImage(model = offer.coverUrl, contentDescription = offer.title,
@@ -41,9 +43,10 @@ fun FeedOfferCard(offer: FeedOffer, modifier: Modifier = Modifier, onOpen: () ->
         error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)
         } })
-      IconButton(onClick = onOpen, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+      IconButton(onClick = onSave ?: onOpen, enabled = !saving, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
         .background(HavenColors.Canvas.copy(alpha = 0.8f), RoundedCornerShape(24.dp))) {
-        Icon(Icons.Outlined.FavoriteBorder, "Open offer to save on Haven", tint = HavenColors.Primary)
+        Icon(if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+          if (saving) "Saving offer" else if (saved) "Unsave offer" else "Save offer", tint = HavenColors.Primary)
       }
     }
     Spacer(Modifier.height(10.dp))

@@ -19,6 +19,31 @@ data class FeedOffer(
   val distanceMeters: Double? = null
 )
 
+data class OfferDetail(
+  val id: String, val slug: String, val title: String, val description: String,
+  val category: String, val priceDisplay: String, val makerName: String,
+  val makerHandle: String, val images: List<String>, val location: String?, val isSaved: Boolean
+)
+
+class HavenOfferDetailRepository(private val auth: HavenAuthClient) {
+  suspend fun load(slug: String, authenticated: Boolean = true): OfferDetail = withContext(Dispatchers.IO) {
+    val path = "/api/v1/offers/${Uri.encode(slug)}"
+    val json = JSONObject(if (authenticated) auth.authenticatedGet(path) else auth.publicGet(path))
+    val images = json.getJSONArray("images")
+    OfferDetail(json.getString("id"), json.getString("slug"), json.getString("title"),
+      json.getString("description"), json.getString("category"), json.getString("price_display"),
+      json.getString("maker_name"), json.getString("maker_handle"),
+      List(images.length()) { images.getString(it) },
+      if (json.isNull("location")) null else json.getString("location"), json.getBoolean("is_saved"))
+  }
+
+  suspend fun setSaved(slug: String, saved: Boolean): Boolean = withContext(Dispatchers.IO) {
+    val method = if (saved) "POST" else "DELETE"
+    val body = JSONObject(auth.authenticatedMutation(method, "/api/v1/offers/${Uri.encode(slug)}/saved"))
+    body.getBoolean("is_saved")
+  }
+}
+
 data class FeedCategory(val slug: String, val label: String)
 data class OffersQuery(
   val search: String = "",

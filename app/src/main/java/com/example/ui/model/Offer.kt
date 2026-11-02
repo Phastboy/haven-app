@@ -19,7 +19,8 @@ data class Offer(
   /** Additional bundled images for the detail gallery. The primary image is [imageResId]. */
   val galleryResIds: List<Int> = emptyList(),
   /** Ordered label/value rows shown under "Offer location". */
-  val location: List<Pair<String, String>> = emptyList()
+  val location: List<Pair<String, String>> = emptyList(),
+  val galleryUrls: List<String> = emptyList()
 )
 
 object SampleOffers {
