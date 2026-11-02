@@ -164,6 +164,7 @@ class ProfileAndThemeRobolectricTest {
       compose.onNodeWithText("Messages").assertIsDisplayed()
       compose.onNodeWithText("Here are three offers to take a look at. Let's discuss.").assertIsDisplayed()
       compose.onNodeWithTag("unread_conv-1", useUnmergedTree = true).assertIsDisplayed()
+      compose.onNodeWithTag("conversation_chevron_conv-1", useUnmergedTree = true).assertIsDisplayed()
       compose.onNodeWithTag("conversation_conv-1").performClick()
       assertEquals("conv-1", selected)
       saveScreenshot("messages-${theme.name.lowercase()}.png")

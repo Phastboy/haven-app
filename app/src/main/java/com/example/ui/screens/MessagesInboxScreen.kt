@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -133,6 +135,8 @@ private fun InboxConversationRow(item: InboxConversation, onClick: () -> Unit) {
         fontSize = 14.sp, color = if (item.isUnread) HavenColors.TextPrimary else HavenColors.TextSecondary,
         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("conversation_preview_${item.id}"))
     }
+    Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = HavenColors.TextSecondary,
+      modifier = Modifier.size(20.dp).testTag("conversation_chevron_${item.id}"))
   }
 }
 
