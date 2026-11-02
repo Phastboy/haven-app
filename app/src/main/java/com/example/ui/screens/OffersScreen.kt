@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.browser.customtabs.CustomTabsIntent
 import coil.compose.SubcomposeAsyncImage
 import com.example.auth.HavenAuthClient
 import com.example.data.FeedOffer
@@ -66,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.ui.model.ProfileViewModel
+import com.example.ui.model.MessagesInboxViewModel
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.HavenBottomBarContainer
@@ -74,6 +77,8 @@ import com.example.ui.model.OffersViewModel
 import com.example.ui.model.SessionManager
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
+import com.example.ui.theme.ThemeManager
+import com.example.ui.theme.ThemeMode
 
 /** Public discovery from Haven. Adjacent journeys open their real web pages. */
 @Composable
@@ -89,24 +94,42 @@ fun OffersScreen(
   val uriHandler = LocalUriHandler.current
   val base = "https://${HavenAuthClient.HOST}"
   var showProfile by remember { mutableStateOf(false) }
+  var showMessages by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
     ProfileViewModel.factory(context.applicationContext)
   })
   val profileState by profileModel.state.collectAsState()
-  LaunchedEffect(showProfile, session.personId) {
+  val messagesModel: MessagesInboxViewModel = viewModel(factory = remember(context.applicationContext) {
+    MessagesInboxViewModel.factory(context.applicationContext)
+  })
+  val messagesState by messagesModel.state.collectAsState()
+  LaunchedEffect(showProfile, showMessages, session.personId) {
     val person = session.personId
-    if (person == null) profileModel.clear() else if (showProfile) profileModel.load(person)
+    if (person == null) {
+      profileModel.clear()
+      messagesModel.clear()
+    } else {
+      if (showProfile) profileModel.load(person)
+      if (showMessages) messagesModel.load(person)
+    }
   }
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
     if (showProfile) session.personId?.let { profileModel.load(it, force = true) }
+    if (showMessages) session.personId?.let { messagesModel.load(it, force = true) }
   }
   var browserError by remember { mutableStateOf<String?>(null) }
   fun openWeb(path: String) {
     try { uriHandler.openUri(base + path) }
     catch (_: Exception) { browserError = "Couldn’t open your browser. Please try again." }
   }
-  BackHandler { if (showProfile) showProfile = false else onNavigateBack() }
+  BackHandler {
+    when {
+      showProfile -> showProfile = false
+      showMessages -> showMessages = false
+      else -> onNavigateBack()
+    }
+  }
 
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("offers_screen")) {
     if (showProfile && session.isAuthenticated) {
@@ -115,6 +138,23 @@ fun OffersScreen(
       ProfileScreen(visibleProfile,
         onRetry = { session.personId?.let { profileModel.load(it, force = true) } },
         onOpenWeb = ::openWeb, onSignOut = onSignOut, modifier = Modifier.weight(1f))
+    } else if (showMessages && session.isAuthenticated) {
+      MessagesInboxScreen(messagesState,
+        onRetry = { session.personId?.let { messagesModel.load(it, force = true) } },
+        onLoadMore = messagesModel::loadMore,
+        onSelectConversation = { id ->
+          try {
+            val scheme = when (ThemeManager.themeMode) {
+              ThemeMode.SYSTEM -> CustomTabsIntent.COLOR_SCHEME_SYSTEM
+              ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
+              ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
+            }
+            CustomTabsIntent.Builder().setShowTitle(true).setColorScheme(scheme).build()
+              .launchUrl(context, Uri.parse("$base/conversations/$id"))
+          } catch (_: Exception) {
+            browserError = "Couldn’t open this conversation. Please try again."
+          }
+        }, modifier = Modifier.weight(1f))
     } else {
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas, showBottomBorder = false) {
       Column {
@@ -196,15 +236,25 @@ fun OffersScreen(
     HavenBottomBarContainer(backgroundColor = HavenColors.Canvas, showTopBorder = true,
       borderColor = HavenColors.BorderSubtle) {
       Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        FeedNavItem("Offers", Icons.Outlined.GridView, !showProfile) { showProfile = false; viewModel.refresh() }
-        FeedNavItem("Messages", Icons.Outlined.ChatBubbleOutline, false) { openWeb("/conversations") }
+        FeedNavItem("Offers", Icons.Outlined.GridView, !showProfile && !showMessages) {
+          showProfile = false
+          showMessages = false
+          viewModel.refresh()
+        }
+        FeedNavItem("Messages", Icons.Outlined.ChatBubbleOutline, showMessages) {
+          if (session.isAuthenticated) {
+            showProfile = false
+            showMessages = true
+            session.personId?.let { messagesModel.load(it) }
+          } else onNavigateToSignIn()
+        }
         FeedNavItem(if (session.isAuthenticated) "Profile" else "Log in", Icons.Outlined.PersonOutline, showProfile && session.isAuthenticated) {
-          if (session.isAuthenticated) showProfile = true else onNavigateToSignIn()
+          if (session.isAuthenticated) { showMessages = false; showProfile = true } else onNavigateToSignIn()
         }
       }
     }
   }
-  if (showProfile && browserError != null) AlertDialog(
+  if ((showProfile || showMessages) && browserError != null) AlertDialog(
     onDismissRequest = { browserError = null }, title = { Text("Couldn’t open page") },
     text = { Text(browserError ?: "") },
     confirmButton = { TextButton(onClick = { browserError = null }) { Text("Close") } })
