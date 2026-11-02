@@ -44,6 +44,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import com.example.data.HavenOfferDetailRepository
+import com.example.data.OfferDetail
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +103,58 @@ fun OffersScreen(
   var showProfile by remember { mutableStateOf(false) }
   var showMessages by remember { mutableStateOf(false) }
   val context = LocalContext.current
+  val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
+  val scope = rememberCoroutineScope()
+  var selectedSlug by remember { mutableStateOf<String?>(null) }
+  var detail by remember(session.personId) { mutableStateOf<OfferDetail?>(null) }
+  var detailLoading by remember { mutableStateOf(false) }
+  var detailError by remember { mutableStateOf<String?>(null) }
+  var detailRetry by remember { mutableStateOf(0) }
+  var savedStates by remember(session.personId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+  var savingSlugs by remember(session.personId) { mutableStateOf<Set<String>>(emptySet()) }
+  var saveError by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(selectedSlug, session.personId, detailRetry) {
+    detail = null
+    detailError = null
+    val slug = selectedSlug ?: return@LaunchedEffect
+    detailLoading = true
+    try {
+      val response = detailRepository.load(slug, session.isAuthenticated)
+      detail = response
+      savedStates = savedStates + (slug to response.isSaved)
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { detailError = "Couldn’t load this offer. Please try again." }
+    finally { detailLoading = false }
+  }
+  fun saveOffer(slug: String) {
+    if (!session.isAuthenticated) { onNavigateToSignIn(); return }
+    if (slug in savingSlugs) return
+    val actor = session.personId
+    savingSlugs = savingSlugs + slug
+    scope.launch {
+      try {
+        val current = savedStates[slug] ?: detailRepository.load(slug).isSaved
+        val confirmed = detailRepository.setSaved(slug, !current)
+        if (SessionManager.session.value.personId == actor) {
+          savedStates = savedStates + (slug to confirmed)
+          if (detail?.slug == slug) detail = detail?.copy(isSaved = confirmed)
+        }
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) { saveError = "Couldn’t update saved offer. Please try again." }
+      finally { if (SessionManager.session.value.personId == actor) savingSlugs = savingSlugs - slug }
+    }
+  }
+  if (saveError != null) AlertDialog(onDismissRequest = { saveError = null },
+    title = { Text("Couldn’t save offer") }, text = { Text(saveError.orEmpty()) },
+    confirmButton = { TextButton(onClick = { saveError = null }) { Text("Close") } })
+  selectedSlug?.let { slug ->
+    NativeOfferDetailScreen(detail, detailLoading, detailError, session.isAuthenticated,
+      onBack = { selectedSlug = null }, onRetry = { detailRetry++ },
+      onToggleSave = { saveOffer(slug) },
+      onMessageProvider = { uriHandler.openUri("$base/offers/$slug") },
+      onSignInRequested = onNavigateToSignIn, modifier = modifier)
+    return
+  }
   val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
     ProfileViewModel.factory(context.applicationContext)
   })
@@ -214,7 +271,8 @@ fun OffersScreen(
           fontSize = 12.sp, fontFamily = InterFontFamily, color = HavenColors.TextSecondary)
       }
       items(state.items, key = { it.id }) { offer ->
-        FeedOfferCard(offer) { openWeb("/offers/${offer.slug}") }
+        FeedOfferCard(offer, saved = savedStates[offer.slug] ?: false,
+          saving = offer.slug in savingSlugs, onSave = { saveOffer(offer.slug) }) { selectedSlug = offer.slug }
       }
       if (state.isLoading && state.items.isEmpty()) {
         items(4) { index -> OfferCardSkeleton(Modifier.testTag("offers_loading_skeleton_$index")) }

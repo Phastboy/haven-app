@@ -69,6 +69,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.SubcomposeAsyncImage
 import com.example.ui.components.shimmerBackground
 import com.example.ui.model.Offer
+import com.example.data.OfferDetail
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 import kotlinx.coroutines.delay
@@ -134,7 +135,6 @@ fun OfferDetailScreen(
           onBack = onBack,
           onToggleSave = {
             if (isAuthenticated) {
-              toastMessage = if (isSaved) "Offer removed from saved offers" else "Offer saved"
               onToggleSave()
             } else {
               authIntent = DetailAuthIntent.SAVE
@@ -225,6 +225,51 @@ fun OfferDetailScreen(
   }
 }
 
+/** Native detail presentation backed by the public offer detail response. */
+@Composable
+fun NativeOfferDetailScreen(
+  offer: OfferDetail?, loading: Boolean, error: String?, isAuthenticated: Boolean,
+  onBack: () -> Unit, onRetry: () -> Unit, onToggleSave: () -> Unit,
+  onMessageProvider: () -> Unit, onSignInRequested: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  if (offer == null) {
+    if (loading) OfferDetailLoadingSkeleton(modifier)
+    else Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+      Text(error ?: "Offer unavailable", color = HavenColors.TextPrimary)
+      Text("Try again", Modifier.clickable(onClick = onRetry).padding(12.dp))
+    }
+    return
+  }
+  OfferDetailScreen(
+    offer = Offer(offer.id, offer.title, offer.title, offer.makerName,
+      offer.makerName.firstOrNull()?.uppercase() ?: "H", offer.priceDisplay, "", 0.0,
+      0, offer.images.firstOrNull().orEmpty(), category = offer.category,
+      description = offer.description, location = listOfNotNull(offer.location?.let { "Offer location" to it }),
+      galleryUrls = offer.images),
+    isSaved = offer.isSaved, isAuthenticated = isAuthenticated, onBack = onBack,
+    onToggleSave = onToggleSave, onMessageProvider = onMessageProvider,
+    onSignInRequested = onSignInRequested, modifier = modifier,
+    onOpenProvider = null
+  )
+}
+
+@Composable
+private fun OfferDetailLoadingSkeleton(modifier: Modifier = Modifier) {
+  Column(modifier.fillMaxSize().background(HavenColors.Canvas).verticalScroll(rememberScrollState())
+    .testTag("offer_detail_loading_skeleton")) {
+    Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).shimmerBackground())
+    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+      Box(Modifier.size(86.dp, 14.dp).shimmerBackground())
+      Box(Modifier.fillMaxWidth(.82f).height(30.dp).shimmerBackground())
+      Box(Modifier.size(120.dp, 24.dp).shimmerBackground())
+      Box(Modifier.fillMaxWidth().height(68.dp).clip(RoundedCornerShape(12.dp)).shimmerBackground())
+      repeat(4) { Box(Modifier.fillMaxWidth(if (it == 3) .62f else 1f).height(14.dp).shimmerBackground()) }
+      Box(Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(12.dp)).shimmerBackground())
+    }
+  }
+}
+
 @Composable
 private fun OfferGallery(
   offer: Offer,
@@ -236,7 +281,8 @@ private fun OfferGallery(
   val images = remember(offer) {
     val extras = offer.galleryResIds.filter { it != offer.imageResId }
     buildList {
-      add(GalleryImage(url = offer.imageUrl, resId = offer.imageResId))
+      if (offer.galleryUrls.isNotEmpty()) offer.galleryUrls.forEach { add(GalleryImage(url = it, resId = 0)) }
+      else add(GalleryImage(url = offer.imageUrl, resId = offer.imageResId))
       extras.forEach { add(GalleryImage(url = null, resId = it)) }
     }
   }
@@ -276,12 +322,9 @@ private fun OfferGallery(
             )
           },
           error = {
-            Image(
-              painter = painterResource(id = image.resId),
-              contentDescription = "${offer.title}, image ${page + 1} of ${images.size}",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize()
-            )
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+              Text("Image unavailable", color = HavenColors.TextSecondary)
+            }
           }
         )
       }
