@@ -70,6 +70,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.ui.model.ProfileViewModel
 import com.example.ui.model.MessagesInboxViewModel
 import com.example.ui.components.FeedOfferCard
+import com.example.ui.components.OfferCardSkeleton
+import com.example.ui.components.shimmerBackground
 import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.HavenBottomBarContainer
 import com.example.ui.components.HavenTopBarContainer
@@ -188,9 +190,17 @@ fun OffersScreen(
         }
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
           horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          CategoryChip("All", state.query.category.isEmpty()) { viewModel.selectCategory("") }
-          state.categories.forEach { category ->
-            CategoryChip(category.label, state.query.category == category.slug) { viewModel.selectCategory(category.slug) }
+          if (state.isLoading && state.categories.isEmpty()) {
+            repeat(5) { index ->
+              Box(Modifier.padding(vertical = 14.dp).size(width = listOf(42, 82, 104, 90, 76)[index].dp, height = 34.dp)
+                .clip(RoundedCornerShape(24.dp)).shimmerBackground(RoundedCornerShape(24.dp))
+                .testTag(if (index == 0) "category_chip_skeleton" else "category_chip_skeleton_$index"))
+            }
+          } else {
+            CategoryChip("All", state.query.category.isEmpty()) { viewModel.selectCategory("") }
+            state.categories.forEach { category ->
+              CategoryChip(category.label, state.query.category == category.slug) { viewModel.selectCategory(category.slug) }
+            }
           }
         }
       }
@@ -206,7 +216,9 @@ fun OffersScreen(
       items(state.items, key = { it.id }) { offer ->
         FeedOfferCard(offer) { openWeb("/offers/${offer.slug}") }
       }
-      if (state.isLoading) item(span = { GridItemSpan(2) }) {
+      if (state.isLoading && state.items.isEmpty()) {
+        items(4) { index -> OfferCardSkeleton(Modifier.testTag("offers_loading_skeleton_$index")) }
+      } else if (state.isLoading) item(span = { GridItemSpan(2) }) {
         Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(Modifier.size(24.dp).testTag("offers_loading"), color = HavenColors.Primary)
         }
