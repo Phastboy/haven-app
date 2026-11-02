@@ -133,8 +133,7 @@ fun OffersScreen(
     savingSlugs = savingSlugs + slug
     scope.launch {
       try {
-        val current = savedStates[slug] ?: detailRepository.load(slug).isSaved
-        val confirmed = detailRepository.setSaved(slug, !current)
+        val confirmed = detailRepository.setSaved(slug, requestedSavedState(savedStates[slug]))
         if (SessionManager.session.value.personId == actor) {
           savedStates = savedStates + (slug to confirmed)
           if (detail?.slug == slug) detail = detail?.copy(isSaved = confirmed)
@@ -152,6 +151,12 @@ fun OffersScreen(
       onBack = { selectedSlug = null }, onRetry = { detailRetry++ },
       onToggleSave = { saveOffer(slug) },
       onMessageProvider = { uriHandler.openUri("$base/offers/$slug") },
+      onOpenProvider = { handle ->
+        try {
+          CustomTabsIntent.Builder().setShowTitle(true).build()
+            .launchUrl(context, Uri.parse("$base/profiles/${Uri.encode(handle)}"))
+        } catch (_: Exception) { saveError = "Couldn’t open the provider profile. Please try again." }
+      },
       onSignInRequested = onNavigateToSignIn, modifier = modifier)
     return
   }
@@ -336,6 +341,9 @@ fun OffersScreen(
     onApply = viewModel::applyFilters, onClear = viewModel::clearFilters, onDismiss = viewModel::closeFilterSheet)
 
 }
+
+/** An outlined Save action always saves, including when status has not been fetched. */
+internal fun requestedSavedState(confirmed: Boolean?): Boolean = confirmed != true
 
 @Composable
 private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) {

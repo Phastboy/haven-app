@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,7 +99,8 @@ fun OfferDetailScreen(
   onMessageProvider: () -> Unit,
   onSignInRequested: () -> Unit,
   modifier: Modifier = Modifier,
-  onOpenProvider: (() -> Unit)? = null
+  onOpenProvider: (() -> Unit)? = null,
+  formattedPrice: String? = null
 ) {
   val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
   var authIntent by remember { mutableStateOf<DetailAuthIntent?>(null) }
@@ -149,7 +151,7 @@ fun OfferDetailScreen(
             .padding(top = 20.dp, bottom = 28.dp),
           verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
-          OfferSummary(offer = offer)
+          OfferSummary(offer = offer, formattedPrice = formattedPrice)
 
           ProviderCard(
             offer = offer,
@@ -231,13 +233,22 @@ fun NativeOfferDetailScreen(
   offer: OfferDetail?, loading: Boolean, error: String?, isAuthenticated: Boolean,
   onBack: () -> Unit, onRetry: () -> Unit, onToggleSave: () -> Unit,
   onMessageProvider: () -> Unit, onSignInRequested: () -> Unit,
+  onOpenProvider: (String) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  BackHandler(enabled = offer == null, onBack = onBack)
   if (offer == null) {
-    if (loading) OfferDetailLoadingSkeleton(modifier)
-    else Column(modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-      Text(error ?: "Offer unavailable", color = HavenColors.TextPrimary)
-      Text("Try again", Modifier.clickable(onClick = onRetry).padding(12.dp))
+    Box(modifier.fillMaxSize().background(HavenColors.Canvas)) {
+      if (loading) OfferDetailLoadingSkeleton()
+      else Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+        Text(error ?: "Offer unavailable", color = HavenColors.TextPrimary)
+        TextButton(onClick = onRetry) { Text("Try again") }
+      }
+      TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)
+        .windowInsetsPadding(WindowInsets.statusBars).padding(12.dp)
+        .background(HavenColors.Canvas, RoundedCornerShape(24.dp)).testTag("offer_detail_back")) {
+        Text("Back", color = HavenColors.TextPrimary)
+      }
     }
     return
   }
@@ -250,7 +261,8 @@ fun NativeOfferDetailScreen(
     isSaved = offer.isSaved, isAuthenticated = isAuthenticated, onBack = onBack,
     onToggleSave = onToggleSave, onMessageProvider = onMessageProvider,
     onSignInRequested = onSignInRequested, modifier = modifier,
-    onOpenProvider = null
+    onOpenProvider = { onOpenProvider(offer.makerHandle) },
+    formattedPrice = offer.priceDisplay
   )
 }
 
@@ -424,7 +436,7 @@ private fun OfferGallery(
 }
 
 @Composable
-private fun OfferSummary(offer: Offer) {
+private fun OfferSummary(offer: Offer, formattedPrice: String? = null) {
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
       text = offer.category,
@@ -451,7 +463,7 @@ private fun OfferSummary(offer: Offer) {
       verticalAlignment = Alignment.Bottom
     ) {
       Text(
-        text = priceAmount(offer),
+        text = formattedPrice ?: priceAmount(offer),
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 23.sp,
@@ -459,7 +471,7 @@ private fun OfferSummary(offer: Offer) {
         color = HavenColors.TextPrimary
       )
 
-      if (offer.priceNumeric > 0.0 && offer.currency.isNotBlank()) {
+      if (formattedPrice == null && offer.priceNumeric > 0.0 && offer.currency.isNotBlank()) {
         Spacer(modifier = Modifier.size(6.dp))
         Text(
           text = offer.currency,
