@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -57,13 +58,25 @@ fun FeedOfferCard(
         error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)
         } })
-      IconButton(onClick = onSave ?: onOpen, enabled = !saving, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-        .background(HavenColors.Canvas.copy(alpha = 0.8f), RoundedCornerShape(24.dp))) {
-        Icon(if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-          if (saving) "Saving offer" else if (saved) "Unsave offer" else "Save offer", tint = HavenColors.Primary)
+      Box(
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(top = 8.dp, end = 8.dp)
+          .size(32.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(HavenColors.Canvas.copy(alpha = 0.85f))
+          .clickable(enabled = !saving, onClick = { (onSave ?: onOpen).invoke() }),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+          contentDescription = if (saving) "Saving offer" else if (saved) "Unsave offer" else "Save offer",
+          tint = HavenColors.Primary,
+          modifier = Modifier.size(16.dp)
+        )
       }
     }
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(8.dp))
     Text(
       text = offer.title,
       modifier = Modifier
@@ -78,14 +91,15 @@ fun FeedOfferCard(
       maxLines = 1,
       overflow = TextOverflow.Ellipsis
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(2.dp))
     val providerClickable = onOpenProvider != null && offer.makerHandle.isNotBlank()
     Text(
       text = listOfNotNull(offer.makerName, offerDistanceLabel(offer.distanceMeters)).joinToString(" · "),
       fontFamily = InterFontFamily,
-      fontSize = 13.sp,
-      lineHeight = 19.sp,
+      fontSize = 12.sp,
+      lineHeight = 17.sp,
       color = HavenColors.TextSecondary,
+      fontWeight = FontWeight.Normal,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
       modifier = Modifier
@@ -98,7 +112,7 @@ fun FeedOfferCard(
           }
         )
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(2.dp))
     Text(
       text = offer.priceDisplay,
       modifier = Modifier
@@ -106,7 +120,7 @@ fun FeedOfferCard(
         .testTag("offer_price_${offer.id}"),
       color = HavenColors.TextPrimary,
       fontFamily = InterFontFamily,
-      fontSize = 14.sp,
+      fontSize = 15.sp,
       lineHeight = 20.sp,
       fontWeight = FontWeight.SemiBold,
       maxLines = 1,
