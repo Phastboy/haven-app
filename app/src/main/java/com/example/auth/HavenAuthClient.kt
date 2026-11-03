@@ -4,18 +4,31 @@ import android.content.Context
 import java.io.IOException
 import android.net.Uri
 import android.util.Base64
+import android.util.Log
 import com.example.ui.model.SessionManager
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.concurrent.CopyOnWriteArrayList
 import org.json.JSONObject
 
 /** The native half of Haven's Google and browser sign-in flows. */
 class HavenAuthClient(private val store: SecureAuthStore) {
+
+  data class DiagnosticEvent(
+    val timestampMs: Long = System.currentTimeMillis(),
+    val tag: String,
+    val flow: String,
+    val step: String,
+    val message: String,
+    val isError: Boolean = false
+  )
+
   companion object {
     const val HOST = "haven-odysseon-d48990aa.koyeb.app"
     private const val BASE = "https://$HOST"
+    const val TAG = "HavenAuthDiag"
 
     /**
      * Set to false to return the app to browser PKCE sign-in. The backend keeps
@@ -28,6 +41,58 @@ class HavenAuthClient(private val store: SecureAuthStore) {
       "1064336033731-fk1m1vv5q0p0f6j36fhm3iaadcrprtoj.apps.googleusercontent.com"
 
     private var sharedClient: HavenAuthClient? = null
+    private val _diagnosticLogs = CopyOnWriteArrayList<DiagnosticEvent>()
+
+    /** Thread-safe snapshot of all auth execution diagnostic logs. */
+    val diagnosticLogs: List<DiagnosticEvent> get() = _diagnosticLogs.toList()
+
+    /** Records a diagnostic event to in-memory history and Logcat. */
+    fun logDiagnostic(
+      flow: String,
+      step: String,
+      message: String,
+      isError: Boolean = false,
+      throwable: Throwable? = null
+    ) {
+      val fullMessage = if (throwable != null) {
+        "$message | ${throwable.javaClass.name}: ${throwable.message}"
+      } else {
+        message
+      }
+      val event = DiagnosticEvent(
+        tag = TAG,
+        flow = flow,
+        step = step,
+        message = fullMessage,
+        isError = isError
+      )
+      _diagnosticLogs.add(event)
+      try {
+        if (isError) {
+          if (throwable != null) Log.e(TAG, "[$flow] [$step] $fullMessage", throwable)
+          else Log.e(TAG, "[$flow] [$step] $fullMessage")
+        } else {
+          Log.i(TAG, "[$flow] [$step] $fullMessage")
+        }
+      } catch (_: Throwable) {
+        // Fallback for plain host unit-test environments without Android Log implementation
+        val level = if (isError) "ERROR" else "INFO"
+        println("[$TAG] [$level] [$flow] [$step] $fullMessage")
+      }
+    }
+
+    /** Returns formatted diagnostic execution trace for debugging and verification. */
+    fun getDiagnosticSummary(): String = buildString {
+      appendLine("=== Haven Auth Diagnostic Trace (${_diagnosticLogs.size} events) ===")
+      _diagnosticLogs.forEach { event ->
+        appendLine("[${event.flow}] [${event.step}] ${event.message}${if (event.isError) " (ERROR)" else ""}")
+      }
+    }
+
+    /** Clears in-memory diagnostic logs (useful for test isolation). */
+    fun clearDiagnosticLogs() {
+      _diagnosticLogs.clear()
+    }
 
     @Synchronized
     fun shared(context: Context): HavenAuthClient = sharedClient ?: HavenAuthClient(
@@ -43,6 +108,11 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   fun beginAuthorization(): Uri {
+    logDiagnostic(
+      flow = "BROWSER_AUTH",
+      step = "BEGIN_AUTHORIZATION",
+      message = "Generating PKCE code verifier and OAuth state for browser authorization."
+    )
     val verifier = randomUrlSafe(32)
     val state = randomUrlSafe(24)
     val challenge = Base64.encodeToString(
@@ -50,73 +120,152 @@ class HavenAuthClient(private val store: SecureAuthStore) {
       Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
     )
     store.savePending(verifier, state)
-    return Uri.parse("$BASE/api/v1/auth/authorize").buildUpon()
+    val uri = Uri.parse("$BASE/api/v1/auth/authorize").buildUpon()
       .appendQueryParameter("code_challenge", challenge)
       .appendQueryParameter("state", state)
       .build()
+    logDiagnostic(
+      flow = "BROWSER_AUTH",
+      step = "AUTHORIZE_URI_BUILT",
+      message = "Browser authorization URI created: $uri"
+    )
+    return uri
   }
 
-  fun acceptsCallback(uri: Uri?): Boolean = uri?.scheme == "https" &&
-    uri.host == HOST && (uri.path == "/auth/callback" || uri.path == "/auth/callback/")
+  fun acceptsCallback(uri: Uri?): Boolean {
+    val accepts = uri?.scheme == "https" &&
+      uri.host == HOST && (uri.path == "/auth/callback" || uri.path == "/auth/callback/")
+    logDiagnostic(
+      flow = "BROWSER_AUTH",
+      step = "ACCEPTS_CALLBACK",
+      message = "Evaluating callback URI: $uri -> accepted=$accepts"
+    )
+    return accepts
+  }
 
   /** Creates and stores the single-use nonce for a native Google request. */
   fun beginNativeGoogle(): String {
     val nonce = randomUrlSafe(24)
     store.saveNativeNonce(nonce)
+    logDiagnostic(
+      flow = "NATIVE_GOOGLE",
+      step = "BEGIN_NATIVE_GOOGLE",
+      message = "Generated and saved single-use native nonce (prefix: ${nonce.take(6)}...)"
+    )
     return nonce
   }
 
   /** Drops a pending native nonce after cancellation or failure. */
   fun cancelNativeGoogle() {
+    logDiagnostic(
+      flow = "NATIVE_GOOGLE",
+      step = "CANCEL_NATIVE_GOOGLE",
+      message = "Cancelled native Google flow; clearing pending native nonce."
+    )
     store.clearNativeNonce()
   }
 
   /** Returns null on success, or an explicit failure message identifying the failing step. */
   @Synchronized
   fun completeNativeGoogle(idToken: String, nonce: String): String? {
+    logDiagnostic(
+      flow = "NATIVE_GOOGLE",
+      step = "COMPLETE_NATIVE_GOOGLE_START",
+      message = "Validating nonce and preparing backend token exchange at POST /api/v1/auth/google."
+    )
     val expected = store.consumeNativeNonce()
-      ?: return "Google sign-in request expired. Please try again."
-    if (nonce != expected) return "Google sign-in response did not match this request."
+    if (expected == null) {
+      val msg = "Google sign-in request expired. Please try again."
+      logDiagnostic("NATIVE_GOOGLE", "NONCE_EXPIRED", msg, isError = true)
+      return msg
+    }
+    if (nonce != expected) {
+      val msg = "Google sign-in response did not match this request."
+      logDiagnostic("NATIVE_GOOGLE", "NONCE_MISMATCH", msg, isError = true)
+      return msg
+    }
 
+    logDiagnostic(
+      flow = "NATIVE_GOOGLE",
+      step = "DISPATCHING_BACKEND_EXCHANGE",
+      message = "Dispatching POST /api/v1/auth/google with ID token length=${idToken.length}."
+    )
     val response = request("POST", "/api/v1/auth/google", JSONObject()
       .put("id_token", idToken).put("nonce", nonce))
+    logDiagnostic(
+      flow = "NATIVE_GOOGLE",
+      step = "BACKEND_EXCHANGE_RESPONSE",
+      message = "Backend POST /api/v1/auth/google returned HTTP ${response.first}."
+    )
     if (response.first != 200) {
       val snippet = response.second.take(120).trim()
-      return "Google sign-in failed (HTTP ${response.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+      val msg = "Google sign-in failed (HTTP ${response.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+      logDiagnostic("NATIVE_GOOGLE", "BACKEND_EXCHANGE_ERROR", msg, isError = true)
+      return msg
     }
     return try {
-      if (acceptTokens(JSONObject(response.second))) null
-      else "Identity verification (/api/v1/me) failed."
+      val success = acceptTokens(JSONObject(response.second))
+      if (success) {
+        logDiagnostic("NATIVE_GOOGLE", "COMPLETE_SUCCESS", "Native Google sign-in completed and user verified via /api/v1/me.")
+        null
+      } else {
+        val msg = "Identity verification (/api/v1/me) failed."
+        logDiagnostic("NATIVE_GOOGLE", "VERIFY_ME_FAILED", msg, isError = true)
+        msg
+      }
     } catch (e: Exception) {
-      "Failed to parse server authentication response: ${e.message}"
+      val msg = "Failed to parse server authentication response: ${e.message}"
+      logDiagnostic("NATIVE_GOOGLE", "PARSE_ERROR", msg, isError = true, throwable = e)
+      msg
     }
   }
 
   /** Returns null on success, or an explicit failure message identifying the exact failing step. */
   @Synchronized
   fun completeAuthorization(uri: Uri): String? {
+    logDiagnostic("BROWSER_AUTH", "COMPLETE_AUTHORIZATION_START", "Processing incoming browser callback: $uri")
     if (!acceptsCallback(uri)) {
-      return "Invalid callback URL: ${uri.scheme}://${uri.host}${uri.path}"
+      val msg = "Invalid callback URL: ${uri.scheme}://${uri.host}${uri.path}"
+      logDiagnostic("BROWSER_AUTH", "INVALID_CALLBACK_URL", msg, isError = true)
+      return msg
     }
     uri.getQueryParameter("error")?.let { err ->
-      return when (err) {
+      val msg = when (err) {
         "google_cancelled" -> "Google sign-in was cancelled."
         "access_denied" -> "Access was denied by Google."
         else -> "Authentication failed: $err"
       }
+      logDiagnostic("BROWSER_AUTH", "CALLBACK_ERROR_PARAM", "Callback returned error: $err ($msg)", isError = true)
+      return msg
     }
     val state = uri.getQueryParameter("state")
-      ?: return "Callback missing OAuth state parameter."
+    if (state == null) {
+      val msg = "Callback missing OAuth state parameter."
+      logDiagnostic("BROWSER_AUTH", "MISSING_STATE", msg, isError = true)
+      return msg
+    }
     val verifier = store.consumePending(state)
-      ?: return "OAuth state mismatch or expired request. Please try again."
+    if (verifier == null) {
+      val msg = "OAuth state mismatch or expired request. Please try again."
+      logDiagnostic("BROWSER_AUTH", "STATE_MISMATCH_OR_EXPIRED", msg, isError = true)
+      return msg
+    }
     val code = uri.getQueryParameter("code")
-      ?: return "Callback missing authorization code."
+    if (code == null) {
+      val msg = "Callback missing authorization code."
+      logDiagnostic("BROWSER_AUTH", "MISSING_CODE", msg, isError = true)
+      return msg
+    }
 
+    logDiagnostic("BROWSER_AUTH", "DISPATCHING_PKCE_EXCHANGE", "Exchanging authorization code via POST /api/v1/auth/exchange.")
     val exchangeResponse = request("POST", "/api/v1/auth/exchange", JSONObject()
       .put("code", code).put("code_verifier", verifier))
+    logDiagnostic("BROWSER_AUTH", "PKCE_EXCHANGE_RESPONSE", "PKCE exchange returned HTTP ${exchangeResponse.first}.")
     if (exchangeResponse.first != 200) {
       val snippet = exchangeResponse.second.take(120).trim()
-      return "PKCE token exchange failed (HTTP ${exchangeResponse.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+      val msg = "PKCE token exchange failed (HTTP ${exchangeResponse.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+      logDiagnostic("BROWSER_AUTH", "PKCE_EXCHANGE_ERROR", msg, isError = true)
+      return msg
     }
 
     return try {
@@ -126,18 +275,24 @@ class HavenAuthClient(private val store: SecureAuthStore) {
       store.refreshToken = refresh
       accessToken = access
 
+      logDiagnostic("BROWSER_AUTH", "VERIFYING_ME", "Verifying identity at GET /api/v1/me.")
       val me = request("GET", "/api/v1/me", null, access)
       if (me.first != 200) {
         val snippet = me.second.take(120).trim()
-        return "Identity verification (/api/v1/me) failed (HTTP ${me.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+        val msg = "Identity verification (/api/v1/me) failed (HTTP ${me.first}): ${if (snippet.isNotEmpty()) snippet else "Unauthorized"}"
+        logDiagnostic("BROWSER_AUTH", "VERIFY_ME_ERROR", msg, isError = true)
+        return msg
       }
       val profile = JSONObject(me.second)
       SessionManager.signInPerson(
         profile.getString("id"), profile.getString("display_name"), profile.getString("handle")
       )
+      logDiagnostic("BROWSER_AUTH", "COMPLETE_SUCCESS", "Browser authentication successful, session created for ${profile.optString("handle")}.")
       null
     } catch (e: Exception) {
-      "Failed to parse server authentication response: ${e.message}"
+      val msg = "Failed to parse server authentication response: ${e.message}"
+      logDiagnostic("BROWSER_AUTH", "PARSE_ERROR", msg, isError = true, throwable = e)
+      msg
     }
   }
 
@@ -148,14 +303,21 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   @Synchronized
   fun restore(): Boolean {
     val refresh = store.refreshToken ?: return false
+    logDiagnostic("SESSION", "RESTORE_START", "Attempting session restoration with stored refresh token.")
     val response = request("POST", "/api/v1/auth/refresh", JSONObject().put("refresh_token", refresh))
     if (response.first == 401) {
+      logDiagnostic("SESSION", "REFRESH_REJECTED_401", "Stored refresh token rejected (HTTP 401). Signing out locally.", isError = true)
       store.refreshToken = null
       SessionManager.signOut()
       return false
     }
-    if (response.first != 200) return false
-    return acceptTokens(JSONObject(response.second))
+    if (response.first != 200) {
+      logDiagnostic("SESSION", "REFRESH_FAILED", "Session restoration returned HTTP ${response.first}.", isError = true)
+      return false
+    }
+    val success = acceptTokens(JSONObject(response.second))
+    logDiagnostic("SESSION", "RESTORE_RESULT", "Session restoration success=$success.")
+    return success
   }
 
   private fun acceptTokens(body: JSONObject): Boolean {
@@ -175,6 +337,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
 
   @Synchronized
   fun signOut() {
+    logDiagnostic("SESSION", "SIGN_OUT", "User requested sign out. Clearing tokens and session.")
     val refresh = store.refreshToken
     store.refreshToken = null
     accessToken = null

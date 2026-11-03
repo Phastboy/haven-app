@@ -575,10 +575,19 @@ fun OffersScreen(
             showProfile = false
             showMessages = true
             session.personId?.let { messagesModel.load(it) }
-          } else onNavigateToSignIn()
+          } else {
+            HavenAuthClient.logDiagnostic("UI", "NAVIGATE_TO_SIGN_IN", "Messages tab clicked while unauthenticated; navigating to Sign In screen.")
+            onNavigateToSignIn()
+          }
         }
         FeedNavItem(if (session.isAuthenticated) "Profile" else "Log in", Icons.Outlined.PersonOutline, showProfile && session.isAuthenticated) {
-          if (session.isAuthenticated) { showMessages = false; showProfile = true } else onNavigateToSignIn()
+          if (session.isAuthenticated) {
+            showMessages = false
+            showProfile = true
+          } else {
+            HavenAuthClient.logDiagnostic("UI", "NAVIGATE_TO_SIGN_IN", "Log in tab clicked while unauthenticated; navigating to Sign In screen.")
+            onNavigateToSignIn()
+          }
         }
       }
     }

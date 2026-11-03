@@ -43,8 +43,15 @@ fun FeedOfferCard(
   onOpenProvider: ((String) -> Unit)? = null,
   onOpen: () -> Unit
 ) {
-  Column(modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("offer_card_${offer.id}")) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(HavenColors.SurfaceContainer)) {
+  Column(modifier = modifier.fillMaxWidth().testTag("offer_card_${offer.id}")) {
+    Box(
+      Modifier
+        .fillMaxWidth()
+        .aspectRatio(1f)
+        .clip(RoundedCornerShape(12.dp))
+        .background(HavenColors.SurfaceContainer)
+        .clickable(onClick = onOpen)
+    ) {
       SubcomposeAsyncImage(model = offer.coverUrl, contentDescription = offer.title,
         modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
         error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -57,8 +64,20 @@ fun FeedOfferCard(
       }
     }
     Spacer(Modifier.height(10.dp))
-    Text(offer.title, modifier = Modifier.testTag("offer_title_${offer.id}"), color = HavenColors.TextPrimary, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
-      fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(
+      text = offer.title,
+      modifier = Modifier
+        .fillMaxWidth()
+        .clickable(onClick = onOpen)
+        .testTag("offer_title_${offer.id}"),
+      color = HavenColors.TextPrimary,
+      fontFamily = InterFontFamily,
+      fontSize = 14.sp,
+      lineHeight = 20.sp,
+      fontWeight = FontWeight.Medium,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
+    )
     Spacer(Modifier.height(4.dp))
     val providerClickable = onOpenProvider != null && offer.makerHandle.isNotBlank()
     Text(
@@ -80,8 +99,19 @@ fun FeedOfferCard(
         )
     )
     Spacer(Modifier.height(4.dp))
-    Text(offer.priceDisplay, modifier = Modifier.testTag("offer_price_${offer.id}"), color = HavenColors.TextPrimary, fontFamily = InterFontFamily, fontSize = 14.sp, lineHeight = 20.sp,
-      fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(
+      text = offer.priceDisplay,
+      modifier = Modifier
+        .clickable(onClick = onOpen)
+        .testTag("offer_price_${offer.id}"),
+      color = HavenColors.TextPrimary,
+      fontFamily = InterFontFamily,
+      fontSize = 14.sp,
+      lineHeight = 20.sp,
+      fontWeight = FontWeight.SemiBold,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
+    )
   }
 }
 

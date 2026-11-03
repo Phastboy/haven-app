@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.auth.HavenAuthClient
 import com.example.ui.components.HavenAlertBanner
 import com.example.ui.components.HavenGoogleButton
 import com.example.ui.components.HavenInsets
@@ -178,6 +179,11 @@ fun SignInScreen(
           // Google Auth Button
           HavenGoogleButton(
             onClick = {
+              HavenAuthClient.logDiagnostic(
+                flow = "UI",
+                step = "GOOGLE_SIGN_IN_CLICK",
+                message = "User clicked Google Sign-In button on SignInScreen; calling onStartGoogleSignIn()."
+              )
               focusManager.clearFocus()
               viewModel.onGoogleSignInClicked()
               onStartGoogleSignIn()
@@ -221,7 +227,14 @@ fun SignInScreen(
             keyboardActions = KeyboardActions(
               onDone = {
                 focusManager.clearFocus()
-                if (viewModel.onSendMagicLink()) onStartBrowserSignIn()
+                if (viewModel.onSendMagicLink()) {
+                  HavenAuthClient.logDiagnostic(
+                    flow = "UI",
+                    step = "MAGIC_LINK_KEYBOARD_DONE",
+                    message = "User completed magic link form via keyboard action; calling onStartBrowserSignIn()."
+                  )
+                  onStartBrowserSignIn()
+                }
               }
             ),
             testTag = "email_input_field"
@@ -234,7 +247,14 @@ fun SignInScreen(
             text = "Send magic link",
             onClick = {
               focusManager.clearFocus()
-              if (viewModel.onSendMagicLink()) onStartBrowserSignIn()
+              if (viewModel.onSendMagicLink()) {
+                HavenAuthClient.logDiagnostic(
+                  flow = "UI",
+                  step = "MAGIC_LINK_BUTTON_CLICK",
+                  message = "User clicked Send Magic Link button; calling onStartBrowserSignIn()."
+                )
+                onStartBrowserSignIn()
+              }
             },
             testTag = "send_magic_link_button"
           )
