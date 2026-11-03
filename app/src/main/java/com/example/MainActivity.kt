@@ -136,7 +136,7 @@ class MainActivity : ComponentActivity() {
         )
         auth.cancelNativeGoogle()
         if (isNoCredential) {
-          "Google sign-in found no matching credentials for this app. Verify that package 'com.aistudio.haven.xvykpt' and SHA-1 (74:71:B7:9E:17:F9:45:9E:78:9B:E9:7F:5A:67:43:3D:B5:3B:71:D8) are registered in Google Cloud Console, or sign in with email."
+          "Google sign-in found no credentials on this device. Ensure an active Google account is signed in on the device, or sign in with your email."
         } else {
           "Google sign-in failed: ${e.message ?: "unexpected error"}"
         }

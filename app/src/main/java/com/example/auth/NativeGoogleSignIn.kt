@@ -4,81 +4,106 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 
 /**
- * Requests a Google ID token through the system Credential Manager.
+ * Requests a Google ID token through the explicit Google sign-in button.
  *
- * The returned token is verified by Haven's backend; this class never trusts or
- * parses the identity claims itself.
+ * The returned token must be verified by Haven's backend.
  */
 object NativeGoogleSignIn {
-  suspend fun idToken(context: Context, serverClientId: String, nonce: String?): String {
-    HavenAuthClient.logDiagnostic(
-      flow = "NATIVE_CREDENTIAL_MANAGER",
-      step = "CONFIGURING_REQUEST",
-      message = "Configuring GetGoogleIdOption & GetSignInWithGoogleOption with serverClientId=$serverClientId, autoSelectEnabled=false, filterByAuthorizedAccounts=false, hasNonce=${nonce != null}"
-    )
-    val googleIdOption = GetGoogleIdOption.Builder()
-      .setServerClientId(serverClientId)
-      .setFilterByAuthorizedAccounts(false)
-      .setAutoSelectEnabled(false)
-      .apply { if (nonce != null) setNonce(nonce) }
-      .build()
-    val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId)
-      .apply { if (nonce != null) setNonce(nonce) }
-      .build()
-    val request = GetCredentialRequest.Builder()
-      .addCredentialOption(googleIdOption)
-      .addCredentialOption(signInWithGoogleOption)
-      .build()
+
+  suspend fun idToken(
+    context: Context,
+    serverClientId: String,
+    nonce: String?
+  ): String {
+
+    require(serverClientId.isNotBlank()) {
+      "Google Web Client ID must not be empty."
+    }
 
     HavenAuthClient.logDiagnostic(
       flow = "NATIVE_CREDENTIAL_MANAGER",
-      step = "DISPATCHING_GET_CREDENTIAL",
-      message = "Calling CredentialManager.create(context).getCredential(...) to display native Google One-Tap / Account sheet"
+      step = "CONFIGURING_REQUEST",
+      message = "Configuring explicit Google sign-in; hasNonce=${nonce != null}"
     )
+
+    val googleOption =
+      GetSignInWithGoogleOption.Builder(serverClientId)
+        .apply {
+          if (nonce != null) setNonce(nonce)
+        }
+        .build()
+
+    val request = GetCredentialRequest.Builder()
+      .addCredentialOption(googleOption)
+      .build()
+
     val credential = try {
+      HavenAuthClient.logDiagnostic(
+        flow = "NATIVE_CREDENTIAL_MANAGER",
+        step = "DISPATCHING_GET_CREDENTIAL",
+        message = "Requesting explicit Google sign-in"
+      )
+
       CredentialManager.create(context)
-        .getCredential(context, request)
+        .getCredential(
+          context = context,
+          request = request
+        )
         .credential
+
+    } catch (e: GetCredentialCancellationException) {
+      HavenAuthClient.logDiagnostic(
+        flow = "NATIVE_CREDENTIAL_MANAGER",
+        step = "SIGN_IN_CANCELLED",
+        message = "User cancelled Google sign-in",
+        throwable = e
+      )
+      throw e
+
     } catch (e: Exception) {
       HavenAuthClient.logDiagnostic(
         flow = "NATIVE_CREDENTIAL_MANAGER",
-        step = "GET_CREDENTIAL_THREW_EXCEPTION",
-        message = "CredentialManager.getCredential failed with exception ${e.javaClass.name}: ${e.message}",
+        step = "GET_CREDENTIAL_FAILED",
+        message = "Exception: ${e.javaClass.name}; message=${e.message}",
         isError = true,
         throwable = e
       )
       throw e
     }
 
-    HavenAuthClient.logDiagnostic(
-      flow = "NATIVE_CREDENTIAL_MANAGER",
-      step = "CREDENTIAL_RESULT_RECEIVED",
-      message = "Credential returned: class=${credential.javaClass.name}, type=${(credential as? CustomCredential)?.type ?: "non-custom"}"
-    )
-
-    if (credential is CustomCredential &&
-      credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+    if (
+      credential !is CustomCredential ||
+      credential.type !=
+        GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
     ) {
-      val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
+      val message =
+        "Unexpected credential type: ${credential.type}"
+
       HavenAuthClient.logDiagnostic(
         flow = "NATIVE_CREDENTIAL_MANAGER",
-        step = "ID_TOKEN_EXTRACTED",
-        message = "Successfully extracted Google ID token (length=${token.length}, prefix=${token.take(12)}...)"
+        step = "UNEXPECTED_CREDENTIAL",
+        message = message,
+        isError = true
       )
-      return token
+
+      throw IllegalStateException(message)
     }
-    val failureMsg = "Google did not return an ID token. Credential type=${credential.type}."
+
+    val token = GoogleIdTokenCredential
+      .createFrom(credential.data)
+      .idToken
+
     HavenAuthClient.logDiagnostic(
       flow = "NATIVE_CREDENTIAL_MANAGER",
-      step = "UNEXPECTED_CREDENTIAL_TYPE",
-      message = failureMsg,
-      isError = true
+      step = "ID_TOKEN_EXTRACTED",
+      message = "Google ID token successfully extracted"
     )
-    throw IllegalStateException(failureMsg)
+
+    return token
   }
 }
