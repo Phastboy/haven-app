@@ -40,7 +40,7 @@ current capabilities are described.
 ## Integration boundaries
 
 - The main Haven repository owns the product roadmap and backend behavior.
-- Live backend: `https://haven-odysseon-d48990aa.koyeb.app`; auth, `/api/v1/me`, `/api/v1/offers`, `/api/v1/me/profile`, and `/api/v1/conversations` are integrated.
+- Live backend: `https://haven.apps.mistral.run`; auth, `/api/v1/me`, `/api/v1/offers`, `/api/v1/me/profile`, and `/api/v1/conversations` are integrated. The legacy `haven-odysseon-d48990aa.koyeb.app` host no longer serves the app.
 - Every screen selected for integration must use verified backend behavior. Samples, fake timers, and fabricated successful writes are forbidden in that runtime path.
 - People search, proximity, agreement/closing, and payments are not current app
   capabilities. Do not advertise them as available.
