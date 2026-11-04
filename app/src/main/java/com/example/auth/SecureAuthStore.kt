@@ -60,21 +60,6 @@ class SecureAuthStore(context: Context) {
     }
   }
 
-  fun savePending(verifier: String, state: String) {
-    put("pkce_verifier", verifier)
-    put("oauth_state", state)
-    preferences.edit().putLong("pending_until", System.currentTimeMillis() + 10 * 60 * 1000).apply()
-  }
-
-  fun consumePending(incomingState: String): String? {
-    val state = get("oauth_state")
-    val valid = state != null && state == incomingState &&
-      System.currentTimeMillis() <= preferences.getLong("pending_until", 0)
-    val verifier = if (valid) get("pkce_verifier") else null
-    preferences.edit().remove("pkce_verifier").remove("oauth_state").remove("pending_until").apply()
-    return verifier
-  }
-
   /** Stores the single-use nonce sent with a native Google ID token request. */
   fun saveNativeNonce(nonce: String) {
     put("native_nonce", nonce)

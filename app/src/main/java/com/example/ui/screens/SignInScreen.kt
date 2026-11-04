@@ -5,10 +5,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -32,11 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,7 +41,6 @@ import com.example.ui.components.HavenAlertBanner
 import com.example.ui.components.HavenGoogleButton
 import com.example.ui.components.HavenInsets
 import com.example.ui.components.HavenPrimaryButton
-import com.example.ui.components.HavenTextField
 import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.model.SignInViewModel
 import com.example.ui.theme.HavenColors
@@ -55,11 +48,12 @@ import com.example.ui.theme.InterFontFamily
 
 /**
  * Screen 2: Sign In Screen
- * Matches the sign-in prototype. Google uses Credential Manager; email links open the browser.
+ * Matches the sign-in prototype. Google uses Credential Manager; email sign-in is
+ * shown but inactive because the app has no email delivery path.
  *
  * Centralized Insets:
  * - Top bar extends behind the status bar and display cutouts to the top edge.
- * - Interactive form lifts cleanly above the IME virtual keyboard.
+ * - The form lifts cleanly above the IME virtual keyboard.
  * - Respects gesture navigation handle and 3-button navigation when keyboard is dismissed.
  */
 @Composable
@@ -67,12 +61,10 @@ fun SignInScreen(
   viewModel: SignInViewModel,
   onNavigateBack: () -> Unit,
   onStartGoogleSignIn: () -> Unit = {},
-  onStartBrowserSignIn: () -> Unit = {},
   onNavigateToOffers: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val uiState by viewModel.uiState.collectAsState()
-  val focusManager = LocalFocusManager.current
   val scrollState = rememberScrollState()
 
   // Handle Android physical/gesture back button to return to Welcome
@@ -84,9 +76,6 @@ fun SignInScreen(
     modifier = modifier
       .fillMaxSize()
       .background(HavenColors.Canvas)
-      .pointerInput(Unit) {
-        detectTapGestures(onTap = { focusManager.clearFocus() })
-      }
       .testTag("sign_in_screen")
   ) {
     // 56px Top Bar with Back Chevron & Status Bar / Notch Inset integration
@@ -161,7 +150,7 @@ fun SignInScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Shown only for a real browser-launch or callback failure.
+        // Shown only for a real Credential Manager or backend failure.
         AnimatedVisibility(
           visible = uiState.authError != null,
           enter = fadeIn() + slideInVertically(),
@@ -184,7 +173,6 @@ fun SignInScreen(
                 step = "GOOGLE_SIGN_IN_CLICK",
                 message = "User clicked Google Sign-In button on SignInScreen; calling onStartGoogleSignIn()."
               )
-              focusManager.clearFocus()
               viewModel.onGoogleSignInClicked()
               onStartGoogleSignIn()
             },
@@ -215,48 +203,26 @@ fun SignInScreen(
             )
           }
 
-          // Email Input Form Group
-          HavenTextField(
-            value = uiState.email,
-            onValueChange = { viewModel.onEmailChange(it) },
-            label = "Email",
-            placeholder = "name@example.com",
-            errorMessage = uiState.emailError,
-            isError = uiState.isError,
-            helperText = "We’ll email you a link to sign in. No password needed.",
-            keyboardActions = KeyboardActions(
-              onDone = {
-                focusManager.clearFocus()
-                if (viewModel.onSendMagicLink()) {
-                  HavenAuthClient.logDiagnostic(
-                    flow = "UI",
-                    step = "MAGIC_LINK_KEYBOARD_DONE",
-                    message = "User completed magic link form via keyboard action; calling onStartBrowserSignIn()."
-                  )
-                  onStartBrowserSignIn()
-                }
-              }
-            ),
-            testTag = "email_input_field"
+          // Email is intentionally inactive: the app has no email delivery path.
+          HavenPrimaryButton(
+            text = "Continue with email",
+            onClick = {},
+            enabled = false,
+            testTag = "email_sign_in_button"
           )
 
-          Spacer(modifier = Modifier.height(24.dp))
-
-          // Continue to Haven's browser sign-in for email verification.
-          HavenPrimaryButton(
-            text = "Send magic link",
-            onClick = {
-              focusManager.clearFocus()
-              if (viewModel.onSendMagicLink()) {
-                HavenAuthClient.logDiagnostic(
-                  flow = "UI",
-                  step = "MAGIC_LINK_BUTTON_CLICK",
-                  message = "User clicked Send Magic Link button; calling onStartBrowserSignIn()."
-                )
-                onStartBrowserSignIn()
-              }
-            },
-            testTag = "send_magic_link_button"
+          Text(
+            text = "Email sign-in isn't available in the app yet.",
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 13.sp,
+            lineHeight = 19.sp,
+            color = HavenColors.TextMuted,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(top = 10.dp)
+              .testTag("email_sign_in_note")
           )
       }
 

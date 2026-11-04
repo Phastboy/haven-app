@@ -1,5 +1,10 @@
 # AI Studio task: repair Haven Android sign-in
 
+> **Superseded 2026-11-04.** The browser PKCE flow, `/auth/callback` App Link and
+> `assetlinks.json` association described here were removed. Sign-in is native
+> Google via Credential Manager → `POST /api/v1/auth/google`. This file is kept
+> as a historical record of the earlier investigation.
+
 ## Goal
 
 Make the existing Haven backend sign-in flow work end to end in AI Studio's simulated Android device, then provide the exact checks needed for the installed build. Keep Haven as the authentication authority. Do not replace its flow with Firebase Auth, Credential Manager, a simulated user, or local success state.

@@ -1,6 +1,5 @@
 package com.example
 
-import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.example.auth.HavenAuthClient
 import com.example.auth.SecureAuthStore
@@ -62,30 +61,7 @@ class HavenAuthDiagnosticTest {
   }
 
   @Test
-  fun testBrowserAuthorizationDiagnostics() {
-    val uri = auth.beginAuthorization()
-    assertNotNull(uri)
-
-    val logs = HavenAuthClient.diagnosticLogs
-    assertTrue("Should log BEGIN_AUTHORIZATION", logs.any {
-      it.flow == "BROWSER_AUTH" && it.step == "BEGIN_AUTHORIZATION"
-    })
-    assertTrue("Should log AUTHORIZE_URI_BUILT", logs.any {
-      it.flow == "BROWSER_AUTH" && it.step == "AUTHORIZE_URI_BUILT"
-    })
-
-    val accepted = auth.acceptsCallback(Uri.parse("https://${HavenAuthClient.HOST}/auth/callback?code=abc&state=xyz"))
-    assertTrue(accepted)
-    assertTrue("Should log ACCEPTS_CALLBACK", HavenAuthClient.diagnosticLogs.any {
-      it.flow == "BROWSER_AUTH" && it.step == "ACCEPTS_CALLBACK"
-    })
-  }
-
-  @Test
   fun testRoutingDiagnosticConfirmsNativeGoogleMode() {
-    // When USE_NATIVE_GOOGLE_SIGN_IN is true, logDiagnostic confirms routing to native credential manager
-    assertTrue(HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN)
-
     HavenAuthClient.logDiagnostic(
       flow = "AUTH_ROUTER",
       step = "START_SIGN_IN",

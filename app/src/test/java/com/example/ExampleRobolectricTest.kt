@@ -5,11 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.ui.model.MessagesViewModel
 import com.example.ui.model.SampleOffers
 import com.example.ui.model.SessionManager
-import com.example.ui.model.SignInViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -47,55 +45,6 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Haven", appName)
-  }
-
-  @Test
-  fun `email validation correctly identifies valid and invalid emails`() {
-    assertTrue(SignInViewModel.isValidEmail("adaeze@crafts.ng"))
-    assertTrue(SignInViewModel.isValidEmail("name@example.com"))
-    assertTrue(SignInViewModel.isValidEmail("user.name+tag@sub.domain.co"))
-
-    assertFalse(SignInViewModel.isValidEmail(""))
-    assertFalse(SignInViewModel.isValidEmail("   "))
-    assertFalse(SignInViewModel.isValidEmail("adaeze@not-an-email"))
-    assertFalse(SignInViewModel.isValidEmail("plainaddress"))
-    assertFalse(SignInViewModel.isValidEmail("@missingusername.com"))
-    assertFalse(SignInViewModel.isValidEmail("user@.com"))
-  }
-
-  @Test
-  fun `submitting invalid email displays validation error`() {
-    val viewModel = SignInViewModel(testDispatcher)
-    viewModel.onEmailChange("adaeze@not-an-email")
-    viewModel.onSendMagicLink()
-
-    val state = viewModel.uiState.value
-    assertTrue(state.isError)
-    assertEquals("Enter a valid email address.", state.emailError)
-    assertNull(state.authError)
-  }
-
-  @Test
-  fun `typing in email clears previous validation error`() {
-    val viewModel = SignInViewModel(testDispatcher)
-    viewModel.onEmailChange("invalid")
-    viewModel.onSendMagicLink()
-    assertTrue(viewModel.uiState.value.isError)
-
-    viewModel.onEmailChange("adaeze@crafts.ng")
-    assertFalse(viewModel.uiState.value.isError)
-    assertNull(viewModel.uiState.value.emailError)
-  }
-
-  @Test
-  fun `browser handoff never authenticates without an API exchange`() {
-    SessionManager.signOut()
-    val viewModel = SignInViewModel(testDispatcher)
-    viewModel.onEmailChange("adaeze@crafts.ng")
-    assertTrue(viewModel.onSendMagicLink())
-    viewModel.onGoogleSignInClicked()
-    assertFalse(SessionManager.session.value.isAuthenticated)
-    assertNull(viewModel.uiState.value.authError)
   }
 
   @Test
