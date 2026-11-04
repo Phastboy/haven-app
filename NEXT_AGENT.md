@@ -87,7 +87,9 @@ second-actor isolation and image-delivery limits. Credentials are not committed.
 
 - Backend: Phastboy/haven, workspace `expts/rust`.
 - Android: Phastboy/haven-app, local `/home/tgenericx/dev/github.com/phastboy/h-mobile`.
-- Host: `https://haven-odysseon-d48990aa.koyeb.app`, Koyeb `haven/web`.
+- Host: `https://haven.apps.mistral.run` (Koyeb `haven/web`, custom domain).
+  The legacy `https://haven-odysseon-d48990aa.koyeb.app` returns
+  `404: No active service`. `HavenAuthClient.HOST` uses the live domain.
 - Package: `com.aistudio.haven.xvykpt`. The Android OAuth client for native Google
   must be registered with this package and the installed APK's signing SHA-1.
 - Pinned AI Studio signer:

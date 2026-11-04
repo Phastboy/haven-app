@@ -8,7 +8,7 @@ Android PR #9 merged at `0e011cc`; review fixes are on main at `b076605` and
 passed build/tests/lint in run 41419917646. Inspect that implementation before
 duplicating detail/save work in AI Studio. Device fidelity remains unaccepted.
 
-Base URL: `https://haven-odysseon-d48990aa.koyeb.app`.
+Base URL: `https://haven.apps.mistral.run`.
 Use native Google sign-in (`POST /api/v1/auth/google`) and rotating bearer tokens
 for private requests. The browser PKCE routes and `/auth/callback` no longer
 exist; the app never opens a browser for authentication.

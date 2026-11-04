@@ -14,7 +14,7 @@ Make the existing Haven backend sign-in flow work end to end in AI Studio's simu
 - Android app: `phastboy/h-mobile`, branch containing `app/src/main/java/com/example/auth/HavenAuthClient.kt`, `MainActivity.kt`, `AndroidManifest.xml`, and `prd.md`.
 - Haven backend: `phastboy/haven`, mobile API plan at `expts/rust/MOBILE_API_PLAN.md`; handlers under `expts/rust/crates/haven-web/src/app/api/` and Google OAuth under `expts/rust/crates/haven-web/src/app/auth/google/`.
 - App begins `GET /api/v1/auth/authorize?code_challenge=...&state=...` in the system browser. Haven web handles Google or email sign-in, then redirects to configured HTTPS `/auth/callback?code=...&state=...`. Android verifies state and exchanges the code with PKCE at `POST /api/v1/auth/exchange`, then calls `GET /api/v1/me`. Refresh/revoke use `/api/v1/auth/refresh` and `/api/v1/auth/revoke`.
-- The app currently targets `haven-odysseon-d48990aa.koyeb.app`; confirm that the deployed backend and `MOBILE_APP_LINK` use the same host and callback path.
+- The app currently targets `haven-odysseon-d48990aa.koyeb.app` (retired 2026-11-04; the live domain is `haven.apps.mistral.run`); confirm that the deployed backend and `MOBILE_APP_LINK` use the same host and callback path.
 
 ## Observed failure
 
