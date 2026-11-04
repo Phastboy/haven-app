@@ -53,11 +53,26 @@ fun FeedOfferCard(
         .background(HavenColors.SurfaceContainer)
         .clickable(onClick = onOpen)
     ) {
-      SubcomposeAsyncImage(model = offer.coverUrl, contentDescription = offer.title,
-        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
-        error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)
-        } })
+      val context = androidx.compose.ui.platform.LocalContext.current
+      val imageRequest = androidx.compose.runtime.remember(offer.coverUrl) {
+        coil.request.ImageRequest.Builder(context)
+          .data(offer.coverUrl)
+          .crossfade(true)
+          .memoryCacheKey(offer.coverUrl)
+          .diskCacheKey(offer.coverUrl)
+          .build()
+      }
+      SubcomposeAsyncImage(
+        model = imageRequest,
+        contentDescription = offer.title,
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop,
+        error = {
+          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)
+          }
+        }
+      )
       Box(
         modifier = Modifier
           .align(Alignment.TopEnd)

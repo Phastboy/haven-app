@@ -1,0 +1,264 @@
+package com.example
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.example.data.messaging.HavenLocalFirstMessagingRepository
+import com.example.data.messaging.db.ConversationEntity
+import com.example.data.messaging.db.HavenDatabase
+import com.example.data.messaging.db.MessageDeliveryStatus
+import com.example.data.messaging.transport.ConversationSummaryDto
+import com.example.data.messaging.transport.MockMessagingTransport
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+@OptIn(ExperimentalCoroutinesApi::class)
+class HavenMessagingRepositoryTest {
+
+  private val testDispatcher = StandardTestDispatcher()
+  private lateinit var context: Context
+  private lateinit var database: HavenDatabase
+  private lateinit var transport: MockMessagingTransport
+  private lateinit var repository: HavenLocalFirstMessagingRepository
+
+  @Before
+  fun setUp() {
+    Dispatchers.setMain(testDispatcher)
+    context = ApplicationProvider.getApplicationContext()
+    val directExecutor = java.util.concurrent.Executor { it.run() }
+    database = HavenDatabase.createInMemory(context, directExecutor)
+    transport = MockMessagingTransport(simulatedDelayMs = 0L)
+    repository = HavenLocalFirstMessagingRepository(
+      database = database,
+      transport = transport,
+      coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher),
+      ioDispatcher = testDispatcher
+    )
+  }
+
+  @After
+  fun tearDown() {
+    database.close()
+    Dispatchers.resetMain()
+  }
+
+  @Test
+  fun testCachedInboxRendersImmediatelyWithoutNetwork() = runTest(testDispatcher) {
+    val cachedConv = ConversationEntity(
+      id = "conv-cached-1",
+      ownerPersonId = "person-123",
+      otherUserId = "user-adaeze",
+      displayName = "Adaeze Okafor",
+      handle = "@adaeze",
+      avatarUrl = null,
+      lastMessageBody = "Cached message from local Room",
+      lastMessageAt = "2026-11-04T10:00:00Z",
+      lastMessageTimestamp = 1700000000000L,
+      isUnread = false
+    )
+    database.conversationDao().upsertConversation(cachedConv)
+
+    // Observe flow - should emit cached item immediately without calling refresh
+    val initialList = repository.observeConversations("person-123").first()
+    assertEquals(1, initialList.size)
+    assertEquals("conv-cached-1", initialList[0].id)
+    assertEquals("Cached message from local Room", initialList[0].lastMessageBody)
+  }
+
+  @Test
+  fun testBackgroundRefreshUpdatesRoomConversations() = runTest(testDispatcher) {
+    transport.mockConversations = listOf(
+      ConversationSummaryDto(
+        id = "conv-remote-1",
+        otherUserId = "user-tunde",
+        displayName = "Tunde Bakare",
+        handle = "@tunde",
+        avatarUrl = null,
+        lastMessageBody = "Remote update from server",
+        lastMessageAt = "2026-11-04T10:30:00Z",
+        isUnread = true
+      )
+    )
+
+    val result = repository.refreshConversations("person-123")
+    assertTrue(result.isSuccess)
+
+    val updatedList = repository.observeConversations("person-123").first()
+    assertEquals(1, updatedList.size)
+    assertEquals("conv-remote-1", updatedList[0].id)
+    assertEquals("Remote update from server", updatedList[0].lastMessageBody)
+    assertTrue(updatedList[0].isUnread)
+  }
+
+  @Test
+  fun testOfflinePreservesCachedContent() = runTest(testDispatcher) {
+    // Seed Room cache
+    val cached = ConversationEntity(
+      id = "conv-offline-1",
+      ownerPersonId = "person-123",
+      otherUserId = "user-chioma",
+      displayName = "Chioma Nwosu",
+      handle = "@chioma",
+      avatarUrl = null,
+      lastMessageBody = "Persisted offline message",
+      lastMessageAt = "2026-11-04T09:00:00Z",
+      lastMessageTimestamp = 1700000000000L,
+      isUnread = false
+    )
+    database.conversationDao().upsertConversation(cached)
+
+    // Simulate network error
+    transport.shouldFailNextFetch = true
+    val result = repository.refreshConversations("person-123")
+    assertFalse(result.isSuccess)
+
+    // Cached content must still exist in Room and remain visible
+    val list = repository.observeConversations("person-123").first()
+    assertEquals(1, list.size)
+    assertEquals("conv-offline-1", list[0].id)
+  }
+
+  @Test
+  fun testOptimisticMessageSendAndServerAck() = runTest(testDispatcher) {
+    val convId = "conv-thread-101"
+    val initialConv = ConversationEntity(
+      id = convId,
+      ownerPersonId = "person-123",
+      otherUserId = "user-adaeze",
+      displayName = "Adaeze Okafor",
+      handle = "@adaeze",
+      avatarUrl = null,
+      lastMessageBody = "Old preview",
+      lastMessageAt = "2026-11-04T08:00:00Z",
+      lastMessageTimestamp = 1700000000000L,
+      isUnread = false
+    )
+    database.conversationDao().upsertConversation(initialConv)
+
+    // 1. Send message optimistically
+    val clientId = repository.sendMessage(
+      conversationId = convId,
+      text = "Hi Adaeze, I want to trade my ceramic mug!"
+    )
+    assertNotNull(clientId)
+
+    // 2. Message should exist immediately in Room
+    val messageInDb = database.messageDao().getMessageByClientId(clientId)
+    assertNotNull(messageInDb)
+    assertEquals("Hi Adaeze, I want to trade my ceramic mug!", messageInDb!!.text)
+
+    // 3. Conversation preview must update immediately
+    val convAfterSend = repository.observeConversation(convId).first()
+    assertNotNull(convAfterSend)
+    assertEquals("Hi Adaeze, I want to trade my ceramic mug!", convAfterSend!!.lastMessageBody)
+
+    // 4. Process outbox (simulate background dispatch completion)
+    repository.processOutbox()
+
+    // 5. Message in Room must now be marked SENT with a non-null serverId
+    val messageAfterAck = database.messageDao().getMessageByClientId(clientId)
+    assertNotNull(messageAfterAck)
+    assertEquals(MessageDeliveryStatus.SENT, messageAfterAck!!.status)
+    assertNotNull(messageAfterAck.serverId)
+
+    // 6. Outbox should now be empty
+    val pendingOutbox = database.outboxDao().getPendingOutbox()
+    assertTrue(pendingOutbox.isEmpty())
+  }
+
+  @Test
+  fun testDeliveryFailureAndRetry() = runTest(testDispatcher) {
+    val convId = "conv-thread-fail"
+    transport.alwaysFailSend = true
+
+    // Send message while network is failing
+    val clientId = repository.sendMessage(
+      conversationId = convId,
+      text = "Will this fail?"
+    )
+
+    // Process outbox to execute dispatch
+    repository.processOutbox()
+
+    // Status should be FAILED
+    val failedMessage = database.messageDao().getMessageByClientId(clientId)
+    assertNotNull(failedMessage)
+    assertEquals(MessageDeliveryStatus.FAILED, failedMessage!!.status)
+    assertNotNull(failedMessage.errorMessage)
+
+    // Now transport recovers
+    transport.alwaysFailSend = false
+    repository.retryMessage(clientId)
+    repository.processOutbox()
+
+    // Status should transition to SENT
+    val recoveredMessage = database.messageDao().getMessageByClientId(clientId)
+    assertNotNull(recoveredMessage)
+    assertEquals(MessageDeliveryStatus.SENT, recoveredMessage!!.status)
+  }
+
+  @Test
+  fun testAccountIsolation() = runTest(testDispatcher) {
+    val convUserA = ConversationEntity(
+      id = "conv-a",
+      ownerPersonId = "user_A",
+      otherUserId = "peer-1",
+      displayName = "Peer One",
+      handle = "@peer1",
+      avatarUrl = null,
+      lastMessageBody = "User A secret trade",
+      lastMessageAt = "2026-11-04T10:00:00Z",
+      lastMessageTimestamp = 1000L,
+      isUnread = false
+    )
+    val convUserB = ConversationEntity(
+      id = "conv-b",
+      ownerPersonId = "user_B",
+      otherUserId = "peer-2",
+      displayName = "Peer Two",
+      handle = "@peer2",
+      avatarUrl = null,
+      lastMessageBody = "User B private thread",
+      lastMessageAt = "2026-11-04T10:00:00Z",
+      lastMessageTimestamp = 2000L,
+      isUnread = false
+    )
+    database.conversationDao().upsertConversations(listOf(convUserA, convUserB))
+
+    val listA = repository.observeConversations("user_A").first()
+    assertEquals(1, listA.size)
+    assertEquals("conv-a", listA[0].id)
+
+    val listB = repository.observeConversations("user_B").first()
+    assertEquals(1, listB.size)
+    assertEquals("conv-b", listB[0].id)
+  }
+
+  @Test
+  fun testIdempotentSendDeduplication() = runTest(testDispatcher) {
+    val convId = "conv-idem"
+    val clientId = "msg-fixed-id-123"
+
+    val ack1 = transport.sendMessage(convId, clientId, "Hello").getOrThrow()
+    val ack2 = transport.sendMessage(convId, clientId, "Hello").getOrThrow()
+
+    // Same serverId returned, deduplicated
+    assertEquals(ack1.serverId, ack2.serverId)
+  }
+}

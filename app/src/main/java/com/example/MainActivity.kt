@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HavenApp(
   signInViewModel: SignInViewModel = viewModel(),
-  offersViewModel: OffersViewModel = viewModel(),
+  offersViewModel: OffersViewModel = viewModel(factory = OffersViewModel.factory(androidx.compose.ui.platform.LocalContext.current)),
   onStartGoogleSignIn: () -> Unit = {},
   onSignOut: () -> Unit = {}
 ) {

@@ -93,6 +93,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.ui.model.ProfileViewModel
 import com.example.ui.model.MessagesInboxViewModel
+import com.example.ui.model.ConversationThreadViewModel
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.OfferCardSkeleton
 import com.example.ui.components.shimmerBackground
@@ -112,6 +113,7 @@ sealed interface OffersDestination {
   data object MyOffers : OffersDestination
   data object SavedOffers : OffersDestination
   data object Following : OffersDestination
+  data class ConversationThread(val conversationId: String) : OffersDestination
 }
 
 /** Public discovery from Haven. Adjacent journeys open their real web pages. */
@@ -135,6 +137,13 @@ fun OffersScreen(
   val scope = rememberCoroutineScope()
   var navStack by remember { mutableStateOf<List<OffersDestination>>(emptyList()) }
   val currentDestination = navStack.lastOrNull()
+  val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
+    initialFirstVisibleItemIndex = viewModel.scrollIndex,
+    initialFirstVisibleItemScrollOffset = viewModel.scrollOffset
+  )
+  LaunchedEffect(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) {
+    viewModel.updateScrollPosition(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+  }
 
   val activeSlug = (currentDestination as? OffersDestination.OfferDetail)?.slug
   var detail by remember(session.personId) { mutableStateOf<OfferDetail?>(null) }
@@ -190,16 +199,43 @@ fun OffersScreen(
   }
 
   LaunchedEffect(activeSlug, session.personId, detailRetry) {
-    detail = null
+    val slug = activeSlug ?: run {
+      detail = null
+      detailError = null
+      detailLoading = false
+      return@LaunchedEffect
+    }
+    // Instant cache pre-population from feed items for seamless navigation
+    val cachedSummary = state.items.firstOrNull { it.slug == slug }
+    if (detail?.slug != slug) {
+      if (cachedSummary != null) {
+        detail = OfferDetail(
+          id = cachedSummary.id,
+          slug = cachedSummary.slug,
+          title = cachedSummary.title,
+          description = "",
+          category = cachedSummary.category,
+          priceDisplay = cachedSummary.priceDisplay,
+          makerName = cachedSummary.makerName,
+          makerHandle = cachedSummary.makerHandle,
+          images = listOfNotNull(cachedSummary.coverUrl),
+          location = null,
+          isSaved = savedStates[slug] ?: false
+        )
+      } else {
+        detail = null
+      }
+    }
     detailError = null
-    val slug = activeSlug ?: return@LaunchedEffect
-    detailLoading = true
+    detailLoading = (detail == null)
     try {
       val response = detailRepository.load(slug, session.isAuthenticated)
       detail = response
       savedStates = savedStates + (slug to response.isSaved)
     } catch (cancelled: CancellationException) { throw cancelled }
-    catch (_: Exception) { detailError = "Couldn’t load this offer. Please try again." }
+    catch (_: Exception) {
+      if (detail == null) detailError = "Couldn’t load this offer. Please try again."
+    }
     finally { detailLoading = false }
   }
 
@@ -255,9 +291,16 @@ fun OffersScreen(
     if (slug in savingSlugs) return
     val actor = session.personId
     savingSlugs = savingSlugs + slug
+
+    val previousState = savedStates[slug] ?: false
+    val optimisticTarget = requestedSavedState(previousState)
+    // Instant optimistic update
+    savedStates = savedStates + (slug to optimisticTarget)
+    if (detail?.slug == slug) detail = detail?.copy(isSaved = optimisticTarget)
+
     scope.launch {
       try {
-        val confirmed = detailRepository.setSaved(slug, requestedSavedState(savedStates[slug]))
+        val confirmed = detailRepository.setSaved(slug, optimisticTarget)
         if (SessionManager.session.value.personId == actor) {
           savedStates = savedStates + (slug to confirmed)
           if (detail?.slug == slug) detail = detail?.copy(isSaved = confirmed)
@@ -266,7 +309,14 @@ fun OffersScreen(
           }
         }
       } catch (cancelled: CancellationException) { throw cancelled }
-      catch (_: Exception) { saveError = "Couldn’t update saved offer. Please try again." }
+      catch (_: Exception) {
+        // Rollback on failure
+        if (SessionManager.session.value.personId == actor) {
+          savedStates = savedStates + (slug to previousState)
+          if (detail?.slug == slug) detail = detail?.copy(isSaved = previousState)
+        }
+        saveError = "Couldn’t update saved offer. Please try again."
+      }
       finally { if (SessionManager.session.value.personId == actor) savingSlugs = savingSlugs - slug }
     }
   }
@@ -416,6 +466,28 @@ fun OffersScreen(
           return
         }
       }
+      is OffersDestination.ConversationThread -> {
+        val threadModel: ConversationThreadViewModel = viewModel(
+          key = "thread_${currentDestination.conversationId}",
+          factory = remember(context.applicationContext) {
+            ConversationThreadViewModel.factory(context.applicationContext)
+          }
+        )
+        LaunchedEffect(currentDestination.conversationId) {
+          threadModel.openConversation(currentDestination.conversationId)
+        }
+        val threadState by threadModel.uiState.collectAsState()
+        NativeConversationThreadScreen(
+          state = threadState,
+          onBack = { navStack = navStack.dropLast(1) },
+          onInputChanged = threadModel::onInputTextChanged,
+          onSendMessage = threadModel::sendMessage,
+          onRetryMessage = threadModel::retryMessage,
+          onOpenProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          modifier = modifier
+        )
+        return
+      }
     }
   }
 
@@ -474,17 +546,7 @@ fun OffersScreen(
         onRetry = { session.personId?.let { messagesModel.load(it, force = true) } },
         onLoadMore = messagesModel::loadMore,
         onSelectConversation = { id ->
-          try {
-            val scheme = when (ThemeManager.themeMode) {
-              ThemeMode.SYSTEM -> CustomTabsIntent.COLOR_SCHEME_SYSTEM
-              ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
-              ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
-            }
-            CustomTabsIntent.Builder().setShowTitle(true).setColorScheme(scheme).build()
-              .launchUrl(context, Uri.parse("$base/conversations/$id"))
-          } catch (_: Exception) {
-            browserError = "Couldn’t open this conversation. Please try again."
-          }
+          navStack = navStack + OffersDestination.ConversationThread(id)
         }, modifier = Modifier.weight(1f))
     } else {
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas, showBottomBorder = false) {
@@ -614,6 +676,7 @@ fun OffersScreen(
 
     LazyVerticalGrid(
       columns = GridCells.Fixed(2),
+      state = gridState,
       modifier = Modifier.weight(1f).testTag("offers_grid"),
       contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 20.dp),
       horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -790,9 +853,15 @@ fun OffersScreen(
           inactiveIcon = Icons.Outlined.GridView,
           selected = !showProfile && !showMessages
         ) {
+          val wasAlreadyOnOffers = !showProfile && !showMessages && navStack.isEmpty()
           showProfile = false
           showMessages = false
-          viewModel.refresh()
+          if (navStack.isNotEmpty()) {
+            navStack = emptyList()
+          } else if (wasAlreadyOnOffers) {
+            scope.launch { gridState.animateScrollToItem(0) }
+            viewModel.refresh()
+          }
         }
 
         val unreadCount = messagesState.items.count { it.isUnread }
