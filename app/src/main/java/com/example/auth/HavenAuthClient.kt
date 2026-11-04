@@ -24,7 +24,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   )
 
   companion object {
-    const val HOST = "haven-odysseon-d48990aa.koyeb.app"
+    const val HOST = "haven.apps.mistral.run"
     private const val BASE = "https://$HOST"
     const val TAG = "HavenAuthDiag"
 
