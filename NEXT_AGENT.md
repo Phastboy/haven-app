@@ -1,5 +1,9 @@
 # Start here — Haven mobile/backend pickup, 2026-11-02
 
+> 2026-11-04: browser PKCE sign-in was removed. Native Google
+> (`POST /api/v1/auth/google`) is the only app sign-in path; the `/auth/callback`
+> App Link, `assetlinks` configuration and email magic link no longer exist.
+
 ## Current release and owner direction
 
 Backend PR #53 merged at `d2c166a56e8e3d87592cbfc0845da12dd9a8db7d`.
@@ -60,10 +64,9 @@ Next AI Studio tasks:
 Feed/profile use shared FeedOfferCard with optional server distance; general feed
 does not provide distance. Never invent it. Integrated Messages inbox opens real
 web threads in themed Custom Tabs; native thread history/send/live remains later.
-Auth uses browser PKCE, rotating refresh tokens and GET /api/v1/me. Owner confirmed
-Google sign-in returning to app; fresh browser-session tracing remains pending.
-Production email sign-in was disabled in the previous verified configuration;
-local file-mail auth checks do not establish production email availability.
+Auth is native Google only: Credential Manager → `POST /api/v1/auth/google` →
+rotating refresh tokens → `GET /api/v1/me`. The app never opens a browser for
+authentication. The email option is visible but disabled, with a one-line note.
 
 ## Evidence and remaining limits
 
@@ -73,8 +76,9 @@ save writes returned 401 anonymously. These checks did not mutate production.
 No authenticated production save/unsave or device journey is claimed.
 
 Forty recorded local curl checks passed using a separate native-auth-configured
-server: actual PKCE exchange, private reads, idempotent save, detail readback,
-Saved membership, idempotent unsave and final empty collection. The test actor's
+server: token exchange, private reads, idempotent save, detail readback, Saved
+membership, idempotent unsave and final empty collection. The exchange step used
+the retired PKCE route; the private-read and save evidence still applies. The test actor's
 Saved collection was restored to empty. See the backend report
 `verification/native-api-v085/RESULT.md` for nonempty fixture, pagination,
 second-actor isolation and image-delivery limits. Credentials are not committed.
@@ -84,10 +88,12 @@ second-actor isolation and image-delivery limits. Credentials are not committed.
 - Backend: Phastboy/haven, workspace `expts/rust`.
 - Android: Phastboy/haven-app, local `/home/tgenericx/dev/github.com/phastboy/h-mobile`.
 - Host: `https://haven-odysseon-d48990aa.koyeb.app`, Koyeb `haven/web`.
-- Package: `com.aistudio.haven.xvykpt`; callback is host + `/auth/callback`.
+- Package: `com.aistudio.haven.xvykpt`. The Android OAuth client for native Google
+  must be registered with this package and the installed APK's signing SHA-1.
 - Pinned AI Studio signer:
   `00:27:07:D7:C9:09:36:6B:CE:B9:72:30:95:C9:64:5E:54:4D:E8:FF:3B:74:C8:61:BF:3F:1E:BB:66:36:41:49`.
-  Prior assetlinks/Google verification recognized it. CI debug keys can differ.
+  CI debug keys can differ, and each signing certificate needs its own Android
+  OAuth client.
 - Tag `v*` triggers backend publication/deployment. Android release artifacts
   currently use testing debug signing, not production APK signing.
 

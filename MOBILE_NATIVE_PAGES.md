@@ -9,7 +9,9 @@ passed build/tests/lint in run 41419917646. Inspect that implementation before
 duplicating detail/save work in AI Studio. Device fidelity remains unaccepted.
 
 Base URL: `https://haven-odysseon-d48990aa.koyeb.app`.
-Use existing native PKCE auth and rotating bearer tokens for private requests.
+Use native Google sign-in (`POST /api/v1/auth/google`) and rotating bearer tokens
+for private requests. The browser PKCE routes and `/auth/callback` no longer
+exist; the app never opens a browser for authentication.
 Do not request backend credentials or change backend code from AI Studio.
 
 ## Five prototype screens

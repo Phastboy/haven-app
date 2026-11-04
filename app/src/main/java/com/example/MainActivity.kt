@@ -1,16 +1,12 @@
 package com.example
 
-import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.browser.customtabs.CustomTabsIntent
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.ui.theme.ThemeManager
-import com.example.ui.theme.ThemeMode
 import androidx.activity.viewModels
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -65,29 +61,21 @@ class MainActivity : ComponentActivity() {
       HavenTheme {
         HavenApp(signInViewModel = signInViewModel,
           onStartGoogleSignIn = ::startSignIn,
-          onStartBrowserSignIn = ::startBrowserSignIn,
           onSignOut = ::signOut)
       }
     }
-    if (auth.acceptsCallback(intent?.data)) handleCallback(intent)
-    else lifecycleScope.launch(Dispatchers.IO) {
+    lifecycleScope.launch(Dispatchers.IO) {
       try { auth.restore() } catch (_: Exception) { /* Network failure keeps the device signed out. */ }
     }
-  }
-
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
-    if (auth.acceptsCallback(intent.data)) handleCallback(intent)
   }
 
   private fun startSignIn() {
     HavenAuthClient.logDiagnostic(
       flow = "AUTH_ROUTER",
       step = "START_SIGN_IN",
-      message = "startSignIn() triggered. USE_NATIVE_GOOGLE_SIGN_IN=${HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN} -> Routing to ${if (HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN) "NATIVE CREDENTIAL MANAGER (startNativeGoogleSignIn)" else "BROWSER AUTH FALLBACK (startBrowserSignIn)"}"
+      message = "startSignIn() triggered; routing to native Google Credential Manager."
     )
-    if (HavenAuthClient.USE_NATIVE_GOOGLE_SIGN_IN) startNativeGoogleSignIn() else startBrowserSignIn()
+    startNativeGoogleSignIn()
   }
 
   private fun startNativeGoogleSignIn() {
@@ -136,7 +124,7 @@ class MainActivity : ComponentActivity() {
         )
         auth.cancelNativeGoogle()
         if (isNoCredential) {
-          "Google sign-in found no credentials on this device. Ensure an active Google account is signed in on the device, or sign in with your email."
+          "Google sign-in found no credentials on this device. Add a Google account in system settings and try again."
         } else {
           "Google sign-in failed: ${e.message ?: "unexpected error"}"
         }
@@ -159,90 +147,6 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  private fun startBrowserSignIn() {
-    val caller = Thread.currentThread().stackTrace
-      .filter { !it.className.contains("MainActivity") && !it.className.contains("dalvik") && !it.className.contains("java.lang") }
-      .take(2)
-      .joinToString("; ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
-    HavenAuthClient.logDiagnostic(
-      flow = "BROWSER_AUTH",
-      step = "START_BROWSER_SIGN_IN",
-      message = "startBrowserSignIn() triggered! Caller: [$caller]"
-    )
-    try {
-      val authUri = auth.beginAuthorization()
-      val scheme = when (ThemeManager.themeMode) {
-        ThemeMode.SYSTEM -> CustomTabsIntent.COLOR_SCHEME_SYSTEM
-        ThemeMode.LIGHT -> CustomTabsIntent.COLOR_SCHEME_LIGHT
-        ThemeMode.DARK -> CustomTabsIntent.COLOR_SCHEME_DARK
-      }
-      val customTabsIntent = CustomTabsIntent.Builder()
-        .setShowTitle(true)
-        .setColorScheme(scheme)
-        .build()
-      HavenAuthClient.logDiagnostic(
-        flow = "BROWSER_AUTH",
-        step = "LAUNCH_CUSTOM_TABS",
-        message = "Launching CustomTabs with URL: $authUri"
-      )
-      customTabsIntent.launchUrl(this, authUri)
-    } catch (e: Exception) {
-      HavenAuthClient.logDiagnostic(
-        flow = "BROWSER_AUTH",
-        step = "CUSTOM_TABS_EXCEPTION",
-        message = "Custom Tabs launch failed, attempting ACTION_VIEW fallback: ${e.message}",
-        isError = true,
-        throwable = e
-      )
-      try {
-        val authUri = auth.beginAuthorization()
-        HavenAuthClient.logDiagnostic(
-          flow = "BROWSER_AUTH",
-          step = "LAUNCH_ACTION_VIEW",
-          message = "Launching ACTION_VIEW with URL: $authUri"
-        )
-        startActivity(Intent(Intent.ACTION_VIEW, authUri))
-      } catch (e2: Exception) {
-        HavenAuthClient.logDiagnostic(
-          flow = "BROWSER_AUTH",
-          step = "ACTION_VIEW_EXCEPTION",
-          message = "Could not open browser via ACTION_VIEW: ${e2.message}",
-          isError = true,
-          throwable = e2
-        )
-        signInViewModel.onAuthError("Could not open your browser. Please try again.")
-      }
-    }
-  }
-
-  private fun handleCallback(callback: Intent) {
-    val uri = callback.data ?: return
-    HavenAuthClient.logDiagnostic(
-      flow = "BROWSER_AUTH",
-      step = "HANDLE_CALLBACK",
-      message = "Received callback intent with URI: $uri"
-    )
-    lifecycleScope.launch {
-      val errorMsg = withContext(Dispatchers.IO) {
-        try {
-          auth.completeAuthorization(uri)
-        } catch (e: Exception) {
-          HavenAuthClient.logDiagnostic(
-            flow = "BROWSER_AUTH",
-            step = "COMPLETE_CALLBACK_EXCEPTION",
-            message = "Exception in completeAuthorization: ${e.message}",
-            isError = true,
-            throwable = e
-          )
-          "Sign-in failed: ${e.message ?: "unexpected error"}"
-        }
-      }
-      if (errorMsg != null) {
-        signInViewModel.onAuthError(errorMsg)
-      }
-    }
-  }
-
   private fun signOut() {
     lifecycleScope.launch(Dispatchers.IO) { auth.signOut() }
   }
@@ -253,7 +157,6 @@ fun HavenApp(
   signInViewModel: SignInViewModel = viewModel(),
   offersViewModel: OffersViewModel = viewModel(),
   onStartGoogleSignIn: () -> Unit = {},
-  onStartBrowserSignIn: () -> Unit = {},
   onSignOut: () -> Unit = {}
 ) {
   var currentScreen by remember { mutableStateOf(Screen.WELCOME) }
@@ -292,7 +195,6 @@ fun HavenApp(
           viewModel = signInViewModel,
           onNavigateBack = { currentScreen = Screen.WELCOME },
           onStartGoogleSignIn = onStartGoogleSignIn,
-          onStartBrowserSignIn = onStartBrowserSignIn,
           onNavigateToOffers = { currentScreen = Screen.OFFERS }
         )
       }

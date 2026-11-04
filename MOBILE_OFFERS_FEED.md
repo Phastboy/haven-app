@@ -62,7 +62,7 @@ Android retains `versionName=1.0` and advances `versionCode` from 1 to 2 for the
 next distributed APK. Version codes must increase for subsequent distributed
 builds; API patch numbers and Android version codes are separate sequences.
 The signing certificate still determines whether an APK can update an existing
-installation and receive its verified App Links.
+installation and which Android OAuth client native Google sign-in can use.
 
 ## Verification and handoff
 

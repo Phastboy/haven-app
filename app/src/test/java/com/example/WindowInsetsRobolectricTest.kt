@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -114,8 +115,9 @@ class WindowInsetsRobolectricTest {
     composeTestRule.onNodeWithTag("sign_in_screen").assertExists()
     composeTestRule.onNodeWithTag("back_button").assertExists()
     composeTestRule.onNodeWithTag("sign_in_title").assertExists()
-    composeTestRule.onNodeWithTag("email_input_field").assertExists()
-    composeTestRule.onNodeWithTag("send_magic_link_button").assertExists()
+    composeTestRule.onNodeWithTag("google_sign_in_button").assertExists()
+    composeTestRule.onNodeWithTag("email_sign_in_button").assertIsNotEnabled()
+    composeTestRule.onNodeWithTag("email_sign_in_note").assertExists()
   }
 
   @Test

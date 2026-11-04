@@ -12,29 +12,31 @@ Kotlin and Jetpack Compose. The main Haven project lives in
 
 ## Current state
 
-Sign-in uses Haven's browser authorization flow and `/api/v1/me`. The Offers
-feed now uses `GET /api/v1/offers` for real public data, search, category and
-price filters, and cursor pagination. Its implementation requires backend
-0.8.2 or later. Missing connectivity or an unavailable endpoint shows an error,
-never sample results. See [the integration contract](MOBILE_OFFERS_FEED.md).
+Sign-in is native Google only: Credential Manager obtains an ID token, the app
+exchanges it at `POST /api/v1/auth/google`, and `GET /api/v1/me` confirms the
+person. The app never opens a browser for authentication. The Offers feed uses
+`GET /api/v1/offers` for real public data, search, category and price filters, and
+cursor pagination. Its implementation requires backend 0.8.2 or later. Missing
+connectivity or an unavailable endpoint shows an error, never sample results. See
+[the integration contract](MOBILE_OFFERS_FEED.md).
 
 The prototype includes:
 
-- Welcome and passwordless sign-in screens, with browser handoff and email validation.
+- Welcome and native Google sign-in screens; email sign-in is visible but inactive.
 - Offer browsing, title search, currency and price filters, and saved-offer controls.
 - Full-screen offer detail with a swipeable gallery, provider card, and location breakdown.
 - Offer attachment sheets inside conversations.
 - A conversation inbox and message threads using local state.
 - Profile screens and theme controls.
 
-Both sign-in buttons open Haven's web sign-in. The browser handles email and
-Google authentication; the app only marks a person signed in after a one-time
-PKCE code exchange and `/api/v1/me` response. The email field validates the
-address before handoff; the browser may ask for it again. Refresh credentials
-are encrypted with Android Keystore and excluded from backup. Messages and
-saved state in the remaining prototype files do not represent server-persisted activity.
-The integrated feed opens real Haven web pages for offer detail/save, location,
-messages, and profile journeys; it does not navigate into those sample screens.
+Google sign-in uses Credential Manager and posts the ID token to
+`POST /api/v1/auth/google`; the app only marks a person signed in after the
+`/api/v1/me` response. The browser PKCE flow, `/auth/callback` App Link and email
+magic link were removed. Refresh credentials are encrypted with Android Keystore
+and excluded from backup. Messages and saved state in the remaining prototype
+files do not represent server-persisted activity. The integrated feed opens real
+Haven web pages for offer detail/save, location, messages, and profile journeys;
+it does not navigate into those sample screens.
 
 An inquiry is non-binding communication about an offer. Sending a message does
 not imply an agreement or reserve an offer. Payments and closing an exchange
@@ -51,11 +53,10 @@ are outside this prototype.
 
 The `Android APK` GitHub Action builds and tests on branch pushes and attaches a
 testing APK to each published release. It is debug signed and is not a production
-release artifact. To verify the HTTPS callback on an installed app, deploy the
-matching package ID and APK signing certificate SHA-256 fingerprint in Haven's
-Android App Links configuration. The AI Studio install may use a different signer
-than the GitHub Actions APK. Until that fingerprint is known, Android cannot
-verify the callback link and end-to-end sign-in remains untested.
+release artifact. Native Google sign-in needs an Android OAuth client in Google
+Cloud registered for the APK's package name and signing SHA-1; the package used by
+this app is `com.aistudio.haven.xvykpt`. Debug and release certificates require
+separate clients.
 
 No Gemini API key or Haven backend credentials are needed to build the app. The `.env.example` and Firebase/AI dependencies are inherited scaffolding;
 there are no Gemini calls in the current app source.

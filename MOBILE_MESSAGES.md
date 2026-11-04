@@ -36,4 +36,4 @@ passed build, unit/Robolectric tests, Android Lint, and light/dark screenshots;
 the merged-main run [41369778485](https://github.com/Phastboy/haven-app/actions/runs/41369778485)
 also passed. Compare the full screen on the AI Studio device before claiming
 device-level visual acceptance. CI debug signing is separate from the pinned
-Studio signer used for App Links.
+AI Studio signer used for the Android OAuth client.

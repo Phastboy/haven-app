@@ -14,30 +14,11 @@ class SignInViewModel(
   private val _uiState = MutableStateFlow(SignInUiState())
   val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
-  fun onEmailChange(newEmail: String) {
-    _uiState.update { it.copy(email = newEmail, emailError = null, authError = null) }
-  }
-
-  /** Browser sign-in handles the actual email delivery and Google authentication. */
-  fun onSendMagicLink(): Boolean {
-    if (!isValidEmail(_uiState.value.email.trim())) {
-      _uiState.update { it.copy(emailError = "Enter a valid email address.") }
-      return false
-    }
-    _uiState.update { it.copy(emailError = null, authError = null) }
-    return true
-  }
-
   fun onGoogleSignInClicked() {
     _uiState.update { it.copy(authError = null) }
   }
 
   fun onAuthError(message: String) {
     _uiState.update { it.copy(authError = message) }
-  }
-
-  companion object {
-    private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-    fun isValidEmail(email: String): Boolean = email.isNotBlank() && EMAIL_REGEX.matches(email)
   }
 }
