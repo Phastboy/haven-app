@@ -25,7 +25,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
-import com.example.data.OfferPlace
+import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.components.havenBottomSafePadding
 import com.example.ui.model.OfferEditorState
 import com.example.ui.model.OfferEditorViewModel
 import com.example.ui.theme.HavenColors
