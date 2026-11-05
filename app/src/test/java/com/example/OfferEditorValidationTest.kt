@@ -22,6 +22,10 @@ class OfferEditorValidationTest {
     assertEquals(existing, recovered.first())
     assertEquals(listOf(pending), OfferEditorViewModel.reconcileUploadedImages(listOf(pending), emptyList()))
   }
+  @Test fun existingPrivateOffersCanSaveWithoutBeingPublished() {
+    assertNull(OfferEditorViewModel.validate(valid().copy(images = emptyList(), allowPrivateSave = true)))
+    assertNotNull(OfferEditorViewModel.validate(valid().copy(images = emptyList(), allowPrivateSave = false)))
+  }
   @Test fun acceptsFreeAndPaidOffersWithoutRequiringLocation() {
     assertNull(OfferEditorViewModel.validate(valid()))
     assertNull(OfferEditorViewModel.validate(valid().copy(price = "0")))

@@ -28,6 +28,7 @@ data class OfferEditorState(
   val loading: Boolean = true, val busy: Boolean = false, val dirty: Boolean = false,
   val searching: Boolean = false, val places: List<OfferPlace> = emptyList(),
   val error: String? = null, val placeError: String? = null, val progress: String? = null,
+  val allowPrivateSave: Boolean = false,
   val saved: Boolean = false
 )
 
@@ -57,6 +58,7 @@ class OfferEditorViewModel(
             title = draft.getString("title"), description = draft.getString("description"),
             category = draft.getString("category"), price = draft.getString("price"), currency = draft.getString("currency"),
             place = location?.let { OfferPlace(it.getString("token"), it.getString("label")) },
+            allowPrivateSave = draft.optBoolean("allow_private_save", false),
             images = List(images.length()) { images.getJSONObject(it).let { image -> EditorImage(
               id = image.optString("id").takeIf { value -> value.isNotBlank() }, url = image.getString("url"), uploadId = image.getString("upload_id")
             ) } }, options = options, loading = false, dirty = true
@@ -64,7 +66,7 @@ class OfferEditorViewModel(
         } else if (initialId != null) {
           val offer = repository.load(initialId)
           mutable.value = OfferEditorState(title = offer.title, description = offer.description, category = offer.category,
-            price = offer.price, currency = offer.currency, place = offer.place, images = offer.images, options = options, loading = false)
+            price = offer.price, currency = offer.currency, place = offer.place, images = offer.images, options = options, loading = false, allowPrivateSave = !offer.isPublic)
         } else {
           mutable.value = OfferEditorState(options = options, loading = false,
             place = options.recentPlaces.firstOrNull { it.token == options.defaultPlaceToken })
@@ -77,7 +79,7 @@ class OfferEditorViewModel(
   private fun retain() {
     val state = mutable.value
     handle["draft"] = JSONObject().put("title", state.title).put("description", state.description)
-      .put("category", state.category).put("price", state.price).put("currency", state.currency)
+      .put("category", state.category).put("price", state.price).put("currency", state.currency).put("allow_private_save", state.allowPrivateSave)
       .put("location", state.place?.let { JSONObject().put("token", it.token).put("label", it.label) })
       .put("images", JSONArray(state.images.map { image -> JSONObject().put("id", image.id ?: "").put("url", image.url).put("upload_id", image.uploadId) })).toString()
   }
@@ -146,7 +148,7 @@ class OfferEditorViewModel(
         for (image in remote.images.filter { current -> desired.none { it.id == current.id } }) {
           remote = repository.remove(id, image.id!!)
         }
-        repository.reorder(id, desired)
+        if (desired.isNotEmpty()) repository.reorder(id, desired)
         repository.save(id, input)
         handle.remove<String>("draft")
         mutable.update { it.copy(busy = false, dirty = false, progress = null, saved = true) }
@@ -169,7 +171,7 @@ class OfferEditorViewModel(
       state.options?.categories?.none { it.first == state.category } != false -> "Choose a category."
       state.price.trim().toIntOrNull()?.let { it >= 0 } != true -> "Enter a whole price in minor units, zero for free."
       state.currency !in (state.options?.currencies ?: emptyList()) -> "Choose a currency."
-      state.images.size !in 1..5 -> "Add between one and five photos to publish."
+      state.images.size > 5 || (state.images.isEmpty() && !state.allowPrivateSave) -> "Add between one and five photos to publish."
       else -> null
     }
     fun factory(context: Context, id: String?): ViewModelProvider.Factory = object : ViewModelProvider.Factory {

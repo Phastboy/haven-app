@@ -123,7 +123,7 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
       Button(onClick = model::save, enabled = !state.loading && state.options != null && !state.busy,
         colors = ButtonDefaults.buttonColors(containerColor = HavenColors.Primary),
         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("offer_editor_submit")) {
-        Text(if (state.busy) "Saving…" else if (editing) "Save changes" else "Publish offer")
+        Text(if (state.busy) "Saving…" else if (state.allowPrivateSave && state.images.isEmpty()) "Save private offer" else if (editing) "Save changes" else "Publish offer")
       }
     }
   }
