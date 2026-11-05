@@ -4,65 +4,158 @@ import android.net.Uri
 import com.example.auth.HavenAuthClient
 import com.example.data.HavenMessagesRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Production implementation of [MessagingTransport].
  *
- * Integrates directly with the live Haven backend (`GET /api/v1/conversations`)
- * while delegating pending thread history and sending operations to a robust
- * transport simulator until the Haven backend deploys the native message routes.
+ * Reads and writes the live Haven API only. Inbox parsing reuses the shared
+ * paging contract; thread reads and sends map the native JSON routes.
  */
 class HavenProductionMessagingTransport(
-  private val auth: HavenAuthClient,
-  private val fallbackSimulator: MockMessagingTransport = MockMessagingTransport(simulatedDelayMs = 250L)
+  private val auth: HavenAuthClient
 ) : MessagingTransport {
 
-  override suspend fun getConversations(cursor: String?): Result<ConversationInboxPageDto> = withContext(Dispatchers.IO) {
-    try {
-      val query = cursor?.let { "?after=${Uri.encode(it)}" }.orEmpty()
-      val responseBody = auth.authenticatedGet("/api/v1/conversations$query")
-      val parsed = HavenMessagesRepository.parseInbox(responseBody)
-      val dtos = parsed.items.map { item ->
-        ConversationSummaryDto(
-          id = item.id,
-          otherUserId = item.otherUserId,
-          displayName = item.displayName,
-          handle = item.handle,
-          avatarUrl = item.avatarUrl,
-          lastMessageBody = item.lastMessageBody,
-          lastMessageAt = item.lastMessageAt,
-          isUnread = item.isUnread
+  override suspend fun getConversations(cursor: String?): Result<ConversationInboxPageDto> =
+    withContext(Dispatchers.IO) {
+      runCatching {
+        val query = cursor?.let { "?after=${Uri.encode(it)}" }.orEmpty()
+        val parsed = HavenMessagesRepository.parseInbox(
+          auth.authenticatedGet("/api/v1/conversations$query")
+        )
+        ConversationInboxPageDto(
+          items = parsed.items.map { item ->
+            ConversationSummaryDto(
+              id = item.id,
+              otherUserId = item.otherUserId,
+              displayName = item.displayName,
+              handle = item.handle,
+              avatarUrl = item.avatarUrl,
+              lastMessageBody = item.lastMessageBody,
+              lastMessageAt = item.lastMessageAt,
+              isUnread = item.isUnread
+            )
+          },
+          nextCursor = parsed.nextCursor
         )
       }
-      Result.success(ConversationInboxPageDto(items = dtos, nextCursor = parsed.nextCursor))
-    } catch (e: Exception) {
-      // If server unreachable or error, let caller handle with Room cache fallback
-      Result.failure(e)
     }
-  }
 
-  override suspend fun getThreadHistory(
+  override suspend fun getThread(
     conversationId: String,
-    beforeTimestamp: Long?,
-    limit: Int
-  ): Result<List<RemoteMessageDto>> {
-    // Native thread history route (/api/v1/conversations/{id}/messages) is not yet exposed by backend
-    return fallbackSimulator.getThreadHistory(conversationId, beforeTimestamp, limit)
+    after: String?
+  ): Result<ConversationThreadPageDto> = withContext(Dispatchers.IO) {
+    runCatching {
+      val query = after?.let { "?after=${Uri.encode(it)}" }.orEmpty()
+      parseThread(
+        auth.authenticatedGet(
+          "/api/v1/conversations/${Uri.encode(conversationId)}$query"
+        )
+      )
+    }
   }
 
   override suspend fun sendMessage(
     conversationId: String,
     clientMessageId: String,
+    text: String
+  ): Result<SendMessageAckDto> = mutate(
+    path = "/api/v1/conversations/${Uri.encode(conversationId)}/messages",
+    text = text,
+    clientMessageId = clientMessageId,
+    fallbackConversationId = conversationId
+  )
+
+  override suspend fun sendOfferInquiry(
+    offerSlug: String,
+    clientMessageId: String,
+    text: String
+  ): Result<SendMessageAckDto> = mutate(
+    path = "/api/v1/offers/${Uri.encode(offerSlug)}/inquiries",
+    text = text,
+    clientMessageId = clientMessageId,
+    fallbackConversationId = ""
+  )
+
+  override suspend fun sendProfileInquiry(
+    handle: String,
+    clientMessageId: String,
+    text: String
+  ): Result<SendMessageAckDto> = mutate(
+    path = "/api/v1/profiles/${Uri.encode(handle)}/inquiries",
+    text = text,
+    clientMessageId = clientMessageId,
+    fallbackConversationId = ""
+  )
+
+  private suspend fun mutate(
+    path: String,
     text: String,
-    attachedOfferSlug: String?
-  ): Result<SendMessageAckDto> {
-    // Native message dispatch route (POST /api/v1/conversations/{id}/messages) is not yet exposed by backend
-    return fallbackSimulator.sendMessage(conversationId, clientMessageId, text, attachedOfferSlug)
+    clientMessageId: String,
+    fallbackConversationId: String
+  ): Result<SendMessageAckDto> = withContext(Dispatchers.IO) {
+    runCatching {
+      val response = JSONObject(
+        auth.authenticatedMutation("POST", path, JSONObject().put("body", text))
+      )
+      val now = System.currentTimeMillis()
+      SendMessageAckDto(
+        serverId = response.getString("message_id"),
+        clientMessageId = clientMessageId,
+        conversationId = response.optString("conversation_id")
+          .takeIf { it.isNotBlank() }
+          ?: fallbackConversationId,
+        timestampIso = MessagingTime.formatIso(now),
+        timestampMillis = now
+      )
+    }
   }
 
-  override fun observeEvents(): Flow<MessagingEvent> {
-    return fallbackSimulator.observeEvents()
+  private fun parseThread(body: String): ConversationThreadPageDto {
+    val json = JSONObject(body)
+    val conversationId = json.getString("conversation_id")
+    val other = json.getJSONObject("other_person")
+    val otherPerson = RemotePersonDto(
+      id = other.getString("id"),
+      handle = other.getString("handle"),
+      displayName = other.getString("display_name"),
+      avatarUrl = other.optionalString("avatar_url")
+    )
+    val messages = parseMessages(json.getJSONArray("messages"), conversationId, otherPerson.id)
+    return ConversationThreadPageDto(
+      conversationId = conversationId,
+      otherPerson = otherPerson,
+      messages = messages,
+      nextCursor = json.optionalString("next_cursor"),
+      isUnread = json.optBoolean("is_unread", false)
+    )
+  }
+
+  private fun parseMessages(
+    array: JSONArray,
+    conversationId: String,
+    otherPersonId: String
+  ): List<RemoteMessageDto> = List(array.length()) { index ->
+    val item = array.getJSONObject(index)
+    val createdAt = item.getString("created_at")
+    val senderId = item.getString("sender_id")
+    val offer = if (item.isNull("offer")) null else item.getJSONObject("offer")
+    RemoteMessageDto(
+      serverId = item.getString("id"),
+      clientMessageId = item.getString("id"),
+      conversationId = conversationId,
+      senderPersonId = senderId,
+      isFromMe = senderId != otherPersonId,
+      text = item.getString("body"),
+      timestampIso = createdAt,
+      timestampMillis = MessagingTime.parseIsoToMillis(createdAt),
+      attachedOfferSlug = offer?.optionalString("slug"),
+      attachedOfferTitle = offer?.optionalString("title")
+    )
   }
 }
+
+private fun JSONObject.optionalString(key: String): String? =
+  if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }

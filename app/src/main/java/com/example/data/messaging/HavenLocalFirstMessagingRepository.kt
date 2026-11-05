@@ -11,9 +11,9 @@ import com.example.data.messaging.db.OutboxEntity
 import com.example.data.messaging.db.SyncStateDao
 import com.example.data.messaging.db.SyncStateEntity
 import com.example.data.messaging.transport.ConversationSummaryDto
-import com.example.data.messaging.transport.MessagingEvent
+import com.example.data.messaging.transport.ConversationThreadPageDto
+import com.example.data.messaging.transport.MessagingTime
 import com.example.data.messaging.transport.MessagingTransport
-import com.example.data.messaging.transport.RemoteMessageDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,10 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 import java.util.UUID
 
 /**
@@ -38,7 +34,7 @@ interface MessagingRepository {
   fun observeConversation(conversationId: String): Flow<ConversationEntity?>
   suspend fun refreshConversations(ownerPersonId: String): Result<Unit>
   suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean>
-  suspend fun syncThreadHistory(conversationId: String): Result<Unit>
+  suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
   suspend fun sendMessage(
     conversationId: String,
     text: String,
@@ -48,6 +44,8 @@ interface MessagingRepository {
     attachedOfferPrice: String? = null,
     attachedOfferImageResId: Int? = null
   ): String
+  suspend fun startOfferInquiry(offerSlug: String, text: String): Result<String>
+  suspend fun startProfileInquiry(handle: String, text: String): Result<String>
   suspend fun retryMessage(clientMessageId: String): Result<Unit>
   suspend fun markConversationRead(conversationId: String)
   suspend fun clearForOwner(ownerPersonId: String)
@@ -73,13 +71,8 @@ class HavenLocalFirstMessagingRepository(
   private val outboxMutex = Mutex()
 
   init {
-    // Listen to realtime inbound transport events
-    coroutineScope.launch {
-      transport.observeEvents().collect { event ->
-        handleTransportEvent(event)
-      }
-    }
-    // Process any lingering outbox messages on startup
+    // Deliver messages that were never attempted (for example the app stopped
+    // mid-flight). FAILED rows stay put until the person retries explicitly.
     coroutineScope.launch {
       processOutbox()
     }
@@ -139,49 +132,123 @@ class HavenLocalFirstMessagingRepository(
     }
   }
 
-  override suspend fun syncThreadHistory(conversationId: String): Result<Unit> = withContext(ioDispatcher) {
-    val result = transport.getThreadHistory(conversationId)
-    if (result.isSuccess) {
-      val remoteMessages = result.getOrThrow()
-      // Preserve any local messages currently in SENDING or FAILED state
-      val existing = messageDao.getMessages(conversationId)
-      val localSendingOrFailed = existing.filter {
-        it.status == MessageDeliveryStatus.SENDING || it.status == MessageDeliveryStatus.FAILED
-      }.associateBy { it.clientMessageId }
-
-      val entitiesToInsert = remoteMessages.map { remote ->
-        // If this matches an existing local client ID, keep clientMessageId
-        val existingMatch = existing.firstOrNull { it.serverId == remote.serverId || it.clientMessageId == remote.clientMessageId }
-        val clientId = existingMatch?.clientMessageId ?: remote.clientMessageId
-        MessageEntity(
-          clientMessageId = clientId,
-          conversationId = remote.conversationId,
-          serverId = remote.serverId,
-          senderPersonId = remote.senderPersonId,
-          isFromMe = remote.isFromMe,
-          text = remote.text,
-          timestamp = remote.timestampMillis,
-          formattedTime = formatTimeLabel(remote.timestampMillis),
-          status = MessageDeliveryStatus.SENT,
-          errorMessage = null,
-          attachedOfferSlug = remote.attachedOfferSlug,
-          attachedOfferTitle = remote.attachedOfferTitle,
-          attachedOfferPrice = remote.attachedOfferPrice
-        )
-      }
-
-      // Reconcile and save
-      messageDao.insertMessages(entitiesToInsert)
-
-      // Re-insert unacknowledged local messages to ensure they never get wiped out by server fetch
-      if (localSendingOrFailed.isNotEmpty()) {
-        messageDao.insertMessages(localSendingOrFailed.values.toList())
-      }
-
-      Result.success(Unit)
-    } else {
-      Result.failure(result.exceptionOrNull() ?: RuntimeException("Failed to sync thread"))
+  override suspend fun syncThreadHistory(
+    conversationId: String,
+    ownerPersonId: String?
+  ): Result<Unit> = withContext(ioDispatcher) {
+    val result = transport.getThread(conversationId)
+    if (result.isFailure) {
+      return@withContext Result.failure(
+        result.exceptionOrNull() ?: RuntimeException("Failed to sync thread")
+      )
     }
+
+    val page = result.getOrThrow()
+    val existing = messageDao.getMessages(conversationId)
+    // Preserve any local messages currently in SENDING or FAILED state.
+    val localSendingOrFailed = existing.filter {
+      it.status == MessageDeliveryStatus.SENDING || it.status == MessageDeliveryStatus.FAILED
+    }.associateBy { it.clientMessageId }
+
+    val entitiesToInsert = page.messages.map { remote ->
+      // If this matches an existing local client ID, keep clientMessageId.
+      val existingMatch = existing.firstOrNull {
+        it.serverId == remote.serverId || it.clientMessageId == remote.clientMessageId
+      }
+      val clientId = existingMatch?.clientMessageId ?: remote.clientMessageId
+      MessageEntity(
+        clientMessageId = clientId,
+        conversationId = remote.conversationId,
+        serverId = remote.serverId,
+        senderPersonId = remote.senderPersonId,
+        isFromMe = remote.isFromMe,
+        text = remote.text,
+        timestamp = remote.timestampMillis,
+        formattedTime = formatTimeLabel(remote.timestampMillis),
+        status = MessageDeliveryStatus.SENT,
+        errorMessage = null,
+        attachedOfferSlug = remote.attachedOfferSlug,
+        attachedOfferTitle = remote.attachedOfferTitle,
+        attachedOfferPrice = remote.attachedOfferPrice
+      )
+    }
+
+    // Reconcile and save.
+    messageDao.insertMessages(entitiesToInsert)
+
+    // Re-insert unacknowledged local messages so a server fetch never wipes them out.
+    if (localSendingOrFailed.isNotEmpty()) {
+      messageDao.insertMessages(localSendingOrFailed.values.toList())
+    }
+
+    upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
+    Result.success(Unit)
+  }
+
+  /**
+   * Keeps the inbox summary in sync with the thread the person just opened.
+   *
+   * The owner comes from the caller when known; otherwise an existing local row
+   * supplies it. Without an owner the summary is skipped rather than guessed.
+   */
+  private suspend fun upsertConversationFromThread(
+    conversationId: String,
+    ownerPersonId: String?,
+    page: ConversationThreadPageDto,
+    existing: List<MessageEntity>
+  ) {
+    val current = conversationDao.getConversation(conversationId)
+    val owner = ownerPersonId ?: current?.ownerPersonId ?: return
+    val lastRemote = page.messages.lastOrNull() ?: return
+
+    // Do not move the summary backwards if a newer optimistic send is pending.
+    val pendingNewest = existing.maxOfOrNull { it.timestamp } ?: 0L
+    val keepLocal = current != null &&
+      current.lastMessageTimestamp > lastRemote.timestampMillis &&
+      current.lastMessageTimestamp >= pendingNewest
+    val summaryBody = if (keepLocal) current?.lastMessageBody ?: lastRemote.text else lastRemote.text
+    val summaryAt = if (keepLocal) current?.lastMessageAt ?: lastRemote.timestampIso else lastRemote.timestampIso
+    val summaryTimestamp =
+      if (keepLocal) current?.lastMessageTimestamp ?: lastRemote.timestampMillis else lastRemote.timestampMillis
+
+    conversationDao.upsertConversation(
+      ConversationEntity(
+        id = conversationId,
+        ownerPersonId = owner,
+        otherUserId = page.otherPerson.id,
+        displayName = page.otherPerson.displayName,
+        handle = page.otherPerson.handle,
+        avatarUrl = page.otherPerson.avatarUrl,
+        lastMessageBody = summaryBody,
+        lastMessageAt = summaryAt,
+        lastMessageTimestamp = summaryTimestamp,
+        isUnread = false,
+        unreadCount = 0,
+        updatedAt = System.currentTimeMillis()
+      )
+    )
+  }
+
+  override suspend fun startOfferInquiry(
+    offerSlug: String,
+    text: String
+  ): Result<String> = startInquiry(text) { clientMessageId ->
+    transport.sendOfferInquiry(offerSlug, clientMessageId, text)
+  }
+
+  override suspend fun startProfileInquiry(
+    handle: String,
+    text: String
+  ): Result<String> = startInquiry(text) { clientMessageId ->
+    transport.sendProfileInquiry(handle, clientMessageId, text)
+  }
+
+  private suspend fun startInquiry(
+    text: String,
+    send: suspend (String) -> Result<com.example.data.messaging.transport.SendMessageAckDto>
+  ): Result<String> = withContext(ioDispatcher) {
+    val clientMessageId = "msg-${UUID.randomUUID()}"
+    send(clientMessageId).map { it.conversationId }
   }
 
   override suspend fun sendMessage(
@@ -293,8 +360,7 @@ class HavenLocalFirstMessagingRepository(
         val result = transport.sendMessage(
           conversationId = entry.conversationId,
           clientMessageId = entry.clientMessageId,
-          text = entry.text,
-          attachedOfferSlug = entry.attachedOfferSlug
+          text = entry.text
         )
         if (result.isSuccess) {
           val ack = result.getOrThrow()
@@ -324,69 +390,12 @@ class HavenLocalFirstMessagingRepository(
     }
   }
 
-  private suspend fun handleTransportEvent(event: MessagingEvent) {
-    when (event) {
-      is MessagingEvent.NewMessageReceived -> {
-        val remote = event.message
-        val messageEntity = MessageEntity(
-          clientMessageId = remote.clientMessageId,
-          conversationId = remote.conversationId,
-          serverId = remote.serverId,
-          senderPersonId = remote.senderPersonId,
-          isFromMe = remote.isFromMe,
-          text = remote.text,
-          timestamp = remote.timestampMillis,
-          formattedTime = formatTimeLabel(remote.timestampMillis),
-          status = MessageDeliveryStatus.SENT,
-          errorMessage = null,
-          attachedOfferSlug = remote.attachedOfferSlug,
-          attachedOfferTitle = remote.attachedOfferTitle,
-          attachedOfferPrice = remote.attachedOfferPrice
-        )
-        messageDao.insertMessage(messageEntity)
-
-        // Update conversation summary
-        conversationDao.updateLastMessage(
-          id = remote.conversationId,
-          lastMessageBody = remote.text,
-          lastMessageAt = remote.timestampIso,
-          lastMessageTimestamp = remote.timestampMillis,
-          isUnread = true
-        )
-      }
-      is MessagingEvent.ConversationUpdated -> {
-        // Will be picked up on refresh or specific update
-      }
-      is MessagingEvent.MessageDeliveryAck -> {
-        messageDao.updateMessageStatus(
-          clientMessageId = event.ack.clientMessageId,
-          status = MessageDeliveryStatus.SENT,
-          serverId = event.ack.serverId
-        )
-        outboxDao.delete(event.ack.clientMessageId)
-      }
-    }
-  }
-
   companion object {
-    fun parseIsoToMillis(isoString: String): Long {
-      val normalized = isoString.replace(Regex("\\.\\d+(?=(?:Z|[+-]\\d{2}:?\\d{2})$)"), "")
-      return runCatching {
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
-          timeZone = TimeZone.getTimeZone("UTC")
-        }.parse(normalized)?.time
-      }.getOrNull() ?: System.currentTimeMillis()
-    }
+    fun parseIsoToMillis(isoString: String): Long = MessagingTime.parseIsoToMillis(isoString)
 
-    fun formatIso(epochMillis: Long): String {
-      return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-      }.format(Date(epochMillis))
-    }
+    fun formatIso(epochMillis: Long): String = MessagingTime.formatIso(epochMillis)
 
-    fun formatTimeLabel(epochMillis: Long): String {
-      return SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(epochMillis))
-    }
+    fun formatTimeLabel(epochMillis: Long): String = MessagingTime.formatTimeLabel(epochMillis)
   }
 
   private fun ConversationSummaryDto.toEntity(ownerPersonId: String): ConversationEntity {

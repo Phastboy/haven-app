@@ -94,6 +94,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.ui.model.ProfileViewModel
 import com.example.ui.model.MessagesInboxViewModel
 import com.example.ui.model.ConversationThreadViewModel
+import com.example.ui.model.InquiryComposeViewModel
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.OfferCardSkeleton
 import com.example.ui.components.shimmerBackground
@@ -135,6 +136,10 @@ fun OffersScreen(
   val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
   val nativePagesRepo = remember(context.applicationContext) { HavenNativePagesRepository(HavenAuthClient.shared(context.applicationContext)) }
   val scope = rememberCoroutineScope()
+  val inquiryModel: InquiryComposeViewModel = viewModel(factory = remember(context.applicationContext) {
+    InquiryComposeViewModel.factory(context.applicationContext)
+  })
+  val inquiryState by inquiryModel.state.collectAsState()
   var navStack by remember { mutableStateOf<List<OffersDestination>>(emptyList()) }
   val currentDestination = navStack.lastOrNull()
   val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
@@ -325,6 +330,23 @@ fun OffersScreen(
     title = { Text("Couldn’t save offer") }, text = { Text(saveError.orEmpty()) },
     confirmButton = { TextButton(onClick = { saveError = null }) { Text("Close") } })
 
+  inquiryState.target?.let { target ->
+    NativeMessageComposerSheet(
+      target = target,
+      text = inquiryState.text,
+      isSending = inquiryState.isSending,
+      error = inquiryState.error,
+      onTextChanged = inquiryModel::onTextChanged,
+      onSend = inquiryModel::send,
+      onDismiss = inquiryModel::dismiss
+    )
+  }
+  LaunchedEffect(inquiryState.startedConversationId) {
+    val conversationId = inquiryState.startedConversationId ?: return@LaunchedEffect
+    inquiryModel.consumeStartedConversation()
+    navStack = navStack + OffersDestination.ConversationThread(conversationId)
+  }
+
   if (currentDestination != null) {
     when (currentDestination) {
       is OffersDestination.OfferDetail -> {
@@ -336,7 +358,13 @@ fun OffersScreen(
           onBack = { navStack = navStack.dropLast(1) },
           onRetry = { detailRetry++ },
           onToggleSave = { saveOffer(currentDestination.slug) },
-          onMessageProvider = { openWeb("/offers/${currentDestination.slug}") },
+          onMessageProvider = {
+            inquiryModel.openOffer(
+              slug = currentDestination.slug,
+              offerTitle = detail?.title.orEmpty(),
+              makerName = detail?.makerName.orEmpty()
+            )
+          },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           onSignInRequested = onNavigateToSignIn,
           modifier = modifier
@@ -351,7 +379,16 @@ fun OffersScreen(
           onBack = { navStack = navStack.dropLast(1) },
           onRetry = { providerRetry++ },
           onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
-          onMessageProvider = { openWeb("/profiles/${Uri.encode(currentDestination.handle)}") },
+          onMessageProvider = { handle ->
+            if (session.isAuthenticated) {
+              inquiryModel.openPerson(
+                handle = handle,
+                displayName = providerProfile?.person?.displayName.orEmpty()
+              )
+            } else {
+              onNavigateToSignIn()
+            }
+          },
           onFollowProvider = { openWeb("/profiles/${Uri.encode(currentDestination.handle)}") },
           onLoadMore = {
             providerProfile?.nextCursor?.let { cursor ->
@@ -474,7 +511,10 @@ fun OffersScreen(
           }
         )
         LaunchedEffect(currentDestination.conversationId) {
-          threadModel.openConversation(currentDestination.conversationId)
+          threadModel.openConversation(currentDestination.conversationId, session.personId)
+        }
+        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+          threadModel.refreshThread()
         }
         val threadState by threadModel.uiState.collectAsState()
         NativeConversationThreadScreen(

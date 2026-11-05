@@ -23,6 +23,16 @@ data class ConversationInboxPageDto(
 )
 
 /**
+ * Public identity fields for the other participant in a thread.
+ */
+data class RemotePersonDto(
+  val id: String,
+  val handle: String,
+  val displayName: String,
+  val avatarUrl: String?
+)
+
+/**
  * Remote message data model.
  */
 data class RemoteMessageDto(
@@ -40,6 +50,17 @@ data class RemoteMessageDto(
 )
 
 /**
+ * Page response for an individual conversation thread.
+ */
+data class ConversationThreadPageDto(
+  val conversationId: String,
+  val otherPerson: RemotePersonDto,
+  val messages: List<RemoteMessageDto>,
+  val nextCursor: String?,
+  val isUnread: Boolean
+)
+
+/**
  * Server acknowledgment returned after a message is successfully delivered.
  */
 data class SendMessageAckDto(
@@ -49,12 +70,3 @@ data class SendMessageAckDto(
   val timestampIso: String,
   val timestampMillis: Long
 )
-
-/**
- * Realtime messaging events stream.
- */
-sealed interface MessagingEvent {
-  data class NewMessageReceived(val message: RemoteMessageDto) : MessagingEvent
-  data class ConversationUpdated(val conversation: ConversationSummaryDto) : MessagingEvent
-  data class MessageDeliveryAck(val ack: SendMessageAckDto) : MessagingEvent
-}
