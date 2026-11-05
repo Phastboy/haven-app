@@ -126,7 +126,7 @@ class OfferEditorViewModel(
         val id = offerId ?: repository.save(null, input).id.also { offerId = it; handle["offer_id"] = it }
         var remote = repository.load(id)
         var desired = reconcileUploadedImages(draft.images, remote.images)
-        mutable.update { it.copy(images = desired) }; retain()
+        mutable.update { it.copy(images = desired, allowPrivateSave = !remote.isPublic) }; retain()
         // Free slots without removing the last published photo; replacement uploads then make the final removal safe.
         for (image in remote.images.filter { current -> desired.none { it.id == current.id } }) {
           if (remote.images.size <= 1) break
@@ -140,7 +140,7 @@ class OfferEditorViewModel(
             ?: remote.images.filter { it.id !in before }.singleOrNull()
             ?: throw java.io.IOException("Could not confirm the uploaded photo")
           desired = desired.map { if (it.uploadId == image.uploadId) uploaded else it }
-          mutable.update { it.copy(images = desired) }; retain()
+          mutable.update { it.copy(images = desired, allowPrivateSave = !remote.isPublic) }; retain()
           for (old in remote.images.filter { current -> desired.none { it.id == current.id } }) {
             if (remote.images.size > 1) remote = repository.remove(id, old.id!!)
           }
