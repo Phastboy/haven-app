@@ -13,6 +13,15 @@ class OfferEditorValidationTest {
     price = "150000", currency = "NGN", images = listOf(EditorImage(url = "content://photo")),
     options = OfferFormOptions(listOf("housing-real-estate" to "Housing & real estate"), listOf("NGN"), emptyList(), ""), loading = false
   )
+  @Test fun lostUploadAcknowledgementKeepsTheConfirmedPhoto() {
+    val pending = EditorImage(url = "content://photo", uploadId = "stable-upload")
+    val existing = EditorImage(id = "existing", url = "https://cdn/existing")
+    val uploaded = EditorImage(id = "uploaded", url = "https://cdn/offers/offer/stable-upload")
+    val recovered = OfferEditorViewModel.reconcileUploadedImages(listOf(existing, pending), listOf(existing, uploaded))
+    assertEquals(listOf("existing", "uploaded"), recovered.map { it.id })
+    assertEquals(existing, recovered.first())
+    assertEquals(listOf(pending), OfferEditorViewModel.reconcileUploadedImages(listOf(pending), emptyList()))
+  }
   @Test fun acceptsFreeAndPaidOffersWithoutRequiringLocation() {
     assertNull(OfferEditorViewModel.validate(valid()))
     assertNull(OfferEditorViewModel.validate(valid().copy(price = "0")))

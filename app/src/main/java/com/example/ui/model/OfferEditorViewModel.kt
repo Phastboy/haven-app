@@ -123,7 +123,8 @@ class OfferEditorViewModel(
           .put("place_token", draft.place?.token ?: "none").put("idempotency_key", creationKey)
         val id = offerId ?: repository.save(null, input).id.also { offerId = it; handle["offer_id"] = it }
         var remote = repository.load(id)
-        var desired = draft.images
+        var desired = reconcileUploadedImages(draft.images, remote.images)
+        mutable.update { it.copy(images = desired) }; retain()
         // Free slots without removing the last published photo; replacement uploads then make the final removal safe.
         for (image in remote.images.filter { current -> desired.none { it.id == current.id } }) {
           if (remote.images.size <= 1) break
@@ -157,6 +158,11 @@ class OfferEditorViewModel(
     }
   }
   companion object {
+    fun reconcileUploadedImages(desired: List<EditorImage>, remote: List<EditorImage>): List<EditorImage> =
+      desired.map { image ->
+        if (image.id == null) remote.firstOrNull { it.url.endsWith("/${image.uploadId}") } ?: image else image
+      }
+
     fun validate(state: OfferEditorState): String? = when {
       state.title.trim().codePointCount(0, state.title.trim().length) !in 3..50 -> "Use a title between 3 and 50 characters."
       state.description.trim().codePointCount(0, state.description.trim().length) !in 10..2000 -> "Use a description between 10 and 2,000 characters."
