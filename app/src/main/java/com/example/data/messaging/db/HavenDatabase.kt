@@ -31,6 +31,16 @@ abstract class HavenDatabase : RoomDatabase() {
   abstract fun feedQueryCacheDao(): FeedQueryCacheDao
 
   companion object {
+    val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+      override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        // The previous production simulator used non-UUID server IDs.
+        // Keep unsent drafts; discard synthetic history and acknowledgements.
+        db.execSQL("UPDATE conversations SET lastMessageBody = '', lastMessageAt = '', lastMessageTimestamp = 0 WHERE id IN (SELECT conversationId FROM messages WHERE clientMessageId LIKE 'seed-%' OR serverId LIKE 'srv-%')")
+        db.execSQL("DELETE FROM messages WHERE clientMessageId LIKE 'seed-%' OR serverId LIKE 'srv-%'")
+        db.execSQL("DELETE FROM sync_states WHERE syncKey LIKE 'thread_%'")
+      }
+    }
+
     @Volatile
     private var instance: HavenDatabase? = null
 
@@ -41,15 +51,7 @@ abstract class HavenDatabase : RoomDatabase() {
           HavenDatabase::class.java,
           "haven.db"
         )
-          .addMigrations(object : androidx.room.migration.Migration(2, 3) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-              // The previous production simulator used non-UUID server IDs.
-              // Keep unsent drafts; discard synthetic history and acknowledgements.
-              db.execSQL("DELETE FROM messages WHERE clientMessageId LIKE 'seed-%' OR serverId LIKE 'srv-%'")
-              db.execSQL("UPDATE conversations SET lastMessageBody = '', lastMessageAt = '', lastMessageTimestamp = 0")
-              db.execSQL("DELETE FROM sync_states WHERE syncKey LIKE 'thread_%'")
-            }
-          })
+          .addMigrations(MIGRATION_2_3)
           .fallbackToDestructiveMigration()
           .build()
           .also { instance = it }

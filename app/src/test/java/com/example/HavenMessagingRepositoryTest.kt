@@ -59,6 +59,23 @@ class HavenMessagingRepositoryTest {
   }
 
   @Test
+  fun simulatorMigrationPreservesPendingAndRealMessages() = runTest(testDispatcher) {
+    fun message(id: String, server: String?, status: String) = com.example.data.messaging.db.MessageEntity(
+      clientMessageId = id, serverId = server, conversationId = "migration", senderPersonId = "me",
+      isFromMe = true, text = "message", timestamp = 1L, status = status
+    )
+    val dao = database.messageDao()
+    dao.insertMessages(listOf(
+      message("seed-gen-1", "msg-gen-1", "SENT"),
+      message("sent-simulation", "srv-fake", "SENT"),
+      message("pending", null, "SENDING"),
+      message("real", "00000000-0000-0000-0000-000000000001", "SENT")
+    ))
+    HavenDatabase.MIGRATION_2_3.migrate(database.openHelper.writableDatabase)
+    assertEquals(setOf("pending", "real"), dao.getMessages("migration").map { it.clientMessageId }.toSet())
+  }
+
+  @Test
   fun olderHistoryIsFetchedOnePageAtATime() = runTest(testDispatcher) {
     val person = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null)
     fun page(cursor: String?) = com.example.data.messaging.transport.ConversationThreadPageDto(
