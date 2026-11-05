@@ -97,7 +97,7 @@ class NativePagesTest {
   @Test
   fun `my offers screen renders list and handles edit and create actions`() {
     var created = false
-    var editedSlug: String? = null
+    var editedId: String? = null
     var openedSlug: String? = null
 
     val paginated = PaginatedOffers(
@@ -115,20 +115,38 @@ class NativePagesTest {
           onRetry = {},
           onOpenOffer = { openedSlug = it },
           onCreateOffer = { created = true },
-          onEditOffer = { editedSlug = it }
+          onEditOffer = { editedId = it }
         )
       }
     }
 
     rule.onNodeWithText("My offers").assertExists()
-    rule.onNodeWithText("1 published").assertExists()
+    rule.onNodeWithText("1 offers").assertExists()
     rule.onNodeWithText("Handcrafted Ceramic Vase").assertExists()
 
     rule.onNodeWithTag("my_offers_create_button").performClick()
     rule.runOnIdle { assertEquals(true, created) }
 
     rule.onNodeWithTag("my_offer_edit_${testOffer.id}").performClick()
-    rule.runOnIdle { assertEquals("handcrafted-vase", editedSlug) }
+    rule.runOnIdle { assertEquals(testOffer.id, editedId) }
+  }
+
+  @Test
+  fun `private offers open the editor instead of unavailable public detail`() {
+    var editedId: String? = null
+    var openedSlug: String? = null
+    rule.setContent {
+      HavenTheme {
+        MyOffersScreen(
+          offers = PaginatedOffers(listOf(testOffer.copy(isPublic = false)), null),
+          loading = false, error = null, onBack = {}, onRetry = {},
+          onOpenOffer = { openedSlug = it }, onCreateOffer = {}, onEditOffer = { editedId = it }
+        )
+      }
+    }
+    rule.onNodeWithText("Private · add a photo to publish").assertExists()
+    rule.onNodeWithText(testOffer.title).performClick()
+    rule.runOnIdle { assertEquals(testOffer.id, editedId); assertNull(openedSlug) }
   }
 
   @Test
