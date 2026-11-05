@@ -113,7 +113,7 @@ fun MyOffersScreen(
           )
           val count = offers?.items?.size ?: 0
           Text(
-            text = "$count published",
+            text = "$count offers",
             fontFamily = InterFontFamily,
             fontSize = 12.sp,
             color = HavenColors.TextSecondary
@@ -194,7 +194,7 @@ fun MyOffersScreen(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-          text = "No published offers yet",
+          text = "No offers yet",
           fontFamily = InterFontFamily,
           fontWeight = FontWeight.SemiBold,
           fontSize = 16.sp,
@@ -244,8 +244,8 @@ fun MyOffersScreen(
       items(items, key = { it.id }) { offer ->
         MyOfferCard(
           offer = offer,
-          onOpen = { onOpenOffer(offer.slug) },
-          onEdit = { onEditOffer(offer.slug) }
+          onOpen = { if (offer.isPublic) onOpenOffer(offer.slug) else onEditOffer(offer.id) },
+          onEdit = { onEditOffer(offer.id) }
         )
       }
 
@@ -345,7 +345,7 @@ private fun MyOfferCard(
         )
       }
       Text(
-        text = offer.priceDisplay,
+        text = if (offer.isPublic) offer.priceDisplay else "Private · add a photo to publish",
         fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,

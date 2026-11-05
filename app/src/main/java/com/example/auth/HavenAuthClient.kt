@@ -251,6 +251,38 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return response.second
   }
 
+  @Synchronized
+  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String): String {
+    if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    fun upload(): Pair<Int, String> {
+      val boundary = "haven-$uploadId"
+      val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 15_000
+        readTimeout = 60_000
+        doOutput = true
+        setRequestProperty("Accept", "application/json")
+        setRequestProperty("Authorization", "Bearer $accessToken")
+        setRequestProperty("Idempotency-Key", uploadId)
+        setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+      }
+      return try {
+        connection.outputStream.use { output ->
+          output.write(("--$boundary\r\nContent-Disposition: form-data; name=\"image\"; filename=\"photo\"\r\nContent-Type: application/octet-stream\r\n\r\n").toByteArray())
+          output.write(bytes)
+          output.write("\r\n--$boundary--\r\n".toByteArray())
+        }
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        status to (stream?.bufferedReader()?.use { it.readText() } ?: "")
+      } finally { connection.disconnect() }
+    }
+    var response = upload()
+    if (response.first == 401 && restore()) response = upload()
+    if (response.first !in 200..299) throw IOException("Photo upload failed (HTTP ${response.first}). Retry to finish.")
+    return response.second
+  }
+
   private fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> {
     val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
       requestMethod = method

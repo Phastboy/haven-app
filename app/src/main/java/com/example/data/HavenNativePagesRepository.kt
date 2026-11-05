@@ -59,7 +59,7 @@ class HavenNativePagesRepository(private val auth: HavenAuthClient) : NativePage
 
   override suspend fun getMyOffers(after: String?): PaginatedOffers = withContext(Dispatchers.IO) {
     val query = if (!after.isNullOrBlank()) "?after=${Uri.encode(after)}" else ""
-    val path = "/api/v1/me/offers$query"
+    val path = "/api/v1/me/offer-management$query"
     val raw = auth.authenticatedGet(path)
     val json = JSONObject(raw)
     val itemsArray = json.getJSONArray("items")
