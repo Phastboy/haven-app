@@ -242,11 +242,11 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   @Synchronized
-  fun authenticatedMutation(method: String, path: String): String {
+  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null): String {
     require(method == "POST" || method == "DELETE")
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
-    var response = request(method, path, null, accessToken)
-    if (response.first == 401 && restore()) response = request(method, path, null, accessToken)
+    var response = request(method, path, body, accessToken)
+    if (response.first == 401 && restore()) response = request(method, path, body, accessToken)
     if (response.first !in 200..299) throw IOException("Request failed (HTTP ${response.first}).")
     return response.second
   }

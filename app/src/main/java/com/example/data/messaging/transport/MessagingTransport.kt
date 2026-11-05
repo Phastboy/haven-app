@@ -1,42 +1,47 @@
 package com.example.data.messaging.transport
 
-import kotlinx.coroutines.flow.Flow
-
 /**
- * Transport contract defining communications between the local Haven messaging repository
- * and remote services.
+ * Transport contract between the local Haven messaging repository and the live
+ * Haven API.
  *
- * Designed to cleanly swap between mock transport, staging, and future production
- * REST/WebSocket endpoints without altering Room schemas, ViewModels, or Composables.
+ * The production implementation talks only to server state. There is no
+ * simulated fallback: a failed call is reported as a failure so the caller can
+ * offer a retry instead of inventing a local success.
  */
 interface MessagingTransport {
 
-  /**
-   * Loads a page of conversation summaries.
-   */
+  /** Loads a page of conversation summaries. */
   suspend fun getConversations(cursor: String?): Result<ConversationInboxPageDto>
 
   /**
-   * Fetches historical messages for an individual conversation thread.
+   * Fetches the newest page of a conversation thread.
+   *
+   * Pass [after] with a previous [ConversationThreadPageDto.nextCursor] to fetch
+   * older messages.
    */
-  suspend fun getThreadHistory(
+  suspend fun getThread(
     conversationId: String,
-    beforeTimestamp: Long? = null,
-    limit: Int = 50
-  ): Result<List<RemoteMessageDto>>
+    after: String? = null
+  ): Result<ConversationThreadPageDto>
 
-  /**
-   * Dispatches an outgoing message with an idempotency key ([clientMessageId]).
-   */
+  /** Appends a message to an existing conversation. */
   suspend fun sendMessage(
     conversationId: String,
     clientMessageId: String,
-    text: String,
-    attachedOfferSlug: String? = null
+    text: String
   ): Result<SendMessageAckDto>
 
-  /**
-   * Observes live incoming messages and thread events (via WebSocket / SSE / simulated stream).
-   */
-  fun observeEvents(): Flow<MessagingEvent>
+  /** Starts or continues a conversation about a published offer. */
+  suspend fun sendOfferInquiry(
+    offerSlug: String,
+    clientMessageId: String,
+    text: String
+  ): Result<SendMessageAckDto>
+
+  /** Starts or continues a direct conversation with another person. */
+  suspend fun sendProfileInquiry(
+    handle: String,
+    clientMessageId: String,
+    text: String
+  ): Result<SendMessageAckDto>
 }

@@ -41,11 +41,13 @@ class ConversationThreadViewModel(
   private var observeMessagesJob: Job? = null
   private var observeConversationJob: Job? = null
   private var currentConversationId: String? = null
+  private var ownerPersonId: String? = null
 
   fun clear() {
     observeMessagesJob?.cancel()
     observeConversationJob?.cancel()
     currentConversationId = null
+    ownerPersonId = null
     _uiState.value = ConversationThreadUiState()
   }
 
@@ -54,8 +56,12 @@ class ConversationThreadViewModel(
     clear()
   }
 
-  fun openConversation(conversationId: String) {
-    if (currentConversationId == conversationId) return
+  fun openConversation(conversationId: String, ownerPersonId: String? = null) {
+    this.ownerPersonId = ownerPersonId
+    if (currentConversationId == conversationId) {
+      refreshThread()
+      return
+    }
     currentConversationId = conversationId
 
     observeMessagesJob?.cancel()
@@ -85,10 +91,16 @@ class ConversationThreadViewModel(
       }
     }
 
-    // Background sync thread history from transport
+    refreshThread()
+  }
+
+  /** Re-reads server state, for example when the app returns to the foreground. */
+  fun refreshThread() {
+    val convId = currentConversationId ?: return
+    _uiState.update { it.copy(isSyncing = true, syncError = null) }
     viewModelScope.launch {
-      repository.markConversationRead(conversationId)
-      val syncResult = repository.syncThreadHistory(conversationId)
+      repository.markConversationRead(convId)
+      val syncResult = repository.syncThreadHistory(convId, ownerPersonId)
       _uiState.update {
         it.copy(
           isSyncing = false,
