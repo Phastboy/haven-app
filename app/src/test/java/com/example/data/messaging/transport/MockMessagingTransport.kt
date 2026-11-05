@@ -19,6 +19,8 @@ class MockMessagingTransport(
   // Conversation thread histories keyed by conversationId.
   private val threadMessages = ConcurrentHashMap<String, MutableList<RemoteMessageDto>>()
 
+  val requestedThreadCursors = mutableListOf<String?>()
+  val threadPages = mutableMapOf<String, ConversationThreadPageDto>()
   var alwaysFailSend: Boolean = false
   var shouldFailNextSend: Boolean = false
   var shouldFailNextFetch: Boolean = false
@@ -68,6 +70,8 @@ class MockMessagingTransport(
       return Result.failure(failureException)
     }
 
+    requestedThreadCursors.add(after)
+    threadPages[after ?: "latest"]?.let { return Result.success(it) }
     val history = threadMessages.computeIfAbsent(conversationId) { id -> seedHistory(id) }
     val summary = mockConversations.firstOrNull { it.id == conversationId }
     return Result.success(
@@ -112,6 +116,8 @@ class MockMessagingTransport(
     )
     sentAcks[clientMessageId] = ack
 
+    requestedThreadCursors.add(after)
+    threadPages[after ?: "latest"]?.let { return Result.success(it) }
     val history = threadMessages.computeIfAbsent(conversationId) { id -> seedHistory(id) }
     history.add(
       RemoteMessageDto(

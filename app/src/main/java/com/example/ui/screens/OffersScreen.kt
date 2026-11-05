@@ -523,6 +523,7 @@ fun OffersScreen(
           onInputChanged = threadModel::onInputTextChanged,
           onSendMessage = threadModel::sendMessage,
           onRetryMessage = threadModel::retryMessage,
+          onLoadOlder = threadModel::loadOlderMessages,
           onOpenProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           modifier = modifier
         )
