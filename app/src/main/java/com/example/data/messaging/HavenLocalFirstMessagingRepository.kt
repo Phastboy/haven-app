@@ -35,6 +35,7 @@ interface MessagingRepository {
   suspend fun refreshConversations(ownerPersonId: String): Result<Unit>
   suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean>
   suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
+  suspend fun loadOlderMessages(conversationId: String): Result<Boolean>
   suspend fun sendMessage(
     conversationId: String,
     text: String,
@@ -144,6 +145,24 @@ class HavenLocalFirstMessagingRepository(
     }
 
     val page = result.getOrThrow()
+    syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
+    mergeThreadPage(conversationId, page)
+    val existing = messageDao.getMessages(conversationId)
+    upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
+    Result.success(Unit)
+  }
+
+  override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = withContext(ioDispatcher) {
+    val cursor = syncStateDao.getSyncState("thread_$conversationId")?.nextCursor
+      ?: return@withContext Result.success(false)
+    transport.getThread(conversationId, cursor).map { page ->
+      mergeThreadPage(conversationId, page)
+      syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
+      page.nextCursor != null
+    }
+  }
+
+  private suspend fun mergeThreadPage(conversationId: String, page: ConversationThreadPageDto) {
     val existing = messageDao.getMessages(conversationId)
     // Preserve any local messages currently in SENDING or FAILED state.
     val localSendingOrFailed = existing.filter {
@@ -181,8 +200,6 @@ class HavenLocalFirstMessagingRepository(
       messageDao.insertMessages(localSendingOrFailed.values.toList())
     }
 
-    upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
-    Result.success(Unit)
   }
 
   /**
@@ -364,6 +381,7 @@ class HavenLocalFirstMessagingRepository(
         )
         if (result.isSuccess) {
           val ack = result.getOrThrow()
+          messageDao.deleteDuplicateDelivery(ack.serverId, entry.clientMessageId)
           // Mark message SENT with serverId
           messageDao.updateMessageStatus(
             clientMessageId = entry.clientMessageId,

@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
 data class ConversationThreadUiState(
   val conversation: ConversationEntity? = null,
   val messages: List<MessageEntity> = emptyList(),
+  val isLoadingOlder: Boolean = false,
+  val olderError: String? = null,
+  val hasOlder: Boolean = true,
   val inputText: String = "",
   val isSyncing: Boolean = false,
   val syncError: String? = null,
@@ -107,6 +110,20 @@ class ConversationThreadViewModel(
           syncError = if (syncResult.isFailure) "Offline - viewing cached messages" else null
         )
       }
+    }
+  }
+
+  fun loadOlderMessages() {
+    val id = currentConversationId ?: return
+    if (_uiState.value.isLoadingOlder || !_uiState.value.hasOlder) return
+    _uiState.update { it.copy(isLoadingOlder = true, olderError = null) }
+    viewModelScope.launch {
+      val result = repository.loadOlderMessages(id)
+      _uiState.update { it.copy(
+        isLoadingOlder = false,
+        hasOlder = result.getOrNull() ?: it.hasOlder,
+        olderError = if (result.isFailure) "Could not load earlier messages. Tap to retry." else null
+      ) }
     }
   }
 

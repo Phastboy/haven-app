@@ -98,7 +98,7 @@ class HavenProductionMessagingTransport(
   ): Result<SendMessageAckDto> = withContext(Dispatchers.IO) {
     runCatching {
       val response = JSONObject(
-        auth.authenticatedMutation("POST", path, JSONObject().put("body", text))
+        auth.authenticatedMutation("POST", path, JSONObject().put("body", text).put("client_message_id", clientMessageId.removePrefix("msg-")))
       )
       val now = System.currentTimeMillis()
       SendMessageAckDto(

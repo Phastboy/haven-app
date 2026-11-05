@@ -59,6 +59,23 @@ class HavenMessagingRepositoryTest {
   }
 
   @Test
+  fun olderHistoryIsFetchedOnePageAtATime() = runTest(testDispatcher) {
+    val person = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null)
+    fun page(cursor: String?) = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "paged", otherPerson = person, messages = emptyList(), nextCursor = cursor,
+      isUnread = false
+    )
+    transport.threadPages["latest"] = page("older")
+    transport.threadPages["older"] = page(null)
+    repository.syncThreadHistory("paged", "owner").getOrThrow()
+    assertEquals(listOf<String?>(null), transport.requestedThreadCursors)
+    assertFalse(repository.loadOlderMessages("paged").getOrThrow())
+    assertEquals(listOf(null, "older"), transport.requestedThreadCursors)
+    repository.loadOlderMessages("paged").getOrThrow()
+    assertEquals(2, transport.requestedThreadCursors.size)
+  }
+
+  @Test
   fun testCachedInboxRendersImmediatelyWithoutNetwork() = runTest(testDispatcher) {
     val cachedConv = ConversationEntity(
       id = "conv-cached-1",

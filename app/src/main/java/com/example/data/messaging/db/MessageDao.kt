@@ -43,6 +43,9 @@ interface MessageDao {
     retryIncrement: Int = 0
   )
 
+  @Query("DELETE FROM messages WHERE serverId = :serverId AND clientMessageId != :clientMessageId")
+  suspend fun deleteDuplicateDelivery(serverId: String, clientMessageId: String)
+
   @Query("DELETE FROM messages WHERE clientMessageId = :clientMessageId")
   suspend fun deleteMessage(clientMessageId: String)
 

@@ -75,6 +75,11 @@ class ConversationThreadViewModelTest {
     )
     database.conversationDao().upsertConversation(conv)
 
+    transport.mockConversations = listOf(com.example.data.messaging.transport.ConversationSummaryDto(
+      id = conv.id, otherUserId = conv.otherUserId, displayName = conv.displayName,
+      handle = conv.handle, avatarUrl = null, lastMessageBody = conv.lastMessageBody,
+      lastMessageAt = conv.lastMessageAt, isUnread = true
+    ))
     viewModel.openConversation("conv-open-test")
     testScheduler.advanceUntilIdle()
 

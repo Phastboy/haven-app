@@ -18,7 +18,7 @@ import com.example.data.offers.db.FeedQueryCacheEntity
     FeedOfferEntity::class,
     FeedQueryCacheEntity::class
   ],
-  version = 2,
+  version = 3,
   exportSchema = false
 )
 abstract class HavenDatabase : RoomDatabase() {
@@ -41,6 +41,15 @@ abstract class HavenDatabase : RoomDatabase() {
           HavenDatabase::class.java,
           "haven.db"
         )
+          .addMigrations(object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+              // The previous production simulator used non-UUID server IDs.
+              // Keep unsent drafts; discard synthetic history and acknowledgements.
+              db.execSQL("DELETE FROM messages WHERE clientMessageId LIKE 'seed-%' OR serverId LIKE 'srv-%'")
+              db.execSQL("UPDATE conversations SET lastMessageBody = '', lastMessageAt = '', lastMessageTimestamp = 0")
+              db.execSQL("DELETE FROM sync_states WHERE syncKey LIKE 'thread_%'")
+            }
+          })
           .fallbackToDestructiveMigration()
           .build()
           .also { instance = it }

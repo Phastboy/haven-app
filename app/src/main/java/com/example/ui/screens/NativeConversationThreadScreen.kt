@@ -41,6 +41,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +81,7 @@ fun NativeConversationThreadScreen(
   onInputChanged: (String) -> Unit,
   onSendMessage: () -> Unit,
   onRetryMessage: (String) -> Unit,
+  onLoadOlder: () -> Unit = {},
   onOpenProfile: ((String) -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
@@ -84,11 +91,19 @@ fun NativeConversationThreadScreen(
     onBack()
   }
 
-  // Anchor to the latest message on new insertions without disorientation
-  LaunchedEffect(state.messages.size) {
-    if (state.messages.isNotEmpty()) {
-      listState.animateScrollToItem(state.messages.size - 1)
+  var previousLastId by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(state.messages.lastOrNull()?.clientMessageId) {
+    val last = state.messages.lastOrNull()
+    if (last != null && (previousLastId == null ||
+        listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index == listState.layoutInfo.totalItemsCount - 1 ||
+        (last.isFromMe && last.status == MessageDeliveryStatus.SENDING))) {
+      listState.scrollToItem(state.messages.size)
     }
+    previousLastId = last?.clientMessageId
+  }
+  LaunchedEffect(listState) {
+    snapshotFlow { listState.isScrollInProgress && listState.firstVisibleItemIndex <= 1 }
+      .distinctUntilChanged().collect { nearTop -> if (nearTop) onLoadOlder() }
   }
 
   val conv = state.conversation
@@ -267,8 +282,16 @@ fun NativeConversationThreadScreen(
         .testTag("thread_messages_list"),
       verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-      item {
-        Spacer(modifier = Modifier.height(8.dp))
+      item(key = "history_status") {
+        if (state.isLoadingOlder) {
+          CircularProgressIndicator(modifier = Modifier.size(20.dp))
+        } else if (state.hasOlder) {
+          Text(
+            text = state.olderError ?: "Earlier messages",
+            color = HavenColors.TextSecondary,
+            modifier = Modifier.clickable(onClick = onLoadOlder).padding(12.dp)
+          )
+        }
       }
 
       items(state.messages, key = { it.clientMessageId }) { message ->
@@ -278,8 +301,16 @@ fun NativeConversationThreadScreen(
         )
       }
 
-      item {
-        Spacer(modifier = Modifier.height(8.dp))
+      item(key = "history_status") {
+        if (state.isLoadingOlder) {
+          CircularProgressIndicator(modifier = Modifier.size(20.dp))
+        } else if (state.hasOlder) {
+          Text(
+            text = state.olderError ?: "Earlier messages",
+            color = HavenColors.TextSecondary,
+            modifier = Modifier.clickable(onClick = onLoadOlder).padding(12.dp)
+          )
+        }
       }
     }
 
