@@ -113,7 +113,7 @@ fun MyOffersScreen(
           )
           val count = offers?.items?.size ?: 0
           Text(
-            text = "$count offers",
+            text = if (count == 1) "1 offer" else "$count offers",
             fontFamily = InterFontFamily,
             fontSize = 12.sp,
             color = HavenColors.TextSecondary

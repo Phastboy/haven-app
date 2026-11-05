@@ -121,7 +121,7 @@ class NativePagesTest {
     }
 
     rule.onNodeWithText("My offers").assertExists()
-    rule.onNodeWithText("1 offers").assertExists()
+    rule.onNodeWithText("1 offer").assertExists()
     rule.onNodeWithText("Handcrafted Ceramic Vase").assertExists()
 
     rule.onNodeWithTag("my_offers_create_button").performClick()
