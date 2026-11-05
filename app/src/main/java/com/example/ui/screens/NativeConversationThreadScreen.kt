@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -86,6 +87,7 @@ fun NativeConversationThreadScreen(
   modifier: Modifier = Modifier
 ) {
   val listState = rememberLazyListState()
+  val isDragged by listState.interactionSource.collectIsDraggedAsState()
 
   BackHandler {
     onBack()
@@ -101,8 +103,9 @@ fun NativeConversationThreadScreen(
     }
     previousLastId = last?.clientMessageId
   }
-  LaunchedEffect(listState) {
-    snapshotFlow { listState.isScrollInProgress && listState.firstVisibleItemIndex <= 1 }
+  LaunchedEffect(listState, isDragged) {
+    if (!isDragged) return@LaunchedEffect
+    snapshotFlow { listState.firstVisibleItemIndex <= 1 }
       .distinctUntilChanged().collect { nearTop -> if (nearTop) onLoadOlder() }
   }
 
