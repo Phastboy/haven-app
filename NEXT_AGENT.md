@@ -1,5 +1,14 @@
 # Start here — Haven mobile/backend pickup, 2026-11-02
 
+> 2026-11-05 branch implementation: native create/edit is in Android draft PR #14,
+> depending on backend draft PR #62. Uses real owner APIs, staged photos, signed
+> public offer locations and recoverable partial saves. These APIs are not deployed.
+> Native messaging PR #13 is merged; prior browser-thread-only statements below
+> are historical. The owner confirmed native Google sign-in on the Android simulator;
+> physical-device acceptance remains pending. Verify backend deployment and the
+> Cloudinary incoming preset before distributing this branch's APK.
+
+
 > 2026-11-04: browser PKCE sign-in was removed. Native Google
 > (`POST /api/v1/auth/google`) is the only app sign-in path; the `/auth/callback`
 > App Link, `assetlinks` configuration and email magic link no longer exist.
