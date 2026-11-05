@@ -116,8 +116,6 @@ class MockMessagingTransport(
     )
     sentAcks[clientMessageId] = ack
 
-    requestedThreadCursors.add(after)
-    threadPages[after ?: "latest"]?.let { return Result.success(it) }
     val history = threadMessages.computeIfAbsent(conversationId) { id -> seedHistory(id) }
     history.add(
       RemoteMessageDto(
