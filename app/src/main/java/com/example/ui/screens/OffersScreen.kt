@@ -111,6 +111,7 @@ import com.example.ui.theme.ThemeMode
 sealed interface OffersDestination {
   data class OfferDetail(val slug: String) : OffersDestination
   data class ProviderProfile(val handle: String) : OffersDestination
+  data class OfferEditor(val id: String? = null, val entryKey: String = java.util.UUID.randomUUID().toString()) : OffersDestination
   data object MyOffers : OffersDestination
   data object SavedOffers : OffersDestination
   data object Following : OffersDestination
@@ -140,7 +141,33 @@ fun OffersScreen(
     InquiryComposeViewModel.factory(context.applicationContext)
   })
   val inquiryState by inquiryModel.state.collectAsState()
-  var navStack by remember { mutableStateOf<List<OffersDestination>>(emptyList()) }
+  val navigationSaver = remember {
+    androidx.compose.runtime.saveable.listSaver<List<OffersDestination>, String>(
+      save = { stack -> stack.map { destination -> when (destination) {
+        is OffersDestination.OfferEditor -> "editor|${destination.id.orEmpty()}|${destination.entryKey}"
+        is OffersDestination.OfferDetail -> "offer|${destination.slug}"
+        is OffersDestination.ProviderProfile -> "profile|${destination.handle}"
+        is OffersDestination.ConversationThread -> "thread|${destination.conversationId}"
+        OffersDestination.MyOffers -> "mine"
+        OffersDestination.SavedOffers -> "saved"
+        OffersDestination.Following -> "following"
+      } } },
+      restore = { entries -> entries.mapNotNull { entry ->
+        val parts = entry.split('|')
+        when (parts.firstOrNull()) {
+          "editor" -> parts.getOrNull(2)?.let { OffersDestination.OfferEditor(parts.getOrNull(1)?.takeIf { id -> id.isNotEmpty() }, it) }
+          "offer" -> parts.getOrNull(1)?.let { OffersDestination.OfferDetail(it) }
+          "profile" -> parts.getOrNull(1)?.let { OffersDestination.ProviderProfile(it) }
+          "thread" -> parts.getOrNull(1)?.let { OffersDestination.ConversationThread(it) }
+          "mine" -> OffersDestination.MyOffers
+          "saved" -> OffersDestination.SavedOffers
+          "following" -> OffersDestination.Following
+          else -> null
+        }
+      } }
+    )
+  }
+  var navStack by androidx.compose.runtime.saveable.rememberSaveable(stateSaver = navigationSaver) { mutableStateOf<List<OffersDestination>>(emptyList()) }
   val currentDestination = navStack.lastOrNull()
   val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
     initialFirstVisibleItemIndex = viewModel.scrollIndex,
@@ -408,6 +435,25 @@ fun OffersScreen(
         )
         return
       }
+      is OffersDestination.OfferEditor -> {
+        if (session.isAuthenticated) {
+          val editor: com.example.ui.model.OfferEditorViewModel = viewModel(
+            key = "offer_editor_${session.personId}_${currentDestination.entryKey}",
+            factory = remember(currentDestination.entryKey) {
+              com.example.ui.model.OfferEditorViewModel.factory(context.applicationContext, currentDestination.id)
+            }
+          )
+          NativeOfferEditorScreen(editor, editing = currentDestination.id != null,
+            onBack = { navStack = navStack.dropLast(1) },
+            onSaved = {
+              myOffersRetry++
+              detailRetry++
+              viewModel.refresh()
+              navStack = listOf(OffersDestination.MyOffers)
+            })
+          return
+        }
+      }
       is OffersDestination.MyOffers -> {
         if (session.isAuthenticated) {
           MyOffersScreen(
@@ -417,8 +463,8 @@ fun OffersScreen(
             onBack = { navStack = navStack.dropLast(1) },
             onRetry = { myOffersRetry++ },
             onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
-            onCreateOffer = { openWeb("/offers/new") },
-            onEditOffer = { slug -> openWeb("/offers/$slug/edit") },
+            onCreateOffer = { run { navStack = navStack + OffersDestination.OfferEditor() } },
+            onEditOffer = { id -> navStack = navStack + OffersDestination.OfferEditor(id) },
             onLoadMore = {
               myOffers?.nextCursor?.let { cursor ->
                 scope.launch {
@@ -674,7 +720,7 @@ fun OffersScreen(
           }
           IconButton(
             onClick = {
-              if (session.isAuthenticated) openWeb("/offers/new") else onNavigateToSignIn()
+              if (session.isAuthenticated) run { navStack = navStack + OffersDestination.OfferEditor() } else onNavigateToSignIn()
             },
             enabled = !isFeedDisabled,
             modifier = Modifier
@@ -830,7 +876,7 @@ fun OffersScreen(
           }
           val onPrimary: () -> Unit = when {
             isSearch -> { { viewModel.onSearchQueryChange("") } }
-            isCategory -> { { if (session.isAuthenticated) openWeb("/offers/new") else onNavigateToSignIn() } }
+            isCategory -> { { if (session.isAuthenticated) run { navStack = navStack + OffersDestination.OfferEditor() } else onNavigateToSignIn() } }
             else -> { { viewModel.clearFilters() } }
           }
           val secondaryLabel = when {
@@ -839,9 +885,9 @@ fun OffersScreen(
             else -> "Post an offer"
           }
           val onSecondary: () -> Unit = when {
-            isSearch -> { { if (session.isAuthenticated) openWeb("/offers/new") else onNavigateToSignIn() } }
+            isSearch -> { { if (session.isAuthenticated) run { navStack = navStack + OffersDestination.OfferEditor() } else onNavigateToSignIn() } }
             isCategory -> { { viewModel.clearFilters() } }
-            else -> { { if (session.isAuthenticated) openWeb("/offers/new") else onNavigateToSignIn() } }
+            else -> { { if (session.isAuthenticated) run { navStack = navStack + OffersDestination.OfferEditor() } else onNavigateToSignIn() } }
           }
 
           Box(
