@@ -133,8 +133,8 @@ class OfferEditorViewModel(
           mutable.update { it.copy(progress = "Uploading photo…") }
           val before = remote.images.map { it.id }.toSet()
           remote = repository.upload(id, image)
-          val uploaded = remote.images.firstOrNull { it.id !in before }
-            ?: remote.images.firstOrNull { it.url.contains(image.uploadId) }
+          val uploaded = remote.images.firstOrNull { it.url.endsWith("/${image.uploadId}") }
+            ?: remote.images.filter { it.id !in before }.singleOrNull()
             ?: throw java.io.IOException("Could not confirm the uploaded photo")
           desired = desired.map { if (it.uploadId == image.uploadId) uploaded else it }
           mutable.update { it.copy(images = desired) }; retain()
