@@ -4,7 +4,7 @@
 > and its contracts. Native create/edit and messaging are now merged; see
 > `MOBILE_OFFER_LIFECYCLE.md` and `MOBILE_NATIVE_API_BACKLOG.md`. Remaining API
 > work and the source-inspected Android tasks are in `MOBILE_NATIVE_API_SWEEP.md`
-> and `MOBILE_AI_STUDIO_HANDOFF.md`; new sweep routes are not deployed yet.
+> and `MOBILE_AI_STUDIO_HANDOFF.md`; sweep routes are released/deployed in v0.8.65.
 
 
 Backend PR #53 merged at `d2c166a`; release v0.8.5 was published on 2026-11-02
@@ -70,10 +70,10 @@ in light and dark mode. Skeleton shimmers should match gallery, text, identity,
 card, and list-row geometry; only show them during actual pending work. Preserve
 Back behavior, scroll position, system insets and accessible control labels.
 
-## Follow and unfollow (v0.8.6 branch, not deployed)
+## Follow and unfollow (released)
 
 Native clients can follow a person without opening the web profile. This is
-implemented on `feat/p1b-conversation-thread` and is **not deployed**.
+released since v0.8.61. Android follow controls still need native wiring.
 
 - `POST /api/v1/profiles/{handle}/follow` follows idempotently.
 - `DELETE /api/v1/profiles/{handle}/follow` unfollows idempotently.
@@ -87,11 +87,12 @@ implemented on `feat/p1b-conversation-thread` and is **not deployed**.
 - Repeat taps are safe; the server is idempotent. Keep the previous state on
   failure and offer retry. Responses are `private, no-store`.
 
-## Conversation thread (v0.8.6 branch, not deployed)
+## Conversation thread (released; native Android integrated)
 
 Native clients can read and send in an existing conversation without opening the
-web thread. This contract is implemented on `feat/p1b-conversation-thread`; it is
-**not released or deployed**, and the Android app is not wired to it yet.
+web thread. The backend contract is released and Android read/send/older-history
+are integrated. Apply the focused duplicate-key repair in Android PR #15 before
+release; live updates are covered by the separate, undeployed API sweep.
 
 `GET /api/v1/conversations/{id}?after=...` requires the authenticated person and
 returns:
@@ -141,11 +142,11 @@ writes return 401) and accepts:
 - Unknown conversations and non-participants return **404**. Malformed JSON and
   malformed cursors return 400.
 
-## Offer inquiry send (branch, not deployed)
+## Offer inquiry send (released; native Android integrated)
 
 Native clients can start a conversation about an offer without opening the web
-offer page. This is implemented on `feat/p1c-inquiry-send`; it is **not yet
-released or deployed**, and the Android app is not wired to it yet.
+offer page. The backend is released since v0.8.62 and Android opens the native
+thread after a storage-confirmed enquiry.
 
 `POST /api/v1/offers/{slug}/inquiries` requires a bearer token (cookie-only
 writes return 401) and accepts:
@@ -168,35 +169,27 @@ writes return 401) and accepts:
   `private, no-store` and `Vary: Authorization, Cookie`. Open
   `GET /api/v1/conversations/{conversation_id}` next.
 
-## Current boundaries
+## Current delivery boundary
 
-My offers exposes published offers using the existing profile listing, not drafts
-or a new offer-management API. Saved excludes deleted/unpublished offers; it does
-not return unavailable tombstone rows. Following is a read API; native
-follow/unfollow and thread read/send are live in v0.8.61. Native inquiry send is
-implemented on `feat/p1c-inquiry-send` but not deployed. Native offer
-create/edit/delete and profile edit writes remain outside this batch. Open
-supported existing web journeys for those actions. Never simulate a successful
-action or make dormant prototype samples reachable at runtime.
+`/api/v1/me/offers` remains published-only. Android My offers management uses
+`/api/v1/me/offer-management`, including owned private offers awaiting photos.
+Saved still excludes unavailable offers. Follow, native thread read/send,
+enquiries and create/edit/photo/location APIs are released.
 
-Source compile/CI success does not establish deployment or device visual fidelity.
+Profile/avatar/deletion/global-unread/SSE and scoped/proximity discovery are now
+released/deployed in v0.8.65 (CD run 42182772275). Their contracts and the exact
+remaining Android work are in `MOBILE_NATIVE_API_SWEEP.md` and
+`MOBILE_AI_STUDIO_HANDOFF.md`. Do not reactivate sample screens or simulate success.
 
-Local HTTP verification now covers all five reads and the authenticated
-save/readback/list/unsave round trip: [curl results](verification/native-api-v085/RESULT.md).
-Forty recorded checks passed on the native-auth-configured local server. Read the
-report's remaining fixture, pagination, isolation and media limits before acceptance.
+Source/CI/deployment success does not establish authenticated end-to-end or
+physical-device acceptance. Historical local read/save evidence remains in
+[the v0.8.5 report](verification/native-api-v085/RESULT.md).
 
 ## Next mobile pickup
 
-Google AI Studio owns the corresponding native pages. Provider profile, My offers,
-Saved and Following are ready to integrate using this contract. Existing Android
-detail/save wiring needs real-device light/dark prototype comparison and signed-in
-production save/readback/restart checks. Preserve backend price_display, real
-provider navigation and Back during loading/error; these regressions are covered
-by NativeOfferDetailReviewTest. Feed skeletons and profile action placement shipped
-in PR #8. Appearance belongs in the profile action group; Sign out follows offers.
-Messages is an integrated inbox with web thread handoff. Native thread read/send
-and follow/unfollow are live in v0.8.61. An inquiry-send contract is defined above
-on the P1c branch, but it is not deployed or wired into Android; live updates
-remain outside this batch. Build/test/lint in CI to preserve the owner's data
-budget. Keep backend changes within v0.8.*.
+Read `MOBILE_AI_STUDIO_HANDOFF.md`. It was written after inspecting Android main
+`5d1b681`, including current collection ViewModels. Preserve existing native
+create/edit and messaging; implement the documented missing actions/cache/live
+updates instead of reactivating sample screens. Merge Android PR #15's thread-key
+fix first. Build/test/lint in CI to preserve the owner's data budget. Backend
+changes remain within v0.8.*; new API release precedes Android production acceptance.

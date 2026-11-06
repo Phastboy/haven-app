@@ -1,9 +1,12 @@
 # Native parity API sweep — wire contract
 
-Updated 2026-11-06. **Implemented/tested on `feat/native-parity-api-sweep`, not yet
-merged or deployed.** Live baseline is v0.8.64. AI Studio must not invent fallback
-success if an undeployed route returns 404. Backend release must precede Android
-production acceptance. Existing lifecycle APIs are in `MOBILE_OFFER_LIFECYCLE.md`.
+Released as **v0.8.65**, merged in backend PR #63. Deployment action
+[42182772275](https://github.com/Phastboy/haven/actions/runs/42182772275) completed
+successfully on 2026-11-06, including the Koyeb service update. Live read-only
+checks confirmed `/api/v1/me/inquired` → 401 anonymously and
+`/api/v1/offers?near=off` → 200. These contracts are available for Android
+integration. Authenticated end-to-end and physical-device acceptance are separate.
+Existing lifecycle APIs are in `MOBILE_OFFER_LIFECYCLE.md`.
 
 ## Authentication and response handling
 
