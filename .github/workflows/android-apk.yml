@@ -22,10 +22,19 @@ jobs:
       - uses: android-actions/setup-android@v4
       - name: Install Android SDK platform
         run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
-      - name: Generate CI debug keystore
+      - name: Install persistent testing signer
+        env:
+          HAVEN_TEST_KEYSTORE_BASE64: ${{ secrets.HAVEN_TEST_KEYSTORE_BASE64 }}
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
-          if [[ ! -f debug.keystore ]]; then
-            keytool -genkeypair -noprompt -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug, O=Android, C=US"
+          umask 077
+          if [[ -n "$HAVEN_TEST_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$HAVEN_TEST_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+          elif [[ "$IS_FORK" == "true" ]]; then
+            keytool -genkeypair -noprompt -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Fork Verification Only, O=Haven, C=NG"
+          else
+            echo 'Missing persistent testing signer. Restore HAVEN_TEST_KEYSTORE_BASE64; do not generate a replacement.' >&2
+            exit 1
           fi
       - uses: gradle/actions/setup-gradle@v4
       - name: Ensure Gradle wrapper is executable
@@ -43,10 +52,28 @@ jobs:
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
+      - name: Record APK provenance and verify signer
+        env:
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/apksigner" verify --verbose --print-certs "$apk" > apk-provenance.txt
+          if [[ "$IS_FORK" != "true" ]]; then
+            grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' apk-provenance.txt
+          fi
+          printf '\nSource commit: %s\nVariant: debug (testing only)\n' "$(git rev-parse HEAD)" >> apk-provenance.txt
+          printf 'Workflow: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> apk-provenance.txt
+          ./gradlew --version >> apk-provenance.txt
+          "$tools/aapt" dump badging "$apk" >> apk-provenance.txt
+          sha256sum "$apk" > apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: haven-android-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-provenance.txt
+            apk-sha256.txt
           if-no-files-found: error
       - name: Attach testing APK to release
         if: github.event_name == 'release'
