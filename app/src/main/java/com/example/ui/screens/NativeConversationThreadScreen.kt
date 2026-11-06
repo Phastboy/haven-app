@@ -304,17 +304,10 @@ fun NativeConversationThreadScreen(
         )
       }
 
-      item(key = "history_status") {
-        if (state.isLoadingOlder) {
-          CircularProgressIndicator(modifier = Modifier.size(20.dp))
-        } else if (state.hasOlder) {
-          Text(
-            text = state.olderError ?: "Earlier messages",
-            color = HavenColors.TextSecondary,
-            modifier = Modifier.clickable(onClick = onLoadOlder).padding(12.dp)
-          )
-        }
+      item(key = "thread_bottom_space") {
+        Spacer(modifier = Modifier.height(8.dp))
       }
+
     }
 
     // Pinned Bottom Composer Bar with IME padding
