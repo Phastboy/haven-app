@@ -3,6 +3,7 @@ package com.example.ui.model
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /** Public person fields confirmed by GET /api/v1/me. */
 data class UserSession(
@@ -21,6 +22,12 @@ object SessionManager {
 
   fun signInPerson(id: String, displayName: String, handle: String) {
     _session.value = UserSession(true, id, handle, displayName)
+  }
+
+  fun updateProfileIfCurrent(id: String, displayName: String, handle: String) {
+    _session.update { current ->
+      if (current.personId == id) current.copy(displayName = displayName, handle = handle) else current
+    }
   }
 
   fun signOut() {

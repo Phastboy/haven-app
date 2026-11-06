@@ -15,6 +15,7 @@ interface MyOffersRepository {
 
 class HavenMyOffersRepository(
   private val auth: HavenAuthClient,
+  private val ownerPersonId: String? = com.example.ui.model.SessionManager.session.value.personId,
   private val nativePagesRepo: NativePagesRepository = HavenNativePagesRepository(auth)
 ) : MyOffersRepository {
 
@@ -23,8 +24,8 @@ class HavenMyOffersRepository(
   }
 
   override suspend fun deleteOffer(slug: String): Result<Boolean> = runCatching {
-    val raw = auth.authenticatedMutation("DELETE", "/api/v1/offers/${Uri.encode(slug)}")
-    JSONObject(raw).optBoolean("deleted", true)
+    val raw = auth.authenticatedMutation("DELETE", "/api/v1/offers/${Uri.encode(slug)}", expectedPersonId = ownerPersonId)
+    JSONObject(raw).getBoolean("deleted")
   }
 
   companion object {

@@ -272,9 +272,11 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     filename: String,
     bytes: ByteArray,
     idempotencyKey: String? = null,
-    mimeType: String = "image/jpeg"
+    mimeType: String = "image/jpeg",
+    expectedPersonId: String? = SessionManager.session.value.personId
   ): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    check(expectedPersonId != null && SessionManager.session.value.personId == expectedPersonId) { "Account changed" }
     fun upload(): Pair<Int, String> {
       val boundary = "haven-${System.currentTimeMillis()}-${(1000..9999).random()}"
       val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {

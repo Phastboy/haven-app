@@ -201,7 +201,7 @@ fun MyOffersScreen(
           onClick = onCreateOffer,
           modifier = Modifier
             .size(44.dp)
-            .testTag("my_offers_create_button")
+            .testTag("create_offer_action_button")
         ) {
           Icon(
             Icons.Outlined.Add,

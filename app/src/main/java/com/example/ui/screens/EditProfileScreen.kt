@@ -89,16 +89,7 @@ fun EditProfileScreen(
   val photoPickerLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.PickVisualMedia()
   ) { uri: Uri? ->
-    if (uri != null) {
-      try {
-        val stream = context.contentResolver.openInputStream(uri)
-        val bytes = stream?.use { it.readBytes() }
-        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-        if (bytes != null) {
-          viewModel.uploadAvatar(bytes, mimeType)
-        }
-      } catch (_: Exception) {}
-    }
+    if (uri != null) viewModel.selectAvatar(context, uri)
   }
 
   BackHandler { onBack() }
