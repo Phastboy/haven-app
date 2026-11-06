@@ -18,7 +18,7 @@ import com.example.data.offers.db.FeedQueryCacheEntity
     FeedOfferEntity::class,
     FeedQueryCacheEntity::class
   ],
-  version = 3,
+  version = 4,
   exportSchema = false
 )
 abstract class HavenDatabase : RoomDatabase() {
@@ -41,6 +41,22 @@ abstract class HavenDatabase : RoomDatabase() {
       }
     }
 
+    // AI Studio shipped two version-3 schemas: one before and one after location.
+    // Inspect the actual schema so both installations upgrade without data loss.
+    val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+      override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        val hasLocation = db.query("PRAGMA table_info(feed_offers)").use { cursor ->
+          val nameIndex = cursor.getColumnIndexOrThrow("name")
+          var found = false
+          while (cursor.moveToNext()) {
+            if (cursor.getString(nameIndex) == "location") found = true
+          }
+          found
+        }
+        if (!hasLocation) db.execSQL("ALTER TABLE feed_offers ADD COLUMN location TEXT")
+      }
+    }
+
     @Volatile
     private var instance: HavenDatabase? = null
 
@@ -51,8 +67,7 @@ abstract class HavenDatabase : RoomDatabase() {
           HavenDatabase::class.java,
           "haven.db"
         )
-          .addMigrations(MIGRATION_2_3)
-          .fallbackToDestructiveMigration()
+          .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
           .build()
           .also { instance = it }
       }
