@@ -11,11 +11,12 @@ work; do not modify backend behavior or invent success/fallback data.
   Fetch/inspect current main before editing; preserve newer work.
 - Backend inspected baseline: `4a48247`, deployed as v0.8.64. Native create/edit
   PR #62 and Android PR #14 are merged, not still drafts.
-- New backend branch: `feat/native-parity-api-sweep`. Its new routes are
-  implemented and locally tested but **not deployed**. Read
-  `MOBILE_NATIVE_API_SWEEP.md` for exact request/response/status contracts.
-  Backend release must precede Android production acceptance. An undeployed 404
-  must remain a visible unavailable/error state, never a local success.
+- Remaining API sweep: backend PR #63 is merged and **v0.8.65 is deployed**.
+  Release CD 42182772275 passed build/scan/smoke and Deploy to Koyeb; logs confirm
+  the update was executed. Live `/me/inquired` returned 401 anonymously and
+  `/offers?near=off` returned 200. Read `MOBILE_NATIVE_API_SWEEP.md` for exact
+  contracts. APIs are available for integration; authenticated/device acceptance
+  remains separate. Never turn a request failure into simulated success.
 - Native create/edit contracts: `MOBILE_OFFER_LIFECYCLE.md`; existing page and
   follow/thread contracts: `MOBILE_NATIVE_PAGES.md`.
 - Native Google sign-in succeeded on the owner's Android simulator. Physical

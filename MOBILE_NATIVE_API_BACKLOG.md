@@ -1,9 +1,9 @@
 # Native API exposure backlog
 
 Reconciled 2026-11-06 against backend `4a48247` (v0.8.64) and Android
-`5d1b6813ffd7925d2dfa4e766717d291f007c070`. The additional API sweep is implemented
-on `feat/native-parity-api-sweep`; it is **not deployed**. Checkmarks distinguish
-implemented/tested code from the separately unchecked deployment/device gates.
+`5d1b6813ffd7925d2dfa4e766717d291f007c070`. The additional API sweep is merged in PR #63 and released/deployed as
+v0.8.65 (CD run 42182772275). Checkmarks distinguish
+implemented/tested code from the separately tracked deployment/device gates.
 
 This is parity for shipped v0.1–v0.8 journeys, authorized by the owner; no 0.9
 scope is introduced. Contracts: [existing native pages](MOBILE_NATIVE_PAGES.md),
@@ -19,12 +19,12 @@ Frontend tasks come from [the inspected Android handoff](MOBILE_AI_STUDIO_HANDOF
 | Native thread, enquiry and older-history paging | Released | Integrated; duplicate-key rendering fix in PR #15 |
 | Offer create/edit, photos and operating location | Released in v0.8.64 | Merged in PR #14 |
 | Follow/unfollow | Released | Still browser handoffs; follow state is not parsed |
-| Profile text edit and avatar | Implemented/tested in API sweep | Not integrated; existing profile editor is a simulation |
-| Offer deletion | Implemented/tested in API sweep | No native delete API action |
-| Global unread | Implemented/tested in API sweep | Badge still counts loaded inbox rows |
-| Thread JSON SSE | Implemented/tested in API sweep | No subscription/reconnect implementation |
-| Feed saved state | Implemented/tested in API sweep | Public feed does not send bearer or parse saved state |
-| Proximity and Inquired discovery | Implemented/tested in API sweep | No native scope/reference query or controls |
+| Profile text edit and avatar | Released in v0.8.65 | Not integrated; existing profile editor is a simulation |
+| Offer deletion | Released in v0.8.65 | No native delete API action |
+| Global unread | Released in v0.8.65 | Badge still counts loaded inbox rows |
+| Thread JSON SSE | Released in v0.8.65 | No subscription/reconnect implementation |
+| Feed saved state | Released in v0.8.65 | Public feed does not send bearer or parse saved state |
+| Proximity and Inquired discovery | Released in v0.8.65 | No native scope/reference query or controls |
 
 ## P0 — Authentication and host configuration
 
@@ -138,8 +138,8 @@ are included in the released backend.
 
 ## Remaining release gates (not implementation completion)
 
-- [ ] Merge/release/deploy the new API sweep; do not treat these branch contracts as live yet.
-- [ ] Backend sweep CI and container/security checks pass on the final branch head.
+- [x] API sweep merged in PR #63, released as v0.8.65 and deployed by CD run 42182772275.
+- [x] API sweep CI/container/security checks passed; release build/scan/smoke and Deploy to Koyeb passed for `2a4797d`.
 - [ ] AI Studio completes the unchecked Android implementation tasks from the inspected handoff.
 - [ ] Physical-device and authenticated production acceptance are completed later with the owner.
 - [ ] Remaining obvious UI quality issues are corrected against the prototypes.
@@ -151,7 +151,8 @@ outside this parity sweep. Acknowledged performance debt is not reopened here.
 
 - Baseline Android main `5d1b681`: CI 42174560135 passed (ViewModel migration).
 - Android duplicate-key fix PR #15: CI 42179102446 passed, including rendering regression.
-- API sweep: workspace Clippy with warnings denied passed; 67 native API tests passed locally, including eight new parity cases. Full branch CI is a separate gate above.
+- API sweep: workspace Clippy with warnings denied passed; 67 native API tests passed locally, including eight new parity cases. PR #63 and release CD checks passed.
+- v0.8.65: CD [42182772275](https://github.com/Phastboy/haven/actions/runs/42182772275) completed successfully, including Deploy to Koyeb. Logs confirm the update was executed. Live read-only smoke: `/api/v1/me/inquired` → 401 anonymously; `/api/v1/offers?near=off` → 200.
 - Web Google redirect target was checked read-only on 2026-11-06 and is the live domain.
 
 ## Historical verification log
