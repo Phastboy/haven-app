@@ -52,6 +52,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -194,10 +197,11 @@ fun OffersScreen(
 
   // Provider profile state
   val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
-  var providerProfile by remember { mutableStateOf<ProviderProfile?>(null) }
+  var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
   var providerLoading by remember { mutableStateOf(false) }
   var providerError by remember { mutableStateOf<String?>(null) }
   var providerRetry by remember { mutableStateOf(0) }
+  var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
 
   // My offers state
   val isMyOffersActive = currentDestination is OffersDestination.MyOffers
@@ -453,22 +457,25 @@ fun OffersScreen(
             if (!session.isAuthenticated) {
               onNavigateToSignIn()
             } else {
-              val currentFollowing = providerProfile?.person?.isFollowing ?: false
-              val targetFollowing = !currentFollowing
-              providerProfile = providerProfile?.copy(
-                person = providerProfile!!.person.copy(isFollowing = targetFollowing)
-              )
-              scope.launch {
-                try {
-                  if (targetFollowing) {
-                    nativePagesRepo.follow(handle)
-                  } else {
-                    nativePagesRepo.unfollow(handle)
-                  }
-                } catch (_: Exception) {
-                  providerProfile = providerProfile?.copy(
-                    person = providerProfile!!.person.copy(isFollowing = currentFollowing)
-                  )
+              val actor = session.personId
+              val person = providerProfile?.person
+              if (person?.isFollowing != null && !followPending) {
+                val target = !person.isFollowing
+                followPending = true
+                providerError = null
+                scope.launch {
+                  try {
+                    val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
+                    if (SessionManager.session.value.personId == actor && activeProviderHandle == handle) {
+                      providerProfile = providerProfile?.takeIf { it.person.id == person.id }?.let {
+                        it.copy(person = it.person.copy(isFollowing = confirmed))
+                      }
+                    }
+                  } catch (cancelled: CancellationException) { throw cancelled }
+                  catch (_: Exception) {
+                    if (SessionManager.session.value.personId == actor && activeProviderHandle == handle)
+                      providerError = "Couldn’t update following. Please try again."
+                  } finally { followPending = false }
                 }
               }
             }
@@ -625,16 +632,21 @@ fun OffersScreen(
       }
       is OffersDestination.ConversationThread -> {
         val threadModel: ConversationThreadViewModel = viewModel(
-          key = "thread_${currentDestination.conversationId}",
+          key = "thread_${session.personId}_${currentDestination.conversationId}",
           factory = remember(context.applicationContext) {
             ConversationThreadViewModel.factory(context.applicationContext)
           }
         )
-        LaunchedEffect(currentDestination.conversationId) {
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        DisposableEffect(threadModel, lifecycle, session.personId) {
           threadModel.openConversation(currentDestination.conversationId, session.personId)
-        }
-        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-          threadModel.refreshThread()
+          val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) threadModel.startLiveUpdates()
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) threadModel.stopLiveUpdates()
+          }
+          lifecycle.addObserver(observer)
+          if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) threadModel.startLiveUpdates()
+          onDispose { lifecycle.removeObserver(observer); threadModel.clear() }
         }
         val threadState by threadModel.uiState.collectAsState()
         NativeConversationThreadScreen(
