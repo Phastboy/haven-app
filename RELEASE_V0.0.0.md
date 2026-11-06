@@ -79,3 +79,8 @@ See `ANDROID_BUILD_HANDOFF.md` for the pinned build recipe, persistent testing
 signer fingerprints, OAuth registration action, secure backup location and APK
 provenance. This checklist marks implementation separately from CI/device/live
 acceptance; the overall release remains unapproved.
+
+Legacy outbox rows with no proven sender identity remain preserved but quarantined
+from automatic sending. Shared conversation ownership cannot safely identify the
+sender of an old `me` draft. Review/recovery of such pre-existing pending drafts
+is an open upgrade acceptance item; never relabel them as another account's sends.

@@ -56,8 +56,10 @@ abstract class HavenDatabase : RoomDatabase() {
         if (!hasLocation) db.execSQL("ALTER TABLE feed_offers ADD COLUMN location TEXT")
         db.execSQL("ALTER TABLE feed_query_cache ADD COLUMN contextJson TEXT NOT NULL DEFAULT '{}'")
         db.execSQL("ALTER TABLE message_outbox ADD COLUMN ownerPersonId TEXT")
-        db.execSQL("UPDATE message_outbox SET ownerPersonId = (SELECT ownerPersonId FROM conversations WHERE conversations.id = message_outbox.conversationId)")
-        db.execSQL("UPDATE messages SET senderPersonId = (SELECT ownerPersonId FROM message_outbox WHERE message_outbox.clientMessageId = messages.clientMessageId) WHERE senderPersonId = 'me' AND clientMessageId IN (SELECT clientMessageId FROM message_outbox WHERE ownerPersonId IS NOT NULL)")
+        // Conversation rows were shared across accounts; they cannot prove who
+        // queued a legacy message. Only a real local sender identity can do so.
+        // Unknown 'me' drafts remain intact and quarantined from automatic sends.
+        db.execSQL("UPDATE message_outbox SET ownerPersonId = (SELECT senderPersonId FROM messages WHERE messages.clientMessageId = message_outbox.clientMessageId AND isFromMe = 1 AND senderPersonId != 'me' AND senderPersonId != '')")
         // Legacy rows mixed saved/distance state between actors and references.
         db.execSQL("DELETE FROM feed_query_cache")
         db.execSQL("UPDATE feed_offers SET isSaved = NULL, distanceMeters = NULL")

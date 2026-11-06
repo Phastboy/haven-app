@@ -47,6 +47,10 @@ class HavenDatabaseMigrationTest {
           assertEquals(true, cursor.moveToFirst())
           assertEquals("Keep my message", cursor.getString(0))
         }
+        db.query("SELECT ownerPersonId FROM message_outbox WHERE clientMessageId = 'pending-id'").use { cursor ->
+          assertEquals(true, cursor.moveToFirst())
+          assertEquals(true, cursor.isNull(0))
+        }
         db.query("SELECT location FROM feed_offers LIMIT 1").close()
       } finally {
         upgraded.close()
