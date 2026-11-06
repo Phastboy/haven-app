@@ -19,6 +19,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.launch
 
 data class OffersUiState(
@@ -53,6 +58,8 @@ class OffersViewModel(
   private val _uiState = MutableStateFlow(OffersUiState())
   val uiState = _uiState.asStateFlow()
   private var loadJob: Job? = null
+  private var generation = 0L
+  private var displayedQuery: OffersQuery? = null
 
   // Retained scroll coordinates for seamless navigation restoration
   var scrollIndex: Int = 0
@@ -61,6 +68,17 @@ class OffersViewModel(
     private set
 
   init {
+    viewModelScope.launch {
+      SessionManager.session.map { it.personId }.distinctUntilChanged().drop(1).collect {
+        loadJob?.cancel()
+        generation++
+        displayedQuery = null
+        scrollIndex = 0
+        scrollOffset = 0
+        _uiState.value = OffersUiState()
+        refresh()
+      }
+    }
     refresh()
   }
 
@@ -72,112 +90,58 @@ class OffersViewModel(
   fun refresh() = load(reset = true)
 
   fun loadMore() {
-    if (!_uiState.value.isLoading && _uiState.value.nextCursor != null) {
+    if (!_uiState.value.isLoading && !_uiState.value.isRefreshing && _uiState.value.nextCursor != null) {
       load(reset = false)
     }
   }
 
   private fun load(reset: Boolean) {
     loadJob?.cancel()
+    val request = ++generation
+    val actor = SessionManager.session.value
     val before = _uiState.value
     val query = before.query.copy(after = if (reset) null else before.nextCursor)
-
-    // Check local cache immediately on reset to deliver 0ms perceived latency
-    if (reset && localOffersRepository != null) {
-      viewModelScope.launch {
-        val cached = localOffersRepository.getCachedPage(query)
-        if (cached != null && cached.items.isNotEmpty()) {
-          _uiState.update { current ->
-            if (current.query == before.query) {
-              current.copy(
-                items = cached.items,
-                categories = if (cached.categories.isNotEmpty()) cached.categories else current.categories,
-                currencies = if (cached.currencies.isNotEmpty()) cached.currencies else current.currencies,
-                nextCursor = cached.nextCursor,
-                isLoading = false,
-                error = null
-              )
-            } else current
-          }
-        }
-      }
-    }
-
-    val hasExistingItems = _uiState.value.items.isNotEmpty()
-    _uiState.update {
-      it.copy(
-        isLoading = if (hasExistingItems && reset && localOffersRepository != null) false else true,
-        isRefreshing = if (hasExistingItems && reset) true else false,
-        error = null,
-        items = if (reset && localOffersRepository == null) emptyList() else it.items,
-        nextCursor = if (reset && localOffersRepository == null) null else it.nextCursor
-      )
-    }
-
+    val sameQuery = displayedQuery == before.query.copy(after = null)
+    val retained = if (!reset || sameQuery) before.items else emptyList()
+    _uiState.update { it.copy(
+      items = retained,
+      nextCursor = if (reset) null else before.nextCursor,
+      isLoading = retained.isEmpty(),
+      isRefreshing = retained.isNotEmpty(),
+      error = null
+    ) }
     loadJob = viewModelScope.launch {
+      fun isCurrent() = generation == request && SessionManager.session.value == actor
       try {
-        if (localOffersRepository != null) {
-          val result = if (reset) {
-            localOffersRepository.fetchAndCache(query)
-          } else {
-            val currentIds = _uiState.value.items.map { it.id }
-            localOffersRepository.fetchMoreAndCache(query, currentIds)
-          }
-
-          if (result.isSuccess) {
-            val page = result.getOrThrow()
-            _uiState.update { current ->
-              val mergedItems = if (reset) {
-                page.items
-              } else {
-                (current.items + page.items).distinctBy { offer -> offer.id }
-              }
-              current.copy(
-                isLoading = false,
-                isRefreshing = false,
-                items = mergedItems,
-                categories = if (page.categories.isNotEmpty()) page.categories else current.categories,
-                currencies = if (page.currencies.isNotEmpty()) page.currencies else current.currencies,
-                nextCursor = page.nextCursor,
-                error = null
-              )
-            }
-          } else {
-            val currentItems = _uiState.value.items
-            _uiState.update { current ->
-              current.copy(
-                isLoading = false,
-                isRefreshing = false,
-                // Only show blocking error if there are no items in cache
-                error = if (currentItems.isEmpty()) "Couldn’t load offers. Check your connection and try again." else null
-              )
-            }
-          }
-        } else {
-          // Direct remote fallback for tests where local repository is not supplied
-          val page = repository.fetch(query)
-          _uiState.update {
-            it.copy(
-              isLoading = false,
-              isRefreshing = false,
-              items = if (reset) page.items else (it.items + page.items).distinctBy { offer -> offer.id },
-              categories = page.categories,
-              currencies = page.currencies,
-              nextCursor = page.nextCursor
-            )
+        if (reset && localOffersRepository != null) {
+          val cached = localOffersRepository.getCachedPage(query)
+          coroutineContext.ensureActive()
+          if (!isCurrent()) return@launch
+          if (cached != null) {
+            displayedQuery = before.query.copy(after = null)
+            _uiState.update { it.copy(items = cached.items, categories = cached.categories,
+              currencies = cached.currencies, nextCursor = cached.nextCursor,
+              isLoading = cached.items.isEmpty(), isRefreshing = cached.items.isNotEmpty()) }
           }
         }
+        val page = if (localOffersRepository != null) {
+          if (reset) localOffersRepository.fetchAndCache(query).getOrThrow()
+          else localOffersRepository.fetchMoreAndCache(query, before.items.map { it.id }).getOrThrow()
+        } else repository.fetch(query)
+        coroutineContext.ensureActive()
+        if (!isCurrent()) return@launch
+        displayedQuery = before.query.copy(after = null)
+        _uiState.update { it.copy(
+          items = if (reset) page.items else (before.items + page.items).distinctBy { offer -> offer.id },
+          categories = page.categories, currencies = page.currencies, nextCursor = page.nextCursor,
+          isLoading = false, isRefreshing = false, error = null
+        ) }
       } catch (cancelled: CancellationException) {
         throw cancelled
       } catch (_: Exception) {
-        val currentItems = _uiState.value.items
-        _uiState.update {
-          it.copy(
-            isLoading = false,
-            isRefreshing = false,
-            error = if (currentItems.isEmpty()) "Couldn’t load offers. Check your connection and try again." else null
-          )
-        }
+        if (isCurrent()) _uiState.update { it.copy(isLoading = false, isRefreshing = false,
+          error = if (reset) "Couldn’t load offers. Check your connection and try again."
+            else "Couldn’t load more offers. Please try again.") }
       }
     }
   }
@@ -248,6 +212,7 @@ class OffersViewModel(
         )
       )
     }
+    refresh()
   }
 
   fun applyReference(candidate: com.example.data.PlaceCandidate) {

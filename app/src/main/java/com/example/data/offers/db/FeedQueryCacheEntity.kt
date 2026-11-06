@@ -17,5 +17,7 @@ data class FeedQueryCacheEntity(
   val nextCursor: String?,
   val categoriesJson: String = "[]",
   val currenciesJson: String = "[]",
+  @androidx.room.ColumnInfo(defaultValue = "'{}'")
+  val contextJson: String = "{}",
   val lastFetchedAt: Long = System.currentTimeMillis()
 )

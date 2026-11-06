@@ -1,5 +1,8 @@
 package com.example.data.offers
 
+import androidx.room.withTransaction
+import com.example.ui.model.SessionManager
+import kotlinx.coroutines.CancellationException
 import com.example.data.FeedCategory
 import com.example.data.FeedOffer
 import com.example.data.OffersPage
@@ -13,6 +16,7 @@ import com.example.data.offers.db.FeedQueryCacheEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -45,26 +49,30 @@ class HavenLocalFirstOffersRepository(
   private val queryCacheDao: FeedQueryCacheDao = database.feedQueryCacheDao()
 
   override suspend fun getCachedPage(query: OffersQuery): OffersPage? = withContext(ioDispatcher) {
-    val key = computeQueryKey(query)
+    val actor = SessionManager.session.value
+    val key = computeQueryKey(query, actor.personId)
     val cache = queryCacheDao.getCache(key) ?: return@withContext null
-    buildOffersPageFromCache(cache)
+    val page = buildOffersPageFromCache(cache)
+    if (SessionManager.session.value != actor) null else page
   }
 
   override fun observeCachedPage(query: OffersQuery): Flow<OffersPage?> {
-    val key = computeQueryKey(query)
-    return queryCacheDao.observeCache(key).map { cache ->
-      if (cache == null) null else buildOffersPageFromCache(cache)
+    val actor = SessionManager.session.value
+    val key = computeQueryKey(query, actor.personId)
+    return queryCacheDao.observeCache(key).combine(SessionManager.session) { cache, session ->
+      if (cache == null || session != actor) null else buildOffersPageFromCache(cache)
     }.distinctUntilChanged()
   }
 
   override suspend fun fetchAndCache(query: OffersQuery): Result<OffersPage> = withContext(ioDispatcher) {
     try {
+      val actor = SessionManager.session.value
+      val key = computeQueryKey(query, actor.personId)
       val freshPage = remoteRepository.fetch(query.copy(after = null))
-      val key = computeQueryKey(query)
+      if (SessionManager.session.value != actor) throw CancellationException("Account changed")
 
       // 1. Upsert offer records into Room
-      val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it) }
-      offerDao.upsertOffers(entities)
+      val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it.copy(isSaved = null, distanceMeters = null)) }
 
       // 2. Persist authoritative backend ranking order
       val orderedIds = JSONArray().apply { freshPage.items.forEach { put(it.id) } }.toString()
@@ -77,11 +85,18 @@ class HavenLocalFirstOffersRepository(
         nextCursor = freshPage.nextCursor,
         categoriesJson = categoriesJson,
         currenciesJson = currenciesJson,
+        contextJson = serializeContext(freshPage.items),
         lastFetchedAt = System.currentTimeMillis()
       )
-      queryCacheDao.upsertCache(cacheEntry)
+      database.withTransaction {
+        if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+        offerDao.upsertOffers(entities)
+        queryCacheDao.upsertCache(cacheEntry)
+      }
 
       Result.success(freshPage)
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Result.failure(e)
     }
@@ -92,12 +107,13 @@ class HavenLocalFirstOffersRepository(
     currentOfferIds: List<String>
   ): Result<OffersPage> = withContext(ioDispatcher) {
     try {
+      val actor = SessionManager.session.value
+      val key = computeQueryKey(query, actor.personId)
       val freshPage = remoteRepository.fetch(query)
-      val key = computeQueryKey(query)
+      if (SessionManager.session.value != actor) throw CancellationException("Account changed")
 
       // 1. Upsert newly fetched offers
-      val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it) }
-      offerDao.upsertOffers(entities)
+      val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it.copy(isSaved = null, distanceMeters = null)) }
 
       // 2. Append new IDs without duplicating
       val combinedIds = (currentOfferIds + freshPage.items.map { it.id }).distinct()
@@ -111,22 +127,30 @@ class HavenLocalFirstOffersRepository(
         nextCursor = freshPage.nextCursor,
         categoriesJson = categoriesJson,
         currenciesJson = currenciesJson,
+        contextJson = mergeContext(queryCacheDao.getCache(key)?.contextJson, freshPage.items),
         lastFetchedAt = System.currentTimeMillis()
       )
-      queryCacheDao.upsertCache(cacheEntry)
+      database.withTransaction {
+        if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+        offerDao.upsertOffers(entities)
+        queryCacheDao.upsertCache(cacheEntry)
+      }
 
       Result.success(freshPage)
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
       Result.failure(e)
     }
   }
 
   override suspend fun getCachedOfferBySlug(slug: String): FeedOffer? = withContext(ioDispatcher) {
-    offerDao.getOfferBySlug(slug)?.toFeedOffer()
+    offerDao.getOfferBySlug(slug)?.toFeedOffer()?.copy(isSaved = null, distanceMeters = null)
   }
 
   override suspend fun updateSavedStatus(slug: String, isSaved: Boolean) = withContext(ioDispatcher) {
-    offerDao.updateSavedStatus(slug, isSaved)
+    // A confirmed save changes membership as well as heart state. Revalidate pages.
+    queryCacheDao.clearAll()
   }
 
   override suspend fun clearCacheForQuery(query: OffersQuery) = withContext(ioDispatcher) {
@@ -138,7 +162,16 @@ class HavenLocalFirstOffersRepository(
     val offersMap = offerDao.getOffersByIds(idList).associateBy { it.id }
 
     // Preserve the exact order dictated by the backend
-    val orderedOffers = idList.mapNotNull { id -> offersMap[id]?.toFeedOffer() }
+    val context = JSONObject(cache.contextJson)
+    val orderedOffers = idList.mapNotNull { id ->
+      offersMap[id]?.toFeedOffer()?.let { offer ->
+        val values = context.optJSONObject(id)
+        offer.copy(
+          isSaved = if (values == null || values.isNull("saved")) null else values.getBoolean("saved"),
+          distanceMeters = if (values == null || values.isNull("distance")) null else values.getDouble("distance")
+        )
+      }
+    }
     val categories = parseCategoriesJson(cache.categoriesJson)
     val currencies = parseCurrenciesJson(cache.currenciesJson)
 
@@ -160,7 +193,20 @@ class HavenLocalFirstOffersRepository(
       val max = query.maxPrice ?: ""
       val scope = query.scope.trim().lowercase()
       val near = query.near?.trim() ?: "none"
-      return "u=$user&s=$scope&near=$near&q=$search&cat=$category&cur=$currency&min=$min&max=$max"
+      // Structured encoding prevents search text from impersonating another facet.
+      return JSONArray(listOf(user, scope, near, search, category, currency, min, max)).toString()
+    }
+
+    private fun serializeContext(offers: List<FeedOffer>): String = mergeContext(null, offers)
+
+    private fun mergeContext(previous: String?, offers: List<FeedOffer>): String {
+      val context = JSONObject(previous ?: "{}")
+      offers.forEach { offer ->
+        context.put(offer.id, JSONObject()
+          .put("saved", offer.isSaved ?: JSONObject.NULL)
+          .put("distance", offer.distanceMeters ?: JSONObject.NULL))
+      }
+      return context.toString()
     }
 
     private fun serializeCategories(categories: List<FeedCategory>): String {

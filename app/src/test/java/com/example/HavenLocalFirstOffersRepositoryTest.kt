@@ -266,4 +266,57 @@ class HavenLocalFirstOffersRepositoryTest {
     // Items should be populated
     assertTrue(viewModel.uiState.value.items.isNotEmpty())
   }
+  @Test
+  fun sameOfferKeepsIndependentReferenceAndAccountState() = runTest(testDispatcher) {
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("actor-a", "A", "actor-a")
+    try {
+      val repo = HavenLocalFirstOffersRepository(database, OffersRepository { query ->
+        val isA = session.session.value.personId == "actor-a"
+        OffersPage(listOf(sampleOffer("shared").copy(isSaved = isA,
+          distanceMeters = if (query.near == "ref-1") 10.0 else 200.0)), emptyList(), emptyList(), null)
+      }, testDispatcher)
+      val first = OffersQuery(near = "ref-1")
+      val second = OffersQuery(near = "ref-2")
+      repo.fetchAndCache(first).getOrThrow()
+      repo.fetchAndCache(second).getOrThrow()
+      session.signInPerson("actor-b", "B", "actor-b")
+      repo.fetchAndCache(first).getOrThrow()
+      assertEquals(false, repo.getCachedPage(first)!!.items.single().isSaved)
+      session.signInPerson("actor-a", "A", "actor-a")
+      assertEquals(true, repo.getCachedPage(first)!!.items.single().isSaved)
+      assertEquals(10.0, repo.getCachedPage(first)!!.items.single().distanceMeters)
+      assertEquals(200.0, repo.getCachedPage(second)!!.items.single().distanceMeters)
+      assertNull(repo.getCachedOfferBySlug("offer-shared")!!.isSaved)
+      assertNull(repo.getCachedOfferBySlug("offer-shared")!!.distanceMeters)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun responseCannotBeCachedAfterAccountChangesDuringRequest() = runTest(testDispatcher) {
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("actor-a", "A", "actor-a")
+    try {
+      val repo = HavenLocalFirstOffersRepository(database, OffersRepository {
+        session.signInPerson("actor-b", "B", "actor-b")
+        OffersPage(listOf(sampleOffer("private-context").copy(isSaved = true)), emptyList(), emptyList(), null)
+      }, testDispatcher)
+      var cancelled = false
+      try { repo.fetchAndCache(OffersQuery()) }
+      catch (_: kotlinx.coroutines.CancellationException) { cancelled = true }
+      assertTrue(cancelled)
+      assertNull(repo.getCachedPage(OffersQuery()))
+      session.signInPerson("actor-a", "A", "actor-a")
+      assertNull(repo.getCachedPage(OffersQuery()))
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun queryValuesCannotImpersonateAnotherFacet() {
+    val injected = OffersQuery(search = "x&cat=y", category = "z")
+    val separate = OffersQuery(search = "x", category = "y&cat=z")
+    assertTrue(HavenLocalFirstOffersRepository.computeQueryKey(injected) !=
+      HavenLocalFirstOffersRepository.computeQueryKey(separate))
+  }
+
 }

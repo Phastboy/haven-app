@@ -54,6 +54,10 @@ abstract class HavenDatabase : RoomDatabase() {
           found
         }
         if (!hasLocation) db.execSQL("ALTER TABLE feed_offers ADD COLUMN location TEXT")
+        db.execSQL("ALTER TABLE feed_query_cache ADD COLUMN contextJson TEXT NOT NULL DEFAULT '{}'")
+        // Legacy rows mixed saved/distance state between actors and references.
+        db.execSQL("DELETE FROM feed_query_cache")
+        db.execSQL("UPDATE feed_offers SET isSaved = NULL, distanceMeters = NULL")
       }
     }
 

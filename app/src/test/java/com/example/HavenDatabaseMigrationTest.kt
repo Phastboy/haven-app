@@ -32,6 +32,7 @@ class HavenDatabaseMigrationTest {
       initial.close()
       SQLiteDatabase.openDatabase(context.getDatabasePath(name).path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
         if (!hadLocation) db.execSQL("ALTER TABLE feed_offers DROP COLUMN location")
+        db.execSQL("ALTER TABLE feed_query_cache DROP COLUMN contextJson")
         db.version = oldVersion
       }
       val upgraded = Room.databaseBuilder(context, HavenDatabase::class.java, name)
