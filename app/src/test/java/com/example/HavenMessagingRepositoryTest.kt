@@ -48,6 +48,7 @@ class HavenMessagingRepositoryTest {
       database = database,
       transport = transport,
       coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher),
+      enforceOwnership = false,
       ioDispatcher = testDispatcher
     )
   }
@@ -295,4 +296,50 @@ class HavenMessagingRepositoryTest {
     // Same serverId returned, deduplicated
     assertEquals(ack1.serverId, ack2.serverId)
   }
+  @Test
+  fun pendingOutboxCannotBeSentOrViewedByAnotherAccount() = runTest(testDispatcher) {
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      val scoped = HavenLocalFirstMessagingRepository(database, transport,
+        coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher), ioDispatcher = testDispatcher)
+      database.conversationDao().upsertConversation(ConversationEntity(
+        id = "private-thread", ownerPersonId = "owner-a", otherUserId = "peer", displayName = "Peer",
+        handle = "peer", avatarUrl = null, lastMessageBody = "", lastMessageAt = "", lastMessageTimestamp = 0))
+      database.messageDao().insertMessage(com.example.data.messaging.db.MessageEntity(
+        clientMessageId = "pending-a", conversationId = "private-thread", senderPersonId = "owner-a",
+        isFromMe = true, text = "Private draft", timestamp = 1, status = "SENDING"))
+      database.outboxDao().insert(com.example.data.messaging.db.OutboxEntity(
+        clientMessageId = "pending-a", conversationId = "private-thread", ownerPersonId = "owner-a", text = "Private draft"))
+      session.signInPerson("owner-b", "B", "owner-b")
+      scoped.processOutbox()
+      assertTrue(scoped.observeMessages("private-thread").first().isEmpty())
+      assertEquals(1, database.outboxDao().getPendingOutbox().size)
+      assertTrue(scoped.retryMessage("pending-a").isFailure)
+      session.signInPerson("owner-a", "A", "owner-a")
+      scoped.processOutbox()
+      assertTrue(database.outboxDao().getPendingOutbox().isEmpty())
+      assertEquals("SENT", database.messageDao().getMessageByClientId("pending-a")!!.status)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun remoteAcknowledgementDoesNotRestorePendingSnapshot() = runTest(testDispatcher) {
+    val local = com.example.data.messaging.db.MessageEntity(
+      clientMessageId = "pending-match", conversationId = "ack-thread", senderPersonId = "me",
+      isFromMe = true, text = "Delivered", timestamp = 1, status = "SENDING")
+    database.messageDao().insertMessage(local)
+    transport.threadPages["latest"] = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "ack-thread",
+      otherPerson = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+      messages = listOf(com.example.data.messaging.transport.RemoteMessageDto(
+        serverId = "ack-server", clientMessageId = "pending-match", conversationId = "ack-thread",
+        senderPersonId = "me", isFromMe = true, text = "Delivered", timestampIso = "2026-11-06T00:00:00Z", timestampMillis = 1)),
+      nextCursor = null, isUnread = false)
+    repository.syncThreadHistory("ack-thread", "owner").getOrThrow()
+    val acknowledged = database.messageDao().getMessageByClientId("pending-match")!!
+    assertEquals("SENT", acknowledged.status)
+    assertEquals("ack-server", acknowledged.serverId)
+  }
+
 }

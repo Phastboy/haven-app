@@ -47,6 +47,7 @@ class ConversationThreadViewModelTest {
       database = database,
       transport = transport,
       coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher),
+      enforceOwnership = false,
       ioDispatcher = testDispatcher
     )
     viewModel = ConversationThreadViewModel(repository)

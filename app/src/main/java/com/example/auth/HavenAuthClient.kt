@@ -185,6 +185,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     if (response.first == 401) {
       logDiagnostic("SESSION", "REFRESH_REJECTED_401", "Stored refresh token rejected (HTTP 401). Signing out locally.", isError = true)
       store.refreshToken = null
+      accessToken = null
       SessionManager.signOut()
       return false
     }
@@ -238,8 +239,9 @@ class HavenAuthClient(private val store: SecureAuthStore) {
 
   /** Serializes refresh rotation with restore/sign-out; never creates a fake session. */
   @Synchronized
-  fun authenticatedGet(path: String): String {
+  fun authenticatedGet(path: String, expectedPersonId: String? = SessionManager.session.value.personId): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    check(expectedPersonId != null && SessionManager.session.value.personId == expectedPersonId) { "Account changed" }
     var response = request("GET", path, null, accessToken)
     if (response.first == 401 && restore()) response = request("GET", path, null, accessToken)
     if (response.first != 200) throw HttpException(response.first, response.second)
@@ -253,9 +255,10 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   @Synchronized
-  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null): String {
+  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null, expectedPersonId: String? = SessionManager.session.value.personId): String {
     require(method == "POST" || method == "DELETE" || method == "PATCH")
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    check(expectedPersonId != null && SessionManager.session.value.personId == expectedPersonId) { "Account changed" }
     var response = request(method, path, body, accessToken)
     if (response.first == 401 && restore()) response = request(method, path, body, accessToken)
     if (response.first !in 200..299) throw HttpException(response.first, response.second)

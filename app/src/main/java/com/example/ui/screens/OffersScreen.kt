@@ -142,7 +142,7 @@ fun OffersScreen(
   val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
   val nativePagesRepo = remember(context.applicationContext) { HavenNativePagesRepository(HavenAuthClient.shared(context.applicationContext)) }
   val scope = rememberCoroutineScope()
-  val inquiryModel: InquiryComposeViewModel = viewModel(factory = remember(context.applicationContext) {
+  val inquiryModel: InquiryComposeViewModel = viewModel(key = "InquiryComposeViewModel_${session.personId}", factory = remember(context.applicationContext) {
     InquiryComposeViewModel.factory(context.applicationContext)
   })
   val inquiryState by inquiryModel.state.collectAsState()
@@ -240,11 +240,11 @@ fun OffersScreen(
     }
   }
 
-  val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
+  val profileModel: ProfileViewModel = viewModel(key = "ProfileViewModel_${session.personId}", factory = remember(context.applicationContext) {
     ProfileViewModel.factory(context.applicationContext)
   })
   val profileState by profileModel.state.collectAsState()
-  val messagesModel: MessagesInboxViewModel = viewModel(factory = remember(context.applicationContext) {
+  val messagesModel: MessagesInboxViewModel = viewModel(key = "MessagesInboxViewModel_${session.personId}", factory = remember(context.applicationContext) {
     MessagesInboxViewModel.factory(context.applicationContext)
   })
   val messagesState by messagesModel.state.collectAsState()
@@ -467,8 +467,8 @@ fun OffersScreen(
                   try {
                     val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
                     if (SessionManager.session.value.personId == actor && activeProviderHandle == handle) {
-                      providerProfile = providerProfile?.takeIf { it.person.id == person.id }?.let {
-                        it.copy(person = it.person.copy(isFollowing = confirmed))
+                      providerProfile = providerProfile?.let {
+                        if (it.person.id == person.id) it.copy(person = it.person.copy(isFollowing = confirmed)) else it
                       }
                     }
                   } catch (cancelled: CancellationException) { throw cancelled }
