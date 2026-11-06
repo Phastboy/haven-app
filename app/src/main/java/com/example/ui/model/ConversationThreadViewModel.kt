@@ -11,6 +11,7 @@ import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.HavenDatabase
 import com.example.data.messaging.db.MessageEntity
 import com.example.data.messaging.transport.HavenProductionMessagingTransport
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -217,6 +218,7 @@ class ConversationThreadViewModel(
         )
       }
 
+      try {
       repository.sendMessage(
         conversationId = convId,
         text = text,
@@ -224,6 +226,12 @@ class ConversationThreadViewModel(
         attachedOfferTitle = state.pendingAttachedOfferTitle,
         attachedOfferPrice = state.pendingAttachedOfferPrice
       )
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) {
+        if (currentConversationId == convId) _uiState.update { it.copy(
+          inputText = if (it.inputText.isBlank()) text else it.inputText,
+          syncError = "Couldn’t queue your message. Please try again.") }
+      }
     }
   }
 

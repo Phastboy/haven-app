@@ -298,14 +298,16 @@ class HavenMessagingRepositoryTest {
   }
   @Test
   fun pendingOutboxCannotBeSentOrViewedByAnotherAccount() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
     val session = com.example.ui.model.SessionManager
     session.signInPerson("owner-a", "A", "owner-a")
     try {
       val scoped = HavenLocalFirstMessagingRepository(database, transport,
         coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher), ioDispatcher = testDispatcher)
+      testScheduler.runCurrent()
       database.conversationDao().upsertConversation(ConversationEntity(
         id = "private-thread", ownerPersonId = "owner-a", otherUserId = "peer", displayName = "Peer",
-        handle = "peer", avatarUrl = null, lastMessageBody = "", lastMessageAt = "", lastMessageTimestamp = 0))
+        handle = "peer", avatarUrl = null, lastMessageBody = "", lastMessageAt = "", lastMessageTimestamp = 0, isUnread = false))
       database.messageDao().insertMessage(com.example.data.messaging.db.MessageEntity(
         clientMessageId = "pending-a", conversationId = "private-thread", senderPersonId = "owner-a",
         isFromMe = true, text = "Private draft", timestamp = 1, status = "SENDING"))

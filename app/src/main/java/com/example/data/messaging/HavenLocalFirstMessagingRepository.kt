@@ -75,6 +75,7 @@ class HavenLocalFirstMessagingRepository(
   private val syncStateDao: SyncStateDao = database.syncStateDao()
 
   private val outboxMutex = Mutex()
+  private val boundOwnerPersonId = SessionManager.session.value.personId
 
   init {
     // Deliver messages that were never attempted (for example the app stopped
@@ -319,6 +320,7 @@ class HavenLocalFirstMessagingRepository(
       attachedOfferPrice = attachedOfferPrice,
       attachedOfferImageResId = attachedOfferImageResId
     )
+    database.withTransaction {
     messageDao.insertMessage(optimisticMessage)
 
     // 2. Optimistically update Conversation preview in Room
@@ -347,6 +349,8 @@ class HavenLocalFirstMessagingRepository(
         status = "PENDING"
       )
     )
+
+    }
 
     // 4. Trigger Outbox processing in background
     coroutineScope.launch {
@@ -401,7 +405,7 @@ class HavenLocalFirstMessagingRepository(
       val pending = outboxDao.getPendingOutbox()
       for (entry in pending) {
         val actor = SessionManager.session.value.personId
-        if (enforceOwnership && (actor == null || entry.ownerPersonId != actor)) continue
+        if (enforceOwnership && (actor == null || actor != boundOwnerPersonId || entry.ownerPersonId != actor)) continue
         val result = transport.sendMessage(
           conversationId = entry.conversationId,
           clientMessageId = entry.clientMessageId,

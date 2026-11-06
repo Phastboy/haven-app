@@ -35,6 +35,7 @@ class HavenPlacesRepository(
       }
       val raw = try {
         val status = connection.responseCode
+        if (status !in 200..299) throw java.io.IOException("Couldn’t search places. Please try again.")
         val stream = if (status in 200..299) connection.inputStream else connection.errorStream
         stream?.bufferedReader()?.use { it.readText() } ?: ""
       } finally {

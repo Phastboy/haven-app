@@ -252,4 +252,22 @@ class PagesAndAppearanceCleanArchitectureTest {
       compose.onNodeWithText("Handcrafted Ceramic Pot").assertExists()
     }
   }
+  @Test
+  fun deletionDoesNotClaimSuccessBeforeServerConfirmation() = runTest {
+    val confirmation = kotlinx.coroutines.CompletableDeferred<Result<Boolean>>()
+    val fakeRepo = object : MyOffersRepository {
+      override suspend fun getMyOffers(after: String?) = Result.success(PaginatedOffers(listOf(sampleOffer), null))
+      override suspend fun deleteOffer(slug: String): Result<Boolean> = confirmation.await()
+    }
+    val model = MyOffersViewModel(fakeRepo)
+    advanceUntilIdle()
+    model.deleteOffer(sampleOffer.slug)
+    assertEquals(1, model.state.value.items.size)
+    assertEquals(null, model.state.value.actionMessage)
+    confirmation.complete(Result.success(true))
+    advanceUntilIdle()
+    assertEquals(0, model.state.value.items.size)
+    assertEquals("Deleted “${sampleOffer.title}”.", model.state.value.actionMessage)
+  }
+
 }
