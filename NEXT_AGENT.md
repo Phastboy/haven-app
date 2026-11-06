@@ -1,3 +1,19 @@
+# Release audit pickup — 2026-11-06
+
+Start with `RELEASE_V0.0.0.md`. AI Studio update `3191ee2` is already on local
+main. Work branch: `fix/v0.0.0-release-readiness`. Follow/unfollow, profile/avatar,
+delete, discovery controls, unread and SSE now have implementations to audit;
+the older remaining-implementation list below is historical, not current status.
+PRs #15 and #16 are already merged. Do not recreate them.
+
+The release audit found a Room upgrade blocker and unresolved cache/account and
+stream lifecycle risks. Version 4 migration and regression tests are prepared;
+CI has not yet verified this branch. VersionName is 0.0.0, candidate code 9;
+signing/build parity with AI Studio still needs the report in the release record.
+Do not mark launch readiness complete from source inspection alone.
+
+---
+
 # Start here — Android native parity handoff, 2026-11-06
 
 Read `MOBILE_AI_STUDIO_HANDOFF.md`, `MOBILE_NATIVE_API_SWEEP.md` and

@@ -1,3 +1,7 @@
+> Current release status: see `RELEASE_V0.0.0.md` and `NEXT_AGENT.md`.
+> The capability disclosures below are historical; native threads and offer
+> lifecycle are integrated, and the newer parity implementation is under audit.
+
 # Haven mobile project info
 
 ## Identity
@@ -12,7 +16,7 @@
 | Parent project | https://github.com/phastboy/haven |
 | Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
 | Android namespace | `com.example` (current scaffold namespace) |
-| Version name / code | `1.0` / `6` (independent of backend 0.8.4; visible version may start at 0.0.0) |
+| Version name / code | `0.0.0` / `9` (release candidate; confirm distributed code before publishing) |
 | Minimum Android version | Android 7.0 / API 24 |
 
 ## Repository description
