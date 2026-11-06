@@ -19,7 +19,9 @@ data class FeedOffer(
   val distanceMeters: Double? = null,
   val category: String = "",
   val makerHandle: String = "",
-  val isPublic: Boolean = true
+  val isPublic: Boolean = true,
+  val isSaved: Boolean? = null,
+  val location: String? = null
 )
 
 data class OfferDetail(
@@ -33,11 +35,19 @@ class HavenOfferDetailRepository(private val auth: HavenAuthClient) {
     val path = "/api/v1/offers/${Uri.encode(slug)}"
     val json = JSONObject(if (authenticated) auth.authenticatedGet(path) else auth.publicGet(path))
     val images = json.getJSONArray("images")
-    OfferDetail(json.getString("id"), json.getString("slug"), json.getString("title"),
-      json.getString("description"), json.getString("category"), json.getString("price_display"),
-      json.getString("maker_name"), json.getString("maker_handle"),
-      List(images.length()) { images.getString(it) },
-      if (json.isNull("location")) null else json.getString("location"), json.getBoolean("is_saved"))
+    OfferDetail(
+      id = json.getString("id"),
+      slug = json.getString("slug"),
+      title = json.getString("title"),
+      description = json.getString("description"),
+      category = json.getString("category"),
+      priceDisplay = json.getString("price_display"),
+      makerName = json.getString("maker_name"),
+      makerHandle = json.getString("maker_handle"),
+      images = List(images.length()) { images.getString(it) },
+      location = if (json.isNull("location")) null else json.getString("location"),
+      isSaved = json.getBoolean("is_saved")
+    )
   }
 
   suspend fun setSaved(slug: String, saved: Boolean): Boolean = withContext(Dispatchers.IO) {
@@ -54,7 +64,9 @@ data class OffersQuery(
   val currency: String = "",
   val minPrice: Int? = null,
   val maxPrice: Int? = null,
-  val after: String? = null
+  val after: String? = null,
+  val scope: String = "public",
+  val near: String? = null
 )
 data class OffersPage(
   val items: List<FeedOffer>,
@@ -68,7 +80,9 @@ fun interface OffersRepository {
 }
 
 /** Public discovery; the server owns filtering, visibility, and result order. */
-class HavenOffersRepository : OffersRepository {
+class HavenOffersRepository(
+  private val auth: HavenAuthClient? = null
+) : OffersRepository {
   override suspend fun fetch(query: OffersQuery): OffersPage = withContext(Dispatchers.IO) {
     val uri = Uri.parse("https://${HavenAuthClient.HOST}/api/v1/offers").buildUpon()
     if (query.search.isNotBlank()) uri.appendQueryParameter("q", query.search.trim())
@@ -77,15 +91,27 @@ class HavenOffersRepository : OffersRepository {
     query.minPrice?.let { uri.appendQueryParameter("min_price", it.toString()) }
     query.maxPrice?.let { uri.appendQueryParameter("max_price", it.toString()) }
     query.after?.let { uri.appendQueryParameter("after", it) }
+    if (query.scope != "public" && query.scope.isNotBlank()) {
+      uri.appendQueryParameter("scope", query.scope)
+    }
+    if (!query.near.isNullOrBlank()) {
+      uri.appendQueryParameter("near", query.near)
+    }
+
+    val token = auth?.getValidAccessToken()
     val connection = (URL(uri.build().toString()).openConnection() as HttpURLConnection).apply {
       connectTimeout = 10_000
       readTimeout = 15_000
       setRequestProperty("Accept", "application/json")
+      if (token != null) {
+        setRequestProperty("Authorization", "Bearer $token")
+      }
     }
     try {
       when (connection.responseCode) {
         200 -> connection.inputStream.bufferedReader().use { parsePage(it.readText()) }
         400 -> throw IOException("Check your search and price filters, then try again.")
+        401 -> throw IOException("Please sign in to view this collection.")
         else -> throw IOException("Couldn’t load offers. Please try again.")
       }
     } finally {
@@ -95,13 +121,18 @@ class HavenOffersRepository : OffersRepository {
 
   companion object {
     fun parseOffer(item: JSONObject) = FeedOffer(
-      item.getString("id"), item.getString("slug"), item.getString("title"),
-      item.getString("maker_name"), item.getString("price_display"),
-      if (item.isNull("cover_url")) null else item.getString("cover_url"),
-      if (item.isNull("distance_meters")) null else item.getDouble("distance_meters"),
-      if (item.isNull("category")) "" else item.getString("category"),
-      if (item.isNull("maker_handle")) "" else item.getString("maker_handle"),
-      item.optBoolean("is_public", true)
+      id = item.getString("id"),
+      slug = item.getString("slug"),
+      title = item.getString("title"),
+      makerName = item.getString("maker_name"),
+      priceDisplay = item.getString("price_display"),
+      coverUrl = if (item.isNull("cover_url")) null else item.getString("cover_url"),
+      distanceMeters = if (item.isNull("distance_meters")) null else item.getDouble("distance_meters"),
+      category = if (item.isNull("category")) "" else item.getString("category"),
+      makerHandle = if (item.isNull("maker_handle")) "" else item.getString("maker_handle"),
+      isPublic = item.optBoolean("is_public", true),
+      isSaved = if (item.has("is_saved") && !item.isNull("is_saved")) item.getBoolean("is_saved") else null,
+      location = if (item.isNull("location")) null else item.getString("location")
     )
 
     fun parsePage(body: String): OffersPage {

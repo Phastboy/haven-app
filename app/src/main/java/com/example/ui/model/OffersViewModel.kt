@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.auth.HavenAuthClient
 import com.example.data.FeedCategory
 import com.example.data.FeedOffer
 import com.example.data.HavenOffersRepository
@@ -32,9 +33,10 @@ data class OffersUiState(
   val isFilterSheetVisible: Boolean = false,
   val draftCurrency: String = "Any",
   val draftMinPriceText: String = "",
-  val draftMaxPriceText: String = ""
+  val draftMaxPriceText: String = "",
+  val activeReference: com.example.data.PlaceCandidate? = null
 ) {
-  val activeFilterCount: Int get() = if (query.currency.isNotBlank()) 1 else 0
+  val activeFilterCount: Int get() = (if (query.currency.isNotBlank()) 1 else 0) + (if (activeReference != null) 1 else 0)
 }
 
 /**
@@ -246,13 +248,41 @@ class OffersViewModel(
         )
       )
     }
+  }
+
+  fun applyReference(candidate: com.example.data.PlaceCandidate) {
+    _uiState.update {
+      it.copy(
+        activeReference = candidate,
+        query = it.query.copy(near = candidate.near)
+      )
+    }
+    refresh()
+  }
+
+  fun turnOffProximity() {
+    _uiState.update {
+      it.copy(
+        activeReference = null,
+        query = it.query.copy(near = "off")
+      )
+    }
+    refresh()
+  }
+
+  fun setScope(scope: String) {
+    if (_uiState.value.query.scope == scope) return
+    _uiState.update {
+      it.copy(query = it.query.copy(scope = scope))
+    }
     refresh()
   }
 
   fun clearFilters() {
+    val currentReference = _uiState.value.activeReference
     _uiState.update {
       it.copy(
-        query = OffersQuery(),
+        query = OffersQuery(near = currentReference?.near),
         isFilterSheetVisible = false,
         draftCurrency = "Any",
         draftMinPriceText = "",
@@ -268,7 +298,8 @@ class OffersViewModel(
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass.isAssignableFrom(OffersViewModel::class.java))
         val db = HavenDatabase.getInstance(context)
-        val remoteRepo = HavenOffersRepository()
+        val authClient = HavenAuthClient.shared(context)
+        val remoteRepo = HavenOffersRepository(authClient)
         val localRepo = HavenLocalFirstOffersRepository(db, remoteRepo)
         return OffersViewModel(remoteRepo, localRepo) as T
       }

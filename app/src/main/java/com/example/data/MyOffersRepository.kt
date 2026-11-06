@@ -1,13 +1,16 @@
 package com.example.data
 
 import android.content.Context
+import android.net.Uri
 import com.example.auth.HavenAuthClient
+import org.json.JSONObject
 
 /**
  * Clean Architecture repository contract for My Published/Private Offers.
  */
 interface MyOffersRepository {
   suspend fun getMyOffers(after: String? = null): Result<PaginatedOffers>
+  suspend fun deleteOffer(slug: String): Result<Boolean>
 }
 
 class HavenMyOffersRepository(
@@ -17,6 +20,11 @@ class HavenMyOffersRepository(
 
   override suspend fun getMyOffers(after: String?): Result<PaginatedOffers> = runCatching {
     nativePagesRepo.getMyOffers(after)
+  }
+
+  override suspend fun deleteOffer(slug: String): Result<Boolean> = runCatching {
+    val raw = auth.authenticatedMutation("DELETE", "/api/v1/offers/${Uri.encode(slug)}")
+    JSONObject(raw).optBoolean("deleted", true)
   }
 
   companion object {

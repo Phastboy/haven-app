@@ -68,6 +68,8 @@ fun SavedOffersScreen(
     offers = state.offers,
     loading = state.loading,
     error = state.error,
+    pagingError = state.pagingError,
+    loadingMore = state.loadingMore,
     savingSlugs = state.savingSlugs,
     onBack = onBack,
     onRetry = viewModel::load,
@@ -93,6 +95,8 @@ fun SavedOffersScreen(
   onBrowseOffers: () -> Unit,
   onOpenProvider: ((String) -> Unit)? = null,
   onLoadMore: () -> Unit = {},
+  pagingError: String? = null,
+  loadingMore: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   BackHandler(onBack = onBack)
@@ -256,7 +260,27 @@ fun SavedOffersScreen(
         )
       }
 
-      if (offers?.nextCursor != null) {
+      if (pagingError != null) {
+        item(span = { GridItemSpan(2) }) {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              text = pagingError,
+              fontFamily = InterFontFamily,
+              fontSize = 13.sp,
+              color = HavenColors.TextPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onLoadMore) {
+              Text("Retry")
+            }
+          }
+        }
+      } else if (offers?.nextCursor != null) {
         item(span = { GridItemSpan(2) }) {
           Box(
             modifier = Modifier
@@ -264,7 +288,7 @@ fun SavedOffersScreen(
               .padding(16.dp),
             contentAlignment = Alignment.Center
           ) {
-            if (loading) {
+            if (loadingMore) {
               CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 color = HavenColors.Primary

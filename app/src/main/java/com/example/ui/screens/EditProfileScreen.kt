@@ -1,6 +1,10 @@
 package com.example.ui.screens
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,11 +18,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,25 +33,23 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -59,80 +59,55 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
+import com.example.data.ProfileOverview
 import com.example.ui.components.HavenBackButton
 import com.example.ui.components.HavenInsets
 import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.model.EditProfileViewModel
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 import kotlinx.coroutines.delay
 
-private const val DEFAULT_AVATAR_URL =
-  "https://lh3.googleusercontent.com/aida/AEtjO1XT1RMubL8e8hGOBhw0NvVZyAtLhFXR1IlcXKlP77a0ZvKEXNjhZYJWYiQGy_NxHAEs-n9GJhFMoevM7g5HjrJWBU4NxEXmz-YJXxy_k9A9-crh3u1LNXdTOLbxoETTKILuDGSJC5ZCM01HqG-2e71Ilkdm7DFBWuO6ljlIEjq7PSEAW7L-ddjXkY-fO0VH3GqF89oc8Cu0CWZISQZu8NwYUFWgcU_RSDU4cM2x6Oju8m0IrHNemURl_yzw"
-
-/**
- * Edit Profile Screen (/profile/edit):
- * Implements Frame 01 (Filled form with photo & avatar toast) and Frame 02 (Field error states with zero accent colors)
- * strictly following the Haven Monastic Greyscale Design System.
- */
 @Composable
 fun EditProfileScreen(
   onBack: () -> Unit,
   onSaveSuccess: () -> Unit = {},
-  initialName: String = "Adaeze Obi",
-  initialHandle: String = "adaeze-obi",
-  initialBio: String = "I weave Aso Oke the traditional way on a narrow loom. I take custom orders for weddings and naming ceremonies, and every piece is made to order.",
-  hasPhotoInitial: Boolean = true,
+  initialProfile: ProfileOverview? = null,
+  viewModel: EditProfileViewModel = viewModel(factory = EditProfileViewModel.factory(LocalContext.current)),
   modifier: Modifier = Modifier
 ) {
-  BackHandler { onBack() }
+  LaunchedEffect(initialProfile) {
+    viewModel.initialize(initialProfile)
+  }
+
+  val state by viewModel.state.collectAsState()
+  val context = LocalContext.current
   val focusManager = LocalFocusManager.current
 
-  var displayName by remember { mutableStateOf(initialName) }
-  var handle by remember { mutableStateOf(initialHandle) }
-  var bio by remember { mutableStateOf(initialBio) }
-  var hasPhoto by remember { mutableStateOf(hasPhotoInitial) }
-
-  var nameError by remember { mutableStateOf<String?>(null) }
-  var handleError by remember { mutableStateOf<String?>(null) }
-  var bioError by remember { mutableStateOf<String?>(null) }
-
-  var snackbarText by remember { mutableStateOf<String?>(null) }
-  var showSnackbar by remember { mutableStateOf(false) }
-
-  LaunchedEffect(showSnackbar) {
-    if (showSnackbar) {
-      delay(3500)
-      showSnackbar = false
+  val photoPickerLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.PickVisualMedia()
+  ) { uri: Uri? ->
+    if (uri != null) {
+      try {
+        val stream = context.contentResolver.openInputStream(uri)
+        val bytes = stream?.use { it.readBytes() }
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        if (bytes != null) {
+          viewModel.uploadAvatar(bytes, mimeType)
+        }
+      } catch (_: Exception) {}
     }
   }
 
-  fun validate(): Boolean {
-    var isValid = true
+  BackHandler { onBack() }
 
-    if (displayName.trim().length < 2) {
-      nameError = "Display name must be at least 2 characters."
-      isValid = false
-    } else {
-      nameError = null
+  LaunchedEffect(state.saveSuccessMessage) {
+    if (state.saveSuccessMessage != null) {
+      delay(3500)
+      viewModel.dismissSuccessMessage()
     }
-
-    val handlePattern = Regex("^[a-z0-9]+(-[a-z0-9]+)*$")
-    if (!handlePattern.matches(handle.trim())) {
-      handleError = "Handle must contain only lowercase letters, digits, and single hyphens."
-      isValid = false
-    } else {
-      handleError = null
-    }
-
-    if (bio.length > 500) {
-      bioError = "Bio cannot exceed 500 characters."
-      isValid = false
-    } else {
-      bioError = null
-    }
-
-    return isValid
   }
 
   Box(
@@ -206,46 +181,40 @@ fun EditProfileScreen(
               .border(1.dp, HavenColors.BorderSubtle, CircleShape),
             contentAlignment = Alignment.Center
           ) {
-            if (hasPhoto) {
+            val initialLetter = state.displayName.firstOrNull()?.uppercase() ?: "H"
+            val initialComposable: @Composable () -> Unit = {
+              Box(
+                modifier = Modifier
+                  .fillMaxSize()
+                  .background(HavenColors.SurfaceContainer),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = initialLetter,
+                  fontFamily = InterFontFamily,
+                  fontWeight = FontWeight.SemiBold,
+                  fontSize = 32.sp,
+                  color = HavenColors.TextPrimary
+                )
+              }
+            }
+
+            if (state.uploadingAvatar || state.removingAvatar) {
+              CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                color = HavenColors.Primary
+              )
+            } else if (!state.avatarUrl.isNullOrBlank()) {
               SubcomposeAsyncImage(
-                model = DEFAULT_AVATAR_URL,
+                model = state.avatarUrl,
                 contentDescription = "Profile portrait",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                loading = {
-                  Box(
-                    modifier = Modifier
-                      .fillMaxSize()
-                      .background(HavenColors.SurfaceContainer),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Text(
-                      text = "A",
-                      fontFamily = InterFontFamily,
-                      fontWeight = FontWeight.SemiBold,
-                      fontSize = 32.sp,
-                      color = HavenColors.TextPrimary
-                    )
-                  }
-                },
-                error = {
-                  Text(
-                    text = "A",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 32.sp,
-                    color = HavenColors.TextPrimary
-                  )
-                }
+                loading = { initialComposable() },
+                error = { initialComposable() }
               )
             } else {
-              Text(
-                text = "A",
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 32.sp,
-                color = HavenColors.TextPrimary
-              )
+              initialComposable()
             }
           }
 
@@ -264,15 +233,15 @@ fun EditProfileScreen(
               textDecoration = TextDecoration.Underline,
               modifier = Modifier
                 .clickable {
-                  hasPhoto = true
-                  snackbarText = "Avatar photo updated successfully."
-                  showSnackbar = true
+                  photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                  )
                 }
                 .padding(vertical = 4.dp)
                 .testTag("change_photo_button")
             )
 
-            if (hasPhoto) {
+            if (!state.avatarUrl.isNullOrBlank()) {
               Text(
                 text = "Remove photo",
                 fontFamily = InterFontFamily,
@@ -282,9 +251,7 @@ fun EditProfileScreen(
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier
                   .clickable {
-                    hasPhoto = false
-                    snackbarText = "Avatar photo removed."
-                    showSnackbar = true
+                    viewModel.removeAvatar()
                   }
                   .padding(vertical = 4.dp)
                   .testTag("remove_photo_button")
@@ -298,34 +265,30 @@ fun EditProfileScreen(
             text = "JPEG, PNG or WebP up to 5 MB. Photo changes are saved right away.",
             fontFamily = InterFontFamily,
             fontSize = 13.sp,
-            lineHeight = 18.sp,
             color = HavenColors.TextSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp)
+            textAlign = TextAlign.Center
           )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Field 1: Display Name
+        // Display Name Field
+        val isNameError = state.nameError != null
         Column(modifier = Modifier.fillMaxWidth()) {
           Text(
             text = "Display name",
             fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
             color = HavenColors.TextPrimary
           )
-
           Spacer(modifier = Modifier.height(6.dp))
-
-          val isNameError = nameError != null
           Box(
             modifier = Modifier
               .fillMaxWidth()
               .height(48.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(HavenColors.Canvas)
+              .background(HavenColors.SurfaceCard)
               .border(
                 width = if (isNameError) 2.dp else 1.dp,
                 color = if (isNameError) HavenColors.TextPrimary else HavenColors.BorderDefault,
@@ -335,11 +298,8 @@ fun EditProfileScreen(
             contentAlignment = Alignment.CenterStart
           ) {
             BasicTextField(
-              value = displayName,
-              onValueChange = {
-                displayName = it
-                if (nameError != null) validate()
-              },
+              value = state.displayName,
+              onValueChange = viewModel::onDisplayNameChange,
               textStyle = TextStyle(
                 fontFamily = InterFontFamily,
                 fontSize = 15.sp,
@@ -367,45 +327,36 @@ fun EditProfileScreen(
                 modifier = Modifier.size(14.dp)
               )
               Text(
-                text = nameError!!,
+                text = state.nameError!!,
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
-                color = HavenColors.TextPrimary
+                color = HavenColors.TextPrimary,
+                modifier = Modifier.testTag("display_name_error")
               )
             }
-          } else {
-            Text(
-              text = "The name people see on your offers.",
-              fontFamily = InterFontFamily,
-              fontSize = 13.sp,
-              color = HavenColors.TextSecondary,
-              modifier = Modifier.padding(top = 5.dp)
-            )
           }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Field 2: Handle (with @ prefix)
+        // Handle Field (with haven.market/ prefix)
+        val isHandleError = state.handleError != null
         Column(modifier = Modifier.fillMaxWidth()) {
           Text(
             text = "Handle",
             fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
             color = HavenColors.TextPrimary
           )
-
           Spacer(modifier = Modifier.height(6.dp))
-
-          val isHandleError = handleError != null
           Row(
             modifier = Modifier
               .fillMaxWidth()
               .height(48.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(HavenColors.Canvas)
+              .background(HavenColors.SurfaceCard)
               .border(
                 width = if (isHandleError) 2.dp else 1.dp,
                 color = if (isHandleError) HavenColors.TextPrimary else HavenColors.BorderDefault,
@@ -413,34 +364,42 @@ fun EditProfileScreen(
               ),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(
-              text = "@",
-              fontFamily = InterFontFamily,
-              fontWeight = FontWeight.Medium,
-              fontSize = 15.sp,
-              color = HavenColors.TextSecondary,
-              modifier = Modifier.padding(start = 14.dp, end = 4.dp)
-            )
-
-            BasicTextField(
-              value = handle,
-              onValueChange = {
-                handle = it
-                if (handleError != null) validate()
-              },
-              textStyle = TextStyle(
+            Box(
+              modifier = Modifier
+                .background(HavenColors.SurfaceContainer)
+                .padding(horizontal = 12.dp)
+                .height(48.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = "haven.market/",
                 fontFamily = InterFontFamily,
-                fontSize = 15.sp,
-                color = HavenColors.TextPrimary
-              ),
-              cursorBrush = SolidColor(HavenColors.TextPrimary),
-              singleLine = true,
-              keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                fontSize = 14.sp,
+                color = HavenColors.TextSecondary
+              )
+            }
+            Box(
               modifier = Modifier
                 .weight(1f)
-                .padding(end = 14.dp)
-                .testTag("handle_input")
-            )
+                .padding(horizontal = 12.dp),
+              contentAlignment = Alignment.CenterStart
+            ) {
+              BasicTextField(
+                value = state.handle,
+                onValueChange = viewModel::onHandleChange,
+                textStyle = TextStyle(
+                  fontFamily = InterFontFamily,
+                  fontSize = 15.sp,
+                  color = HavenColors.TextPrimary
+                ),
+                cursorBrush = SolidColor(HavenColors.TextPrimary),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .testTag("handle_input")
+              )
+            }
           }
 
           if (isHandleError) {
@@ -456,16 +415,17 @@ fun EditProfileScreen(
                 modifier = Modifier.size(14.dp)
               )
               Text(
-                text = handleError!!,
+                text = state.handleError!!,
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
-                color = HavenColors.TextPrimary
+                color = HavenColors.TextPrimary,
+                modifier = Modifier.testTag("handle_error")
               )
             }
           } else {
             Text(
-              text = "Unique URL handle for your profile (e.g. alex).",
+              text = "Letters, numbers, and single hyphens. 3 to 30 characters.",
               fontFamily = InterFontFamily,
               fontSize = 13.sp,
               color = HavenColors.TextSecondary,
@@ -474,27 +434,39 @@ fun EditProfileScreen(
           }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Field 3: Bio
+        // Bio Field (Multline, 108dp min height)
+        val isBioError = state.bioError != null
         Column(modifier = Modifier.fillMaxWidth()) {
-          Text(
-            text = "Bio",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 14.sp,
-            color = HavenColors.TextPrimary
-          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              text = "Bio",
+              fontFamily = InterFontFamily,
+              fontWeight = FontWeight.SemiBold,
+              fontSize = 14.sp,
+              color = HavenColors.TextPrimary
+            )
+            Text(
+              text = "${state.bio.length} / 500",
+              fontFamily = InterFontFamily,
+              fontSize = 12.sp,
+              color = if (state.bio.length > 500) HavenColors.TextPrimary else HavenColors.TextSecondary
+            )
+          }
 
           Spacer(modifier = Modifier.height(6.dp))
 
-          val isBioError = bioError != null
           Box(
             modifier = Modifier
               .fillMaxWidth()
-              .height(120.dp)
+              .height(108.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(HavenColors.Canvas)
+              .background(HavenColors.SurfaceCard)
               .border(
                 width = if (isBioError) 2.dp else 1.dp,
                 color = if (isBioError) HavenColors.TextPrimary else HavenColors.BorderDefault,
@@ -504,11 +476,8 @@ fun EditProfileScreen(
             contentAlignment = Alignment.TopStart
           ) {
             BasicTextField(
-              value = bio,
-              onValueChange = {
-                bio = it
-                if (bioError != null) validate()
-              },
+              value = state.bio,
+              onValueChange = viewModel::onBioChange,
               textStyle = TextStyle(
                 fontFamily = InterFontFamily,
                 fontSize = 15.sp,
@@ -537,11 +506,12 @@ fun EditProfileScreen(
                 modifier = Modifier.size(14.dp)
               )
               Text(
-                text = bioError!!,
+                text = state.bioError!!,
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
-                color = HavenColors.TextPrimary
+                color = HavenColors.TextPrimary,
+                modifier = Modifier.testTag("bio_error")
               )
             }
           } else {
@@ -555,6 +525,29 @@ fun EditProfileScreen(
           }
         }
 
+        state.generalError?.let { generalErr ->
+          Spacer(modifier = Modifier.height(16.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(vertical = 4.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Outlined.ErrorOutline,
+              contentDescription = null,
+              tint = HavenColors.TextPrimary,
+              modifier = Modifier.size(16.dp)
+            )
+            Text(
+              text = generalErr,
+              fontFamily = InterFontFamily,
+              fontSize = 14.sp,
+              color = HavenColors.TextPrimary,
+              modifier = Modifier.testTag("edit_profile_general_error")
+            )
+          }
+        }
+
         Spacer(modifier = Modifier.height(28.dp))
 
         // Save Changes Button (52dp Solid Button)
@@ -563,25 +556,30 @@ fun EditProfileScreen(
             .fillMaxWidth()
             .height(52.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(HavenColors.TextPrimary)
-            .clickable {
+            .background(if (state.saving) HavenColors.TextSecondary else HavenColors.TextPrimary)
+            .clickable(enabled = !state.saving) {
               focusManager.clearFocus()
-              if (validate()) {
-                snackbarText = "Your profile has been updated."
-                showSnackbar = true
+              viewModel.save {
                 onSaveSuccess()
               }
             }
             .testTag("save_profile_button"),
           contentAlignment = Alignment.Center
         ) {
-          Text(
-            text = "Save changes",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp,
-            color = HavenColors.TextOnDark
-          )
+          if (state.saving) {
+            CircularProgressIndicator(
+              modifier = Modifier.size(20.dp),
+              color = HavenColors.TextOnDark
+            )
+          } else {
+            Text(
+              text = "Save changes",
+              fontFamily = InterFontFamily,
+              fontWeight = FontWeight.SemiBold,
+              fontSize = 16.sp,
+              color = HavenColors.TextOnDark
+            )
+          }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -590,7 +588,7 @@ fun EditProfileScreen(
 
     // Pinned Snackbar Toast at bottom
     AnimatedVisibility(
-      visible = showSnackbar,
+      visible = state.saveSuccessMessage != null,
       enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
       exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
       modifier = Modifier
@@ -611,7 +609,7 @@ fun EditProfileScreen(
           verticalAlignment = Alignment.CenterVertically
         ) {
           Text(
-            text = snackbarText ?: "Your profile has been updated.",
+            text = state.saveSuccessMessage ?: "Your profile has been updated.",
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,

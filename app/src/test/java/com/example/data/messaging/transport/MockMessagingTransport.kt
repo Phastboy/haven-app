@@ -93,7 +93,8 @@ class MockMessagingTransport(
   override suspend fun sendMessage(
     conversationId: String,
     clientMessageId: String,
-    text: String
+    text: String,
+    offerId: String?
   ): Result<SendMessageAckDto> {
     if (simulatedDelayMs > 0) delay(simulatedDelayMs)
 

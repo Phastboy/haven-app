@@ -13,7 +13,8 @@ data class Person(
   val displayName: String,
   val bio: String?,
   val joined: String,
-  val avatarUrl: String?
+  val avatarUrl: String?,
+  val isFollowing: Boolean? = null
 )
 
 data class ProviderProfile(
@@ -37,6 +38,8 @@ interface NativePagesRepository {
   suspend fun getMyOffers(after: String? = null): PaginatedOffers
   suspend fun getSavedOffers(after: String? = null): PaginatedOffers
   suspend fun getFollowing(after: String? = null): PaginatedFollowing
+  suspend fun follow(handle: String): Boolean
+  suspend fun unfollow(handle: String): Boolean
 }
 
 class HavenNativePagesRepository(private val auth: HavenAuthClient) : NativePagesRepository {
@@ -93,6 +96,16 @@ class HavenNativePagesRepository(private val auth: HavenAuthClient) : NativePage
     )
   }
 
+  override suspend fun follow(handle: String): Boolean = withContext(Dispatchers.IO) {
+    val raw = auth.authenticatedMutation("POST", "/api/v1/profiles/${Uri.encode(handle)}/follow")
+    JSONObject(raw).optBoolean("is_following", true)
+  }
+
+  override suspend fun unfollow(handle: String): Boolean = withContext(Dispatchers.IO) {
+    val raw = auth.authenticatedMutation("DELETE", "/api/v1/profiles/${Uri.encode(handle)}/follow")
+    JSONObject(raw).optBoolean("is_following", false)
+  }
+
   companion object {
     fun parsePerson(json: JSONObject): Person = Person(
       id = json.getString("id"),
@@ -100,7 +113,8 @@ class HavenNativePagesRepository(private val auth: HavenAuthClient) : NativePage
       displayName = json.getString("display_name"),
       bio = if (json.isNull("bio")) null else json.getString("bio"),
       joined = json.getString("joined"),
-      avatarUrl = if (json.isNull("avatar_url")) null else json.getString("avatar_url")
+      avatarUrl = if (json.isNull("avatar_url")) null else json.getString("avatar_url"),
+      isFollowing = if (json.has("is_following") && !json.isNull("is_following")) json.getBoolean("is_following") else null
     )
   }
 }

@@ -28,7 +28,8 @@ interface MessagingTransport {
   suspend fun sendMessage(
     conversationId: String,
     clientMessageId: String,
-    text: String
+    text: String,
+    offerId: String? = null
   ): Result<SendMessageAckDto>
 
   /** Starts or continues a conversation about a published offer. */

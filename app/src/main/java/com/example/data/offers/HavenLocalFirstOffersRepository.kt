@@ -151,13 +151,16 @@ class HavenLocalFirstOffersRepository(
   }
 
   companion object {
-    fun computeQueryKey(query: OffersQuery): String {
+    fun computeQueryKey(query: OffersQuery, actor: String? = com.example.ui.model.SessionManager.session.value.personId): String {
+      val user = actor ?: "guest"
       val search = query.search.trim().lowercase()
       val category = query.category.trim()
       val currency = query.currency.trim()
       val min = query.minPrice ?: ""
       val max = query.maxPrice ?: ""
-      return "q=$search&cat=$category&cur=$currency&min=$min&max=$max"
+      val scope = query.scope.trim().lowercase()
+      val near = query.near?.trim() ?: "none"
+      return "u=$user&s=$scope&near=$near&q=$search&cat=$category&cur=$currency&min=$min&max=$max"
     }
 
     private fun serializeCategories(categories: List<FeedCategory>): String {

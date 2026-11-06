@@ -8,6 +8,7 @@ import com.example.auth.HavenAuthClient
  */
 interface FollowingRepository {
   suspend fun getFollowing(after: String? = null): Result<PaginatedFollowing>
+  suspend fun unfollow(handle: String): Result<Boolean>
 }
 
 class HavenFollowingRepository(
@@ -17,6 +18,10 @@ class HavenFollowingRepository(
 
   override suspend fun getFollowing(after: String?): Result<PaginatedFollowing> = runCatching {
     nativePagesRepo.getFollowing(after)
+  }
+
+  override suspend fun unfollow(handle: String): Result<Boolean> = runCatching {
+    nativePagesRepo.unfollow(handle)
   }
 
   companion object {

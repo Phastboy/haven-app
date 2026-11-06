@@ -18,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MessagesInboxUiState(
@@ -25,7 +26,8 @@ data class MessagesInboxUiState(
   val nextCursor: String? = null,
   val loading: Boolean = false,
   val loadingMore: Boolean = false,
-  val error: String? = null
+  val error: String? = null,
+  val globalUnread: Boolean = false
 )
 
 class MessagesInboxViewModel(
@@ -45,8 +47,20 @@ class MessagesInboxViewModel(
     _state.value = MessagesInboxUiState()
   }
 
+  fun refreshUnread() {
+    viewModelScope.launch {
+      try {
+        val hasUnread = repository.getGlobalUnread()
+        _state.update { it.copy(globalUnread = hasUnread) }
+      } catch (_: Exception) {}
+    }
+  }
+
   fun load(personId: String, force: Boolean = false) {
-    if (!force && actor == personId && (_state.value.loading || _state.value.items.isNotEmpty() || _state.value.nextCursor == null && _state.value.error != null)) return
+    if (!force && actor == personId && (_state.value.loading || _state.value.items.isNotEmpty() || _state.value.nextCursor == null && _state.value.error != null)) {
+      refreshUnread()
+      return
+    }
     job?.cancel()
     actor = personId
 
@@ -54,6 +68,8 @@ class MessagesInboxViewModel(
     if (!hasExistingItems) {
       _state.value = _state.value.copy(loading = true, loadingMore = false, error = null)
     }
+
+    refreshUnread()
 
     if (localMessagingRepository != null) {
       // 1. Observe local Room database reactively
@@ -90,7 +106,7 @@ class MessagesInboxViewModel(
       job = viewModelScope.launch {
         try {
           val page = repository.load(null)
-          if (actor == personId) _state.value = page.toState()
+          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread)
         } catch (cancelled: CancellationException) {
           throw cancelled
         } catch (_: Exception) {

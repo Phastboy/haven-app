@@ -19,14 +19,25 @@ data class InboxConversation(
 
 data class ConversationInboxPage(val items: List<InboxConversation>, val nextCursor: String?)
 
-fun interface MessagesInboxRepository {
+interface MessagesInboxRepository {
   suspend fun load(after: String?): ConversationInboxPage
+  suspend fun getGlobalUnread(): Boolean
 }
 
 class HavenMessagesRepository(private val auth: HavenAuthClient) : MessagesInboxRepository {
   override suspend fun load(after: String?): ConversationInboxPage = withContext(Dispatchers.IO) {
     val query = after?.let { "?after=${Uri.encode(it)}" }.orEmpty()
     parseInbox(auth.authenticatedGet("/api/v1/conversations$query"))
+  }
+
+  override suspend fun getGlobalUnread(): Boolean = withContext(Dispatchers.IO) {
+    try {
+      val raw = auth.authenticatedGet("/api/v1/conversations/unread")
+      val json = JSONObject(raw)
+      json.optBoolean("unread", json.optBoolean("unread_exists", false))
+    } catch (_: Exception) {
+      false
+    }
   }
 
   companion object {

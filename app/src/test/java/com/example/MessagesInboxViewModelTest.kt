@@ -36,8 +36,16 @@ class MessagesInboxViewModelTest {
     "A real message from Haven", "2026-11-02T10:44:00Z", true
   )
 
+  private fun fakeInboxRepo(
+    globalUnread: Boolean = false,
+    fetcher: suspend (String?) -> ConversationInboxPage
+  ) = object : MessagesInboxRepository {
+    override suspend fun load(after: String?): ConversationInboxPage = fetcher(after)
+    override suspend fun getGlobalUnread(): Boolean = globalUnread
+  }
+
   @Test fun `inbox only displays repository data and clears it when account leaves`() = runTest(dispatcher) {
-    val model = MessagesInboxViewModel(MessagesInboxRepository { ConversationInboxPage(listOf(inbox("one")), null) })
+    val model = MessagesInboxViewModel(fakeInboxRepo { ConversationInboxPage(listOf(inbox("one")), null) })
     assertTrue(model.state.value.items.isEmpty())
     model.load("owner")
     advanceUntilIdle()
@@ -49,7 +57,7 @@ class MessagesInboxViewModelTest {
 
   @Test fun `load more uses server cursor and appends server rows`() = runTest(dispatcher) {
     val cursors = mutableListOf<String?>()
-    val model = MessagesInboxViewModel(MessagesInboxRepository { cursor ->
+    val model = MessagesInboxViewModel(fakeInboxRepo { cursor ->
       cursors += cursor
       if (cursor == null) ConversationInboxPage(listOf(inbox("one")), "next")
       else ConversationInboxPage(listOf(inbox("two")), null)
@@ -63,7 +71,7 @@ class MessagesInboxViewModelTest {
   }
 
   @Test fun `inbox failures do not retain sample rows`() = runTest(dispatcher) {
-    val model = MessagesInboxViewModel(MessagesInboxRepository { error("offline") })
+    val model = MessagesInboxViewModel(fakeInboxRepo { error("offline") })
     model.load("owner")
     advanceUntilIdle()
     assertTrue(model.state.value.items.isEmpty())

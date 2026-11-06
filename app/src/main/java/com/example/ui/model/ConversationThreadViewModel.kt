@@ -12,6 +12,8 @@ import com.example.data.messaging.db.HavenDatabase
 import com.example.data.messaging.db.MessageEntity
 import com.example.data.messaging.transport.HavenProductionMessagingTransport
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +37,8 @@ data class ConversationThreadUiState(
 )
 
 class ConversationThreadViewModel(
-  private val repository: MessagingRepository
+  private val repository: MessagingRepository,
+  private val eventsListener: com.example.data.messaging.ConversationEventsListener? = null
 ) : ViewModel() {
 
   private val _uiState = MutableStateFlow(ConversationThreadUiState())
@@ -43,12 +46,16 @@ class ConversationThreadViewModel(
 
   private var observeMessagesJob: Job? = null
   private var observeConversationJob: Job? = null
+  private var sseJob: Job? = null
+  private var pollJob: Job? = null
   private var currentConversationId: String? = null
   private var ownerPersonId: String? = null
 
   fun clear() {
     observeMessagesJob?.cancel()
     observeConversationJob?.cancel()
+    sseJob?.cancel()
+    pollJob?.cancel()
     currentConversationId = null
     ownerPersonId = null
     _uiState.value = ConversationThreadUiState()
@@ -69,6 +76,8 @@ class ConversationThreadViewModel(
 
     observeMessagesJob?.cancel()
     observeConversationJob?.cancel()
+    sseJob?.cancel()
+    pollJob?.cancel()
 
     _uiState.update {
       it.copy(
@@ -91,6 +100,23 @@ class ConversationThreadViewModel(
     observeMessagesJob = viewModelScope.launch {
       repository.observeMessages(conversationId).collect { messageList ->
         _uiState.update { it.copy(messages = messageList) }
+      }
+    }
+
+    // Connect real SSE stream for live thread invalidations
+    if (eventsListener != null) {
+      sseJob = viewModelScope.launch {
+        eventsListener.listenToConversationEvents(conversationId) {
+          refreshThread()
+        }
+      }
+    }
+
+    // Foreground fallback polling interval (30 seconds)
+    pollJob = viewModelScope.launch {
+      while (isActive) {
+        delay(30_000L)
+        refreshThread()
       }
     }
 
@@ -194,7 +220,8 @@ class ConversationThreadViewModel(
         val authClient = HavenAuthClient.shared(context)
         val transport = HavenProductionMessagingTransport(authClient)
         val repository = HavenLocalFirstMessagingRepository(database, transport)
-        return ConversationThreadViewModel(repository) as T
+        val eventsListener = com.example.data.messaging.ConversationEventsListener(authClient)
+        return ConversationThreadViewModel(repository, eventsListener) as T
       }
     }
   }

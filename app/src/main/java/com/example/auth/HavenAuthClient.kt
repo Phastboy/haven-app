@@ -225,37 +225,55 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     }
   }
 
+  /** Typed HTTP error with status code and server response body. */
+  class HttpException(val statusCode: Int, val responseBody: String) :
+    IOException("Request failed (HTTP $statusCode): $responseBody")
+
+  /** Obtains a valid bearer access token, restoring session if needed. Safe for independent streaming or background calls. */
+  @Synchronized
+  fun getValidAccessToken(): String? {
+    if (accessToken == null && !restore()) return null
+    return accessToken
+  }
+
   /** Serializes refresh rotation with restore/sign-out; never creates a fake session. */
   @Synchronized
   fun authenticatedGet(path: String): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
     var response = request("GET", path, null, accessToken)
     if (response.first == 401 && restore()) response = request("GET", path, null, accessToken)
-    if (response.first != 200) throw IOException("Request failed (HTTP ${response.first}).")
+    if (response.first != 200) throw HttpException(response.first, response.second)
     return response.second
   }
 
   fun publicGet(path: String): String {
     val response = request("GET", path, null)
-    if (response.first != 200) throw IOException("Request failed (HTTP ${response.first}).")
+    if (response.first != 200) throw HttpException(response.first, response.second)
     return response.second
   }
 
   @Synchronized
   fun authenticatedMutation(method: String, path: String, body: JSONObject? = null): String {
-    require(method == "POST" || method == "DELETE")
+    require(method == "POST" || method == "DELETE" || method == "PATCH")
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
     var response = request(method, path, body, accessToken)
     if (response.first == 401 && restore()) response = request(method, path, body, accessToken)
-    if (response.first !in 200..299) throw IOException("Request failed (HTTP ${response.first}).")
+    if (response.first !in 200..299) throw HttpException(response.first, response.second)
     return response.second
   }
 
   @Synchronized
-  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String): String {
+  fun authenticatedMultipartUpload(
+    path: String,
+    fieldName: String,
+    filename: String,
+    bytes: ByteArray,
+    idempotencyKey: String? = null,
+    mimeType: String = "image/jpeg"
+  ): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
     fun upload(): Pair<Int, String> {
-      val boundary = "haven-$uploadId"
+      val boundary = "haven-${System.currentTimeMillis()}-${(1000..9999).random()}"
       val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 15_000
@@ -263,12 +281,12 @@ class HavenAuthClient(private val store: SecureAuthStore) {
         doOutput = true
         setRequestProperty("Accept", "application/json")
         setRequestProperty("Authorization", "Bearer $accessToken")
-        setRequestProperty("Idempotency-Key", uploadId)
+        if (idempotencyKey != null) setRequestProperty("Idempotency-Key", idempotencyKey)
         setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
       }
       return try {
         connection.outputStream.use { output ->
-          output.write(("--$boundary\r\nContent-Disposition: form-data; name=\"image\"; filename=\"photo\"\r\nContent-Type: application/octet-stream\r\n\r\n").toByteArray())
+          output.write(("--$boundary\r\nContent-Disposition: form-data; name=\"$fieldName\"; filename=\"$filename\"\r\nContent-Type: $mimeType\r\n\r\n").toByteArray())
           output.write(bytes)
           output.write("\r\n--$boundary--\r\n".toByteArray())
         }
@@ -279,8 +297,20 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     }
     var response = upload()
     if (response.first == 401 && restore()) response = upload()
-    if (response.first !in 200..299) throw IOException("Photo upload failed (HTTP ${response.first}). Retry to finish.")
+    if (response.first !in 200..299) throw HttpException(response.first, response.second)
     return response.second
+  }
+
+  @Synchronized
+  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String): String {
+    return authenticatedMultipartUpload(
+      path = path,
+      fieldName = "image",
+      filename = "photo",
+      bytes = bytes,
+      idempotencyKey = uploadId,
+      mimeType = "application/octet-stream"
+    )
   }
 
   private fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> {

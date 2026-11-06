@@ -19,7 +19,10 @@ data class FollowingUiState(
   val following: PaginatedFollowing? = null,
   val loading: Boolean = false,
   val error: String? = null,
-  val loadingMore: Boolean = false
+  val loadingMore: Boolean = false,
+  val pagingError: String? = null,
+  val pendingUnfollowHandles: Set<String> = emptySet(),
+  val actionMessage: String? = null
 ) {
   val items: List<Person> get() = following?.items.orEmpty()
 }
@@ -36,11 +39,11 @@ class FollowingViewModel(
   }
 
   fun load() {
-    _state.update { it.copy(loading = it.following == null, error = null) }
+    _state.update { it.copy(loading = it.following == null, error = null, pagingError = null) }
     viewModelScope.launch {
       repository.getFollowing()
         .onSuccess { page ->
-          _state.update { it.copy(following = page, loading = false, error = null) }
+          _state.update { it.copy(following = page, loading = false, error = null, pagingError = null) }
         }
         .onFailure { error ->
           if (error is CancellationException) throw error
@@ -57,7 +60,7 @@ class FollowingViewModel(
   fun loadMore() {
     val cursor = _state.value.following?.nextCursor ?: return
     if (_state.value.loadingMore) return
-    _state.update { it.copy(loadingMore = true) }
+    _state.update { it.copy(loadingMore = true, pagingError = null) }
     viewModelScope.launch {
       repository.getFollowing(after = cursor)
         .onSuccess { morePage ->
@@ -65,15 +68,57 @@ class FollowingViewModel(
             val combined = (current.following?.items.orEmpty() + morePage.items).distinctBy { it.id }
             current.copy(
               following = PaginatedFollowing(items = combined, nextCursor = morePage.nextCursor),
-              loadingMore = false
+              loadingMore = false,
+              pagingError = null
             )
           }
         }
         .onFailure { error ->
           if (error is CancellationException) throw error
-          _state.update { it.copy(loadingMore = false) }
+          _state.update { it.copy(loadingMore = false, pagingError = "Couldn’t load more providers. Tap to retry.") }
         }
     }
+  }
+
+  fun unfollow(handle: String) {
+    if (handle in _state.value.pendingUnfollowHandles) return
+    val currentFollowing = _state.value.following ?: return
+    val person = currentFollowing.items.firstOrNull { it.handle == handle } ?: return
+
+    _state.update {
+      it.copy(
+        pendingUnfollowHandles = it.pendingUnfollowHandles + handle,
+        following = currentFollowing.copy(
+          items = currentFollowing.items.filter { it.handle != handle }
+        ),
+        actionMessage = "Unfollowed ${person.displayName}."
+      )
+    }
+
+    viewModelScope.launch {
+      repository.unfollow(handle)
+        .onSuccess {
+          _state.update {
+            it.copy(pendingUnfollowHandles = it.pendingUnfollowHandles - handle)
+          }
+        }
+        .onFailure { error ->
+          if (error is CancellationException) throw error
+          // Rollback on failure
+          _state.update { current ->
+            val restored = (current.following?.items.orEmpty() + person).distinctBy { it.id }
+            current.copy(
+              following = current.following?.copy(items = restored),
+              pendingUnfollowHandles = current.pendingUnfollowHandles - handle,
+              actionMessage = "Couldn’t unfollow ${person.displayName}. Please try again."
+            )
+          }
+        }
+    }
+  }
+
+  fun dismissActionMessage() {
+    _state.update { it.copy(actionMessage = null) }
   }
 
   companion object {

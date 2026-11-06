@@ -9,58 +9,58 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.ui.components.HavenTopBarContainer
-import com.example.ui.components.havenBottomSafePadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
 import com.example.data.FeedOffer
 import com.example.data.PaginatedOffers
+import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.components.havenBottomSafePadding
 import com.example.ui.components.shimmerBackground
+import com.example.ui.model.MyOffersViewModel
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
-
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.model.MyOffersViewModel
 
 @Composable
 fun MyOffersScreen(
@@ -76,11 +76,14 @@ fun MyOffersScreen(
     offers = state.offers,
     loading = state.loading,
     error = state.error,
+    pagingError = state.pagingError,
+    loadingMore = state.loadingMore,
     onBack = onBack,
     onRetry = viewModel::load,
     onOpenOffer = onOpenOffer,
     onCreateOffer = onCreateOffer,
     onEditOffer = onEditOffer,
+    onDeleteOffer = viewModel::deleteOffer,
     onLoadMore = viewModel::loadMore,
     modifier = modifier
   )
@@ -96,10 +99,52 @@ fun MyOffersScreen(
   onOpenOffer: (String) -> Unit,
   onCreateOffer: () -> Unit,
   onEditOffer: (String) -> Unit,
+  onDeleteOffer: (String) -> Unit = {},
   onLoadMore: () -> Unit = {},
+  pagingError: String? = null,
+  loadingMore: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   BackHandler(onBack = onBack)
+  var offerPendingDelete by remember { mutableStateOf<FeedOffer?>(null) }
+
+  if (offerPendingDelete != null) {
+    val target = offerPendingDelete!!
+    AlertDialog(
+      onDismissRequest = { offerPendingDelete = null },
+      title = {
+        Text(
+          text = "Delete offer?",
+          fontFamily = InterFontFamily,
+          fontWeight = FontWeight.SemiBold
+        )
+      },
+      text = {
+        Text(
+          text = "Are you sure you want to delete “${target.title}”? This action cannot be undone.",
+          fontFamily = InterFontFamily,
+          fontSize = 14.sp,
+          color = HavenColors.TextPrimary
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            onDeleteOffer(target.slug)
+            offerPendingDelete = null
+          },
+          modifier = Modifier.testTag("confirm_delete_button")
+        ) {
+          Text("Delete", color = HavenColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { offerPendingDelete = null }) {
+          Text("Cancel", color = HavenColors.TextSecondary)
+        }
+      }
+    )
+  }
 
   Column(
     modifier = modifier
@@ -145,37 +190,23 @@ fun MyOffersScreen(
           )
           val count = offers?.items?.size ?: 0
           Text(
-            text = if (count == 1) "1 offer" else "$count offers",
+            text = "$count ${if (count == 1) "offer" else "offers"}",
             fontFamily = InterFontFamily,
             fontSize = 12.sp,
             color = HavenColors.TextSecondary
           )
         }
 
-        // Create button
-        TextButton(
+        IconButton(
           onClick = onCreateOffer,
           modifier = Modifier
-            .height(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(HavenColors.TextPrimary)
-            .testTag("my_offers_create_button")
-            .testTag("create_offer_action_button"),
-          contentPadding = PaddingValues(horizontal = 12.dp)
+            .size(44.dp)
+            .testTag("create_offer_action_button")
         ) {
           Icon(
             Icons.Outlined.Add,
-            contentDescription = null,
-            tint = HavenColors.Canvas,
-            modifier = Modifier.size(16.dp)
-          )
-          Spacer(Modifier.width(4.dp))
-          Text(
-            "Create",
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-            color = HavenColors.Canvas
+            contentDescription = "Create offer",
+            tint = HavenColors.TextPrimary
           )
         }
       }
@@ -209,39 +240,49 @@ fun MyOffersScreen(
       return
     }
 
-    val items = offers?.items ?: emptyList()
-
+    val items = offers?.items.orEmpty()
     if (items.isEmpty()) {
       Column(
         modifier = Modifier
-          .fillMaxSize()
-          .padding(32.dp),
+          .fillMaxWidth()
+          .weight(1f)
+          .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
       ) {
-        Icon(
-          Icons.Outlined.GridView,
-          contentDescription = null,
-          tint = HavenColors.TextSecondary,
-          modifier = Modifier.size(48.dp)
-        )
+        Box(
+          modifier = Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(HavenColors.SurfaceContainer),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            Icons.Outlined.Inventory2,
+            contentDescription = null,
+            tint = HavenColors.TextSecondary,
+            modifier = Modifier.size(24.dp)
+          )
+        }
         Spacer(Modifier.height(16.dp))
         Text(
-          text = "No offers yet",
+          text = "You haven’t created any offers yet",
           fontFamily = InterFontFamily,
           fontWeight = FontWeight.SemiBold,
           fontSize = 16.sp,
-          color = HavenColors.TextPrimary
+          color = HavenColors.TextPrimary,
+          textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(8.dp))
         Text(
-          text = "Publish your first offer to start connecting with buyers.",
+          text = "Post what you make or offer to reach people in your community.",
           fontFamily = InterFontFamily,
           fontSize = 14.sp,
           color = HavenColors.TextSecondary,
-          textAlign = TextAlign.Center
+          textAlign = TextAlign.Center,
+          modifier = Modifier.padding(horizontal = 16.dp)
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         TextButton(
           onClick = onCreateOffer,
           modifier = Modifier
@@ -278,11 +319,32 @@ fun MyOffersScreen(
         MyOfferCard(
           offer = offer,
           onOpen = { if (offer.isPublic) onOpenOffer(offer.slug) else onEditOffer(offer.id) },
-          onEdit = { onEditOffer(offer.id) }
+          onEdit = { onEditOffer(offer.id) },
+          onDelete = { offerPendingDelete = offer }
         )
       }
 
-      if (offers?.nextCursor != null) {
+      if (pagingError != null) {
+        item(span = { GridItemSpan(2) }) {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              text = pagingError,
+              fontFamily = InterFontFamily,
+              fontSize = 13.sp,
+              color = HavenColors.TextPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onLoadMore) {
+              Text("Retry")
+            }
+          }
+        }
+      } else if (offers?.nextCursor != null) {
         item(span = { GridItemSpan(2) }) {
           Box(
             modifier = Modifier
@@ -290,7 +352,7 @@ fun MyOffersScreen(
               .padding(16.dp),
             contentAlignment = Alignment.Center
           ) {
-            if (loading) {
+            if (loadingMore) {
               CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 color = HavenColors.Primary
@@ -312,6 +374,7 @@ private fun MyOfferCard(
   offer: FeedOffer,
   onOpen: () -> Unit,
   onEdit: () -> Unit,
+  onDelete: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   Column(
@@ -388,31 +451,53 @@ private fun MyOfferCard(
       )
     }
 
-    // Card Action: Edit
-    TextButton(
-      onClick = onEdit,
+    // Card Actions: Edit & Delete
+    Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(top = 8.dp)
-        .height(40.dp)
-        .clip(RoundedCornerShape(8.dp))
-        .background(HavenColors.SurfaceContainer)
-        .testTag("my_offer_edit_${offer.id}")
+        .padding(top = 8.dp),
+      horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-      Icon(
-        Icons.Outlined.Edit,
-        contentDescription = null,
-        tint = HavenColors.TextPrimary,
-        modifier = Modifier.size(14.dp)
-      )
-      Spacer(Modifier.width(6.dp))
-      Text(
-        "Edit",
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        color = HavenColors.TextPrimary
-      )
+      TextButton(
+        onClick = onEdit,
+        modifier = Modifier
+          .weight(1f)
+          .height(38.dp)
+          .clip(RoundedCornerShape(8.dp))
+          .background(HavenColors.SurfaceContainer)
+          .testTag("my_offer_edit_${offer.id}")
+      ) {
+        Icon(
+          Icons.Outlined.Edit,
+          contentDescription = null,
+          tint = HavenColors.TextPrimary,
+          modifier = Modifier.size(14.dp)
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+          "Edit",
+          fontFamily = InterFontFamily,
+          fontWeight = FontWeight.Medium,
+          fontSize = 13.sp,
+          color = HavenColors.TextPrimary
+        )
+      }
+
+      IconButton(
+        onClick = onDelete,
+        modifier = Modifier
+          .size(38.dp)
+          .clip(RoundedCornerShape(8.dp))
+          .background(HavenColors.SurfaceContainer)
+          .testTag("my_offer_delete_${offer.id}")
+      ) {
+        Icon(
+          Icons.Outlined.DeleteOutline,
+          contentDescription = "Delete offer",
+          tint = HavenColors.TextPrimary,
+          modifier = Modifier.size(16.dp)
+        )
+      }
     }
   }
 }
@@ -427,46 +512,34 @@ private fun MyOffersLoadingSkeleton() {
     horizontalArrangement = Arrangement.spacedBy(12.dp),
     verticalArrangement = Arrangement.spacedBy(24.dp)
   ) {
-    items(4) {
-      Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp))
-            .shimmerBackground()
-        )
-        Box(
-          modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .height(16.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .shimmerBackground()
-        )
-        Box(
-          modifier = Modifier
-            .fillMaxWidth(0.5f)
-            .height(14.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .shimmerBackground()
-        )
-        Box(
-          modifier = Modifier
-            .fillMaxWidth(0.4f)
-            .height(16.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .shimmerBackground()
-        )
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .shimmerBackground()
-        )
+    repeat(6) {
+      item {
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .aspectRatio(1f)
+              .clip(RoundedCornerShape(12.dp))
+              .shimmerBackground()
+          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth(0.8f)
+              .height(14.dp)
+              .clip(RoundedCornerShape(4.dp))
+              .shimmerBackground()
+          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth(0.5f)
+              .height(12.dp)
+              .clip(RoundedCornerShape(4.dp))
+              .shimmerBackground()
+          )
+        }
       }
     }
   }

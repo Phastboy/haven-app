@@ -72,7 +72,8 @@ fun ProfileScreen(
   onOpenSavedOffers: (() -> Unit)? = null,
   onOpenFollowing: (() -> Unit)? = null,
   onOpenOffer: ((String) -> Unit)? = null,
-  onOpenPublicProfile: ((String) -> Unit)? = null
+  onOpenPublicProfile: ((String) -> Unit)? = null,
+  onOpenEditProfile: (() -> Unit)? = null
 ) {
   val context = LocalContext.current
   var appearance by remember { mutableStateOf(false) }
@@ -117,8 +118,8 @@ fun ProfileScreen(
           Text(bio, fontFamily = InterFontFamily, fontSize = 16.sp, lineHeight = 24.sp,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp).testTag("profile_bio"))
         }
-        TextButton(onClick = { onOpenWeb("/profile/edit") }, modifier = Modifier.padding(top = 16.dp)
-          .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(24.dp))) {
+        TextButton(onClick = { onOpenEditProfile?.invoke() ?: onOpenWeb("/profile/edit") }, modifier = Modifier.padding(top = 16.dp)
+          .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(24.dp)).testTag("profile_edit_button")) {
           Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
           Text("Edit profile", modifier = Modifier.padding(start = 8.dp))
         }

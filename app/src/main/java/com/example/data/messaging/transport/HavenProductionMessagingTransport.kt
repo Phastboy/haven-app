@@ -60,12 +60,14 @@ class HavenProductionMessagingTransport(
   override suspend fun sendMessage(
     conversationId: String,
     clientMessageId: String,
-    text: String
+    text: String,
+    offerId: String?
   ): Result<SendMessageAckDto> = mutate(
     path = "/api/v1/conversations/${Uri.encode(conversationId)}/messages",
     text = text,
     clientMessageId = clientMessageId,
-    fallbackConversationId = conversationId
+    fallbackConversationId = conversationId,
+    offerId = offerId
   )
 
   override suspend fun sendOfferInquiry(
@@ -94,11 +96,18 @@ class HavenProductionMessagingTransport(
     path: String,
     text: String,
     clientMessageId: String,
-    fallbackConversationId: String
+    fallbackConversationId: String,
+    offerId: String? = null
   ): Result<SendMessageAckDto> = withContext(Dispatchers.IO) {
     runCatching {
+      val payload = JSONObject()
+        .put("body", text)
+        .put("client_message_id", clientMessageId.removePrefix("msg-"))
+      if (!offerId.isNullOrBlank()) {
+        payload.put("offer_id", offerId.trim())
+      }
       val response = JSONObject(
-        auth.authenticatedMutation("POST", path, JSONObject().put("body", text).put("client_message_id", clientMessageId.removePrefix("msg-")))
+        auth.authenticatedMutation("POST", path, payload)
       )
       val now = System.currentTimeMillis()
       SendMessageAckDto(

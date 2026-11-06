@@ -70,10 +70,13 @@ fun FollowingScreen(
     following = state.following,
     loading = state.loading,
     error = state.error,
+    pagingError = state.pagingError,
+    loadingMore = state.loadingMore,
     onBack = onBack,
     onRetry = viewModel::load,
     onOpenProvider = onOpenProvider,
     onOpenWebFollow = onOpenWebFollow,
+    onUnfollow = viewModel::unfollow,
     onDiscoverOffers = onDiscoverOffers,
     onLoadMore = viewModel::loadMore,
     modifier = modifier
@@ -91,6 +94,9 @@ fun FollowingScreen(
   onOpenWebFollow: (String) -> Unit,
   onDiscoverOffers: () -> Unit,
   onLoadMore: () -> Unit = {},
+  onUnfollow: ((String) -> Unit)? = null,
+  pagingError: String? = null,
+  loadingMore: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   BackHandler(onBack = onBack)
@@ -244,11 +250,37 @@ fun FollowingScreen(
         FollowingRow(
           person = person,
           onOpen = { onOpenProvider(person.handle) },
-          onAction = { onOpenWebFollow(person.handle) }
+          onAction = {
+            if (onUnfollow != null) {
+              onUnfollow(person.handle)
+            } else {
+              onOpenWebFollow(person.handle)
+            }
+          }
         )
       }
 
-      if (following?.nextCursor != null) {
+      if (pagingError != null) {
+        item {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              text = pagingError,
+              fontFamily = InterFontFamily,
+              fontSize = 13.sp,
+              color = HavenColors.TextPrimary
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onLoadMore) {
+              Text("Retry")
+            }
+          }
+        }
+      } else if (following?.nextCursor != null) {
         item {
           Box(
             modifier = Modifier
@@ -256,7 +288,7 @@ fun FollowingScreen(
               .padding(16.dp),
             contentAlignment = Alignment.Center
           ) {
-            if (loading) {
+            if (loadingMore) {
               CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 color = HavenColors.Primary

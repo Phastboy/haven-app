@@ -28,7 +28,8 @@ data class FeedOfferEntity(
   val category: String = "",
   val distanceMeters: Double? = null,
   val cachedAt: Long = System.currentTimeMillis(),
-  val isSaved: Boolean? = null
+  val isSaved: Boolean? = null,
+  val location: String? = null
 ) {
   fun toFeedOffer(): FeedOffer = FeedOffer(
     id = id,
@@ -39,11 +40,13 @@ data class FeedOfferEntity(
     coverUrl = coverUrl,
     distanceMeters = distanceMeters,
     category = category,
-    makerHandle = makerHandle
+    makerHandle = makerHandle,
+    isSaved = isSaved,
+    location = location
   )
 
   companion object {
-    fun fromFeedOffer(offer: FeedOffer, isSaved: Boolean? = null): FeedOfferEntity = FeedOfferEntity(
+    fun fromFeedOffer(offer: FeedOffer, isSaved: Boolean? = offer.isSaved): FeedOfferEntity = FeedOfferEntity(
       id = offer.id,
       slug = offer.slug,
       title = offer.title,
@@ -54,7 +57,8 @@ data class FeedOfferEntity(
       category = offer.category,
       distanceMeters = offer.distanceMeters,
       cachedAt = System.currentTimeMillis(),
-      isSaved = isSaved
+      isSaved = isSaved,
+      location = offer.location
     )
   }
 }

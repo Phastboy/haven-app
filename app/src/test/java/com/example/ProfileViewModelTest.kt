@@ -21,8 +21,16 @@ class ProfileViewModelTest {
   @Before fun setup() { Dispatchers.setMain(dispatcher) }
   @After fun cleanup() { Dispatchers.resetMain() }
   private fun profile(id: String) = ProfileOverview(id, id, "Real person", null, "Joined November 2026", null, 0, 0, 0, emptyList())
+
+  private fun fakeProfileRepo(fetcher: suspend () -> ProfileOverview) = object : ProfileRepository {
+    override suspend fun load(): ProfileOverview = fetcher()
+    override suspend fun updateProfile(displayName: String, handle: String, bio: String?): Result<ProfileOverview> = Result.success(fetcher())
+    override suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): Result<ProfileOverview> = Result.success(fetcher())
+    override suspend fun removeAvatar(): Result<ProfileOverview> = Result.success(fetcher())
+  }
+
   @Test fun `identity mismatch cannot display another persons profile`() = runTest(dispatcher) {
-    val model = ProfileViewModel(ProfileRepository { profile("other") })
+    val model = ProfileViewModel(fakeProfileRepo { profile("other") })
     model.load("owner")
     advanceUntilIdle()
     assertNull(model.state.value.profile)
@@ -30,7 +38,7 @@ class ProfileViewModelTest {
   }
   @Test fun `network error has no dummy identity and successful retry uses server profile`() = runTest(dispatcher) {
     var fail = true
-    val model = ProfileViewModel(ProfileRepository { if (fail) error("offline") else profile("owner") })
+    val model = ProfileViewModel(fakeProfileRepo { if (fail) error("offline") else profile("owner") })
     model.load("owner")
     advanceUntilIdle()
     assertNull(model.state.value.profile)

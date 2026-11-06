@@ -20,7 +20,8 @@ data class SavedOffersUiState(
   val loading: Boolean = false,
   val error: String? = null,
   val savingSlugs: Set<String> = emptySet(),
-  val loadingMore: Boolean = false
+  val loadingMore: Boolean = false,
+  val pagingError: String? = null
 ) {
   val items: List<FeedOffer> get() = offers?.items.orEmpty()
 }
@@ -37,11 +38,11 @@ class SavedOffersViewModel(
   }
 
   fun load() {
-    _state.update { it.copy(loading = it.offers == null, error = null) }
+    _state.update { it.copy(loading = it.offers == null, error = null, pagingError = null) }
     viewModelScope.launch {
       repository.getSavedOffers()
         .onSuccess { page ->
-          _state.update { it.copy(offers = page, loading = false, error = null) }
+          _state.update { it.copy(offers = page, loading = false, error = null, pagingError = null) }
         }
         .onFailure { error ->
           if (error is CancellationException) throw error
@@ -58,7 +59,7 @@ class SavedOffersViewModel(
   fun loadMore() {
     val cursor = _state.value.offers?.nextCursor ?: return
     if (_state.value.loadingMore) return
-    _state.update { it.copy(loadingMore = true) }
+    _state.update { it.copy(loadingMore = true, pagingError = null) }
     viewModelScope.launch {
       repository.getSavedOffers(after = cursor)
         .onSuccess { morePage ->
@@ -66,13 +67,14 @@ class SavedOffersViewModel(
             val combined = (current.offers?.items.orEmpty() + morePage.items).distinctBy { it.id }
             current.copy(
               offers = PaginatedOffers(items = combined, nextCursor = morePage.nextCursor),
-              loadingMore = false
+              loadingMore = false,
+              pagingError = null
             )
           }
         }
         .onFailure { error ->
           if (error is CancellationException) throw error
-          _state.update { it.copy(loadingMore = false) }
+          _state.update { it.copy(loadingMore = false, pagingError = "Couldn’t load more saved offers. Tap to retry.") }
         }
     }
   }

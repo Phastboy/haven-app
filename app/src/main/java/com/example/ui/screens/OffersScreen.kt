@@ -116,6 +116,8 @@ sealed interface OffersDestination {
   data object SavedOffers : OffersDestination
   data object Following : OffersDestination
   data class ConversationThread(val conversationId: String) : OffersDestination
+  data object EditProfile : OffersDestination
+  data object ReferenceLocation : OffersDestination
 }
 
 /** Public discovery from Haven. Adjacent journeys open their real web pages. */
@@ -151,6 +153,8 @@ fun OffersScreen(
         OffersDestination.MyOffers -> "mine"
         OffersDestination.SavedOffers -> "saved"
         OffersDestination.Following -> "following"
+        OffersDestination.EditProfile -> "edit_profile"
+        OffersDestination.ReferenceLocation -> "reference_location"
       } } },
       restore = { entries -> entries.mapNotNull { entry ->
         val parts = entry.split('|')
@@ -162,6 +166,8 @@ fun OffersScreen(
           "mine" -> OffersDestination.MyOffers
           "saved" -> OffersDestination.SavedOffers
           "following" -> OffersDestination.Following
+          "edit_profile" -> OffersDestination.EditProfile
+          "reference_location" -> OffersDestination.ReferenceLocation
           else -> null
         }
       } }
@@ -227,6 +233,33 @@ fun OffersScreen(
     } catch (_: Exception) {
       try { uriHandler.openUri(base + path) }
       catch (_: Exception) { browserError = "Couldn’t open your browser. Please try again." }
+    }
+  }
+
+  val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
+    ProfileViewModel.factory(context.applicationContext)
+  })
+  val profileState by profileModel.state.collectAsState()
+  val messagesModel: MessagesInboxViewModel = viewModel(factory = remember(context.applicationContext) {
+    MessagesInboxViewModel.factory(context.applicationContext)
+  })
+  val messagesState by messagesModel.state.collectAsState()
+  LaunchedEffect(showProfile, showMessages, session.personId) {
+    val person = session.personId
+    if (person == null) {
+      profileModel.clear()
+      messagesModel.clear()
+    } else {
+      messagesModel.load(person)
+      if (showProfile) profileModel.load(person)
+      if (showMessages) messagesModel.load(person)
+    }
+  }
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    session.personId?.let { personId ->
+      messagesModel.load(personId, force = false)
+      if (showProfile) profileModel.load(personId, force = true)
+      if (showMessages) messagesModel.load(personId, force = true)
     }
   }
 
@@ -416,7 +449,30 @@ fun OffersScreen(
               onNavigateToSignIn()
             }
           },
-          onFollowProvider = { openWeb("/profiles/${Uri.encode(currentDestination.handle)}") },
+          onFollowProvider = { handle ->
+            if (!session.isAuthenticated) {
+              onNavigateToSignIn()
+            } else {
+              val currentFollowing = providerProfile?.person?.isFollowing ?: false
+              val targetFollowing = !currentFollowing
+              providerProfile = providerProfile?.copy(
+                person = providerProfile!!.person.copy(isFollowing = targetFollowing)
+              )
+              scope.launch {
+                try {
+                  if (targetFollowing) {
+                    nativePagesRepo.follow(handle)
+                  } else {
+                    nativePagesRepo.unfollow(handle)
+                  }
+                } catch (_: Exception) {
+                  providerProfile = providerProfile?.copy(
+                    person = providerProfile!!.person.copy(isFollowing = currentFollowing)
+                  )
+                }
+              }
+            }
+          },
           onLoadMore = {
             providerProfile?.nextCursor?.let { cursor ->
               scope.launch {
@@ -431,6 +487,47 @@ fun OffersScreen(
             }
           },
           isOwnProfile = (session.personId != null && providerProfile?.person?.id == session.personId),
+          isFollowing = providerProfile?.person?.isFollowing ?: false,
+          modifier = modifier
+        )
+        return
+      }
+      is OffersDestination.EditProfile -> {
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
+          return
+        }
+        val editProfileModel: com.example.ui.model.EditProfileViewModel = viewModel(
+          key = "edit_profile_${session.personId}",
+          factory = remember(context.applicationContext) {
+            com.example.ui.model.EditProfileViewModel.factory(context.applicationContext)
+          }
+        )
+        EditProfileScreen(
+          viewModel = editProfileModel,
+          initialProfile = profileState.profile,
+          onBack = { navStack = navStack.dropLast(1) },
+          onSaveSuccess = {
+            session.personId?.let { profileModel.load(it, force = true) }
+            navStack = navStack.dropLast(1)
+          },
+          modifier = modifier
+        )
+        return
+      }
+      is OffersDestination.ReferenceLocation -> {
+        ReferenceLocationScreen(
+          currentReference = state.activeReference,
+          onApplyReference = { candidate ->
+            viewModel.applyReference(candidate)
+            navStack = navStack.dropLast(1)
+          },
+          onTurnOffProximity = {
+            viewModel.turnOffProximity()
+            navStack = navStack.dropLast(1)
+          },
+          onBack = { navStack = navStack.dropLast(1) },
           modifier = modifier
         )
         return
@@ -555,33 +652,6 @@ fun OffersScreen(
     }
   }
 
-  val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
-    ProfileViewModel.factory(context.applicationContext)
-  })
-  val profileState by profileModel.state.collectAsState()
-  val messagesModel: MessagesInboxViewModel = viewModel(factory = remember(context.applicationContext) {
-    MessagesInboxViewModel.factory(context.applicationContext)
-  })
-  val messagesState by messagesModel.state.collectAsState()
-  LaunchedEffect(showProfile, showMessages, session.personId) {
-    val person = session.personId
-    if (person == null) {
-      profileModel.clear()
-      messagesModel.clear()
-    } else {
-      messagesModel.load(person)
-      if (showProfile) profileModel.load(person)
-      if (showMessages) messagesModel.load(person)
-    }
-  }
-  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-    session.personId?.let { personId ->
-      messagesModel.load(personId, force = false)
-      if (showProfile) profileModel.load(personId, force = true)
-      if (showMessages) messagesModel.load(personId, force = true)
-    }
-  }
-
   BackHandler {
     when {
       navStack.isNotEmpty() -> navStack = navStack.dropLast(1)
@@ -604,6 +674,7 @@ fun OffersScreen(
         onOpenFollowing = { navStack = navStack + OffersDestination.Following },
         onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
         onOpenPublicProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+        onOpenEditProfile = { navStack = navStack + OffersDestination.EditProfile },
         modifier = Modifier.weight(1f))
     } else if (showMessages && session.isAuthenticated) {
       MessagesInboxScreen(messagesState,
@@ -687,13 +758,22 @@ fun OffersScreen(
             }
           }
           IconButton(
-            onClick = { openWeb("/offers") },
+            onClick = { navStack = navStack + OffersDestination.ReferenceLocation },
             enabled = !isFeedDisabled,
             modifier = Modifier
               .size(40.dp)
-              .background(HavenColors.SurfaceContainer, RoundedCornerShape(20.dp))
+              .background(
+                if (state.activeReference != null) HavenColors.Primary else HavenColors.SurfaceContainer,
+                RoundedCornerShape(20.dp)
+              )
+              .testTag("choose_location_button")
           ) {
-            Icon(Icons.Outlined.LocationOn, "Choose a place on Haven", tint = HavenColors.TextPrimary, modifier = Modifier.size(18.dp))
+            Icon(
+              Icons.Outlined.LocationOn,
+              "Choose a place on Haven",
+              tint = if (state.activeReference != null) HavenColors.TextOnDark else HavenColors.TextPrimary,
+              modifier = Modifier.size(18.dp)
+            )
           }
           IconButton(
             onClick = {
@@ -709,6 +789,51 @@ fun OffersScreen(
           }
         }
         if (!isFeedDisabled) {
+          if (state.activeReference != null) {
+            Row(
+              Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(
+                Modifier
+                  .clip(RoundedCornerShape(14.dp))
+                  .background(HavenColors.SurfaceContainer)
+                  .padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Icon(
+                  Icons.Outlined.LocationOn,
+                  contentDescription = null,
+                  tint = HavenColors.TextPrimary,
+                  modifier = Modifier.size(14.dp)
+                )
+                Text(
+                  text = "Near ${state.activeReference?.label}",
+                  fontFamily = InterFontFamily,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Medium,
+                  color = HavenColors.TextPrimary,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.clickable { navStack = navStack + OffersDestination.ReferenceLocation }
+                )
+                IconButton(
+                  onClick = { viewModel.turnOffProximity() },
+                  modifier = Modifier.size(18.dp)
+                ) {
+                  Icon(
+                    Icons.Outlined.Close,
+                    contentDescription = "Turn off proximity",
+                    tint = HavenColors.TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                  )
+                }
+              }
+            }
+          }
           Row(
             Modifier
               .horizontalScroll(rememberScrollState())
@@ -726,9 +851,22 @@ fun OffersScreen(
                 )
               }
             } else {
-              CategoryChip("All", state.query.category.isEmpty()) { viewModel.selectCategory("") }
+              CategoryChip("All", state.query.category.isEmpty() && state.query.scope != "following") {
+                if (state.query.scope == "following") viewModel.setScope("public")
+                viewModel.selectCategory("")
+              }
+              if (session.isAuthenticated) {
+                CategoryChip("Following", state.query.scope == "following") {
+                  if (state.query.scope == "following") {
+                    viewModel.setScope("public")
+                  } else {
+                    viewModel.setScope("following")
+                  }
+                }
+              }
               state.categories.forEach { category ->
-                CategoryChip(category.label, state.query.category == category.slug) {
+                CategoryChip(category.label, state.query.category == category.slug && state.query.scope != "following") {
+                  if (state.query.scope == "following") viewModel.setScope("public")
                   viewModel.selectCategory(category.slug)
                 }
               }
@@ -775,7 +913,7 @@ fun OffersScreen(
       items(state.items, key = { it.id }) { offer ->
         FeedOfferCard(
           offer = offer,
-          saved = savedStates[offer.slug] ?: false,
+          saved = savedStates[offer.slug] ?: (offer.isSaved == true),
           saving = offer.slug in savingSlugs,
           onSave = { saveOffer(offer.slug) },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
@@ -929,12 +1067,14 @@ fun OffersScreen(
         }
 
         val unreadCount = messagesState.items.count { it.isUnread }
+        val hasUnread = messagesState.globalUnread || unreadCount > 0
         FeedNavItem(
           label = "Messages",
           activeIcon = Icons.Filled.ChatBubble,
           inactiveIcon = Icons.Outlined.ChatBubbleOutline,
           selected = showMessages,
-          badgeCount = unreadCount
+          badgeCount = unreadCount,
+          hasUnreadDot = hasUnread && unreadCount == 0
         ) {
           if (session.isAuthenticated) {
             showProfile = false
@@ -1007,6 +1147,7 @@ private fun RowScope.FeedNavItem(
   inactiveIcon: ImageVector,
   selected: Boolean,
   badgeCount: Int = 0,
+  hasUnreadDot: Boolean = false,
   isLogInAction: Boolean = false,
   onClick: () -> Unit
 ) {
@@ -1076,6 +1217,11 @@ private fun RowScope.FeedNavItem(
                   fontFamily = InterFontFamily
                 )
               }
+            } else if (hasUnreadDot) {
+              Badge(
+                containerColor = HavenColors.Primary,
+                modifier = Modifier.size(6.dp)
+              )
             }
           }
         ) {

@@ -169,6 +169,8 @@ class PagesAndAppearanceCleanArchitectureTest {
     val fakeRepo = object : FollowingRepository {
       override suspend fun getFollowing(after: String?): Result<PaginatedFollowing> =
         Result.success(PaginatedFollowing(listOf(samplePerson), null))
+      override suspend fun unfollow(handle: String): Result<Boolean> =
+        Result.success(true)
     }
 
     val viewModel = FollowingViewModel(fakeRepo)
@@ -183,6 +185,8 @@ class PagesAndAppearanceCleanArchitectureTest {
     val fakeRepo = object : FollowingRepository {
       override suspend fun getFollowing(after: String?): Result<PaginatedFollowing> =
         Result.success(PaginatedFollowing(listOf(samplePerson), null))
+      override suspend fun unfollow(handle: String): Result<Boolean> =
+        Result.success(true)
     }
 
     val viewModel = FollowingViewModel(fakeRepo)
@@ -209,6 +213,8 @@ class PagesAndAppearanceCleanArchitectureTest {
     val fakeRepo = object : MyOffersRepository {
       override suspend fun getMyOffers(after: String?): Result<PaginatedOffers> =
         Result.success(PaginatedOffers(listOf(sampleOffer), "cursor-2"))
+      override suspend fun deleteOffer(slug: String): Result<Boolean> =
+        Result.success(true)
     }
 
     val viewModel = MyOffersViewModel(fakeRepo)
@@ -223,6 +229,8 @@ class PagesAndAppearanceCleanArchitectureTest {
     val fakeRepo = object : MyOffersRepository {
       override suspend fun getMyOffers(after: String?): Result<PaginatedOffers> =
         Result.success(PaginatedOffers(listOf(sampleOffer), null))
+      override suspend fun deleteOffer(slug: String): Result<Boolean> =
+        Result.success(true)
     }
 
     val viewModel = MyOffersViewModel(fakeRepo)
