@@ -50,6 +50,35 @@ import com.example.data.Person
 import com.example.ui.components.shimmerBackground
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.model.FollowingViewModel
+
+@Composable
+fun FollowingScreen(
+  viewModel: FollowingViewModel = viewModel(factory = FollowingViewModel.factory(LocalContext.current)),
+  onBack: () -> Unit,
+  onOpenProvider: (String) -> Unit = {},
+  onOpenWebFollow: (String) -> Unit = {},
+  onDiscoverOffers: () -> Unit = {},
+  modifier: Modifier = Modifier
+) {
+  val state by viewModel.state.collectAsState()
+  FollowingScreen(
+    following = state.following,
+    loading = state.loading,
+    error = state.error,
+    onBack = onBack,
+    onRetry = viewModel::load,
+    onOpenProvider = onOpenProvider,
+    onOpenWebFollow = onOpenWebFollow,
+    onDiscoverOffers = onDiscoverOffers,
+    onLoadMore = viewModel::loadMore,
+    modifier = modifier
+  )
+}
 
 @Composable
 fun FollowingScreen(
@@ -87,6 +116,7 @@ fun FollowingScreen(
           modifier = Modifier
             .size(44.dp)
             .testTag("following_back")
+            .testTag("following_back_button")
         ) {
           Icon(
             Icons.AutoMirrored.Outlined.ArrowBack,
@@ -104,7 +134,8 @@ fun FollowingScreen(
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp,
-            color = HavenColors.TextPrimary
+            color = HavenColors.TextPrimary,
+            modifier = Modifier.testTag("following_title")
           )
           val count = following?.items?.size ?: 0
           Text(

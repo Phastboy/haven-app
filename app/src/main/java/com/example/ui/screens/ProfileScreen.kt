@@ -41,6 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import com.example.data.theme.HavenThemePreferencesRepository
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -161,15 +165,73 @@ fun ProfileScreen(
       }
     }
   }
-  if (appearance) AlertDialog(onDismissRequest = { appearance = false }, title = { Text("Appearance") },
-    text = { Column { ThemeMode.entries.forEach { mode ->
-      Row(Modifier.fillMaxWidth().clickable {
-        ThemeManager.setMode(mode, context); appearance = false
-      }.padding(vertical = 16.dp).testTag("appearance_option_${mode.name.lowercase()}")) {
-        Text(mode.title, color = HavenColors.TextPrimary,
-          fontWeight = if (mode == ThemeManager.themeMode) FontWeight.SemiBold else FontWeight.Normal)
+  val themeRepo = remember(context) { HavenThemePreferencesRepository.getInstance(context) }
+  if (appearance) AlertDialog(
+    onDismissRequest = { appearance = false },
+    title = {
+      Text(
+        "Appearance",
+        fontFamily = InterFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        color = HavenColors.TextPrimary
+      )
+    },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ThemeMode.entries.forEach { mode ->
+          val isSelected = mode == ThemeManager.themeMode
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(8.dp))
+              .clickable {
+                themeRepo.setThemeMode(mode)
+                appearance = false
+              }
+              .padding(vertical = 10.dp, horizontal = 4.dp)
+              .testTag("appearance_option_${mode.name.lowercase()}"),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            RadioButton(
+              selected = isSelected,
+              onClick = {
+                themeRepo.setThemeMode(mode)
+                appearance = false
+              },
+              colors = RadioButtonDefaults.colors(
+                selectedColor = HavenColors.Primary,
+                unselectedColor = HavenColors.TextSecondary
+              ),
+              modifier = Modifier.testTag("appearance_radio_${mode.name.lowercase()}")
+            )
+            Spacer(Modifier.width(12.dp))
+            Column {
+              Text(
+                text = mode.title,
+                fontFamily = InterFontFamily,
+                color = HavenColors.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+              )
+              if (mode.subtitle.isNotBlank()) {
+                Text(
+                  text = mode.subtitle,
+                  fontFamily = InterFontFamily,
+                  color = HavenColors.TextSecondary,
+                  fontSize = 12.sp
+                )
+              }
+            }
+          }
+        }
       }
-    } } }, confirmButton = { TextButton(onClick = { appearance = false }) { Text("Close") } })
+    },
+    confirmButton = {
+      TextButton(onClick = { appearance = false }) {
+        Text("Close", color = HavenColors.Primary)
+      }
+    }
+  )
   if (confirmSignOut) AlertDialog(onDismissRequest = { confirmSignOut = false },
     title = { Text("Sign out?") }, text = { Text("Sign out of Haven on this device?") },
     confirmButton = { TextButton(onClick = { confirmSignOut = false; onSignOut() }) { Text("Sign out") } },

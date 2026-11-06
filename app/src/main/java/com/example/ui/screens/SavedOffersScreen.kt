@@ -48,6 +48,38 @@ import com.example.ui.components.shimmerBackground
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.model.SavedOffersViewModel
+
+@Composable
+fun SavedOffersScreen(
+  viewModel: SavedOffersViewModel = viewModel(factory = SavedOffersViewModel.factory(LocalContext.current)),
+  onBack: () -> Unit,
+  onOpenOffer: (String) -> Unit = {},
+  onBrowseOffers: () -> Unit = {},
+  onOpenProvider: ((String) -> Unit)? = null,
+  modifier: Modifier = Modifier
+) {
+  val state by viewModel.state.collectAsState()
+  SavedOffersScreen(
+    offers = state.offers,
+    loading = state.loading,
+    error = state.error,
+    savingSlugs = state.savingSlugs,
+    onBack = onBack,
+    onRetry = viewModel::load,
+    onOpenOffer = onOpenOffer,
+    onUnsaveOffer = viewModel::toggleSave,
+    onBrowseOffers = onBrowseOffers,
+    onOpenProvider = onOpenProvider,
+    onLoadMore = viewModel::loadMore,
+    modifier = modifier
+  )
+}
+
 @Composable
 fun SavedOffersScreen(
   offers: PaginatedOffers?,
@@ -86,6 +118,7 @@ fun SavedOffersScreen(
           modifier = Modifier
             .size(44.dp)
             .testTag("saved_offers_back")
+            .testTag("saved_offers_back_button")
         ) {
           Icon(
             Icons.AutoMirrored.Outlined.ArrowBack,
@@ -103,7 +136,8 @@ fun SavedOffersScreen(
             fontFamily = InterFontFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp,
-            color = HavenColors.TextPrimary
+            color = HavenColors.TextPrimary,
+            modifier = Modifier.testTag("saved_offers_title")
           )
           val count = offers?.items?.size ?: 0
           Text(

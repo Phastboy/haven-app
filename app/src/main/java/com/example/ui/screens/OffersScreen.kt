@@ -455,99 +455,76 @@ fun OffersScreen(
         }
       }
       is OffersDestination.MyOffers -> {
-        if (session.isAuthenticated) {
-          MyOffersScreen(
-            offers = myOffers,
-            loading = myOffersLoading,
-            error = myOffersError,
-            onBack = { navStack = navStack.dropLast(1) },
-            onRetry = { myOffersRetry++ },
-            onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
-            onCreateOffer = { run { navStack = navStack + OffersDestination.OfferEditor() } },
-            onEditOffer = { id -> navStack = navStack + OffersDestination.OfferEditor(id) },
-            onLoadMore = {
-              myOffers?.nextCursor?.let { cursor ->
-                scope.launch {
-                  try {
-                    val more = nativePagesRepo.getMyOffers(after = cursor)
-                    myOffers = myOffers?.copy(
-                      items = (myOffers?.items ?: emptyList()) + more.items,
-                      nextCursor = more.nextCursor
-                    )
-                  } catch (_: Exception) {}
-                }
-              }
-            },
-            modifier = modifier
-          )
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
           return
         }
+        val myOffersModel: com.example.ui.model.MyOffersViewModel = viewModel(
+          key = "my_offers_${session.personId}_$myOffersRetry",
+          factory = remember(context.applicationContext) {
+            com.example.ui.model.MyOffersViewModel.factory(context.applicationContext)
+          }
+        )
+        MyOffersScreen(
+          viewModel = myOffersModel,
+          onBack = { navStack = navStack.dropLast(1) },
+          onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+          onCreateOffer = { navStack = navStack + OffersDestination.OfferEditor() },
+          onEditOffer = { id -> navStack = navStack + OffersDestination.OfferEditor(id) },
+          modifier = modifier
+        )
+        return
       }
       is OffersDestination.SavedOffers -> {
-        if (session.isAuthenticated) {
-          SavedOffersScreen(
-            offers = savedOffers,
-            loading = savedOffersLoading,
-            error = savedOffersError,
-            savingSlugs = savingSlugs,
-            onBack = { navStack = navStack.dropLast(1) },
-            onRetry = { savedOffersRetry++ },
-            onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
-            onUnsaveOffer = { slug -> saveOffer(slug) },
-            onBrowseOffers = {
-              navStack = emptyList()
-              showProfile = false
-            },
-            onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
-            onLoadMore = {
-              savedOffers?.nextCursor?.let { cursor ->
-                scope.launch {
-                  try {
-                    val more = nativePagesRepo.getSavedOffers(after = cursor)
-                    savedOffers = savedOffers?.copy(
-                      items = (savedOffers?.items ?: emptyList()) + more.items,
-                      nextCursor = more.nextCursor
-                    )
-                  } catch (_: Exception) {}
-                }
-              }
-            },
-            modifier = modifier
-          )
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
           return
         }
+        val savedOffersModel: com.example.ui.model.SavedOffersViewModel = viewModel(
+          key = "saved_offers_${session.personId}_$savedOffersRetry",
+          factory = remember(context.applicationContext) {
+            com.example.ui.model.SavedOffersViewModel.factory(context.applicationContext)
+          }
+        )
+        SavedOffersScreen(
+          viewModel = savedOffersModel,
+          onBack = { navStack = navStack.dropLast(1) },
+          onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+          onBrowseOffers = {
+            navStack = emptyList()
+            showProfile = false
+          },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          modifier = modifier
+        )
+        return
       }
       is OffersDestination.Following -> {
-        if (session.isAuthenticated) {
-          FollowingScreen(
-            following = following,
-            loading = followingLoading,
-            error = followingError,
-            onBack = { navStack = navStack.dropLast(1) },
-            onRetry = { followingRetry++ },
-            onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
-            onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },
-            onDiscoverOffers = {
-              navStack = emptyList()
-              showProfile = false
-            },
-            onLoadMore = {
-              following?.nextCursor?.let { cursor ->
-                scope.launch {
-                  try {
-                    val more = nativePagesRepo.getFollowing(after = cursor)
-                    following = following?.copy(
-                      items = (following?.items ?: emptyList()) + more.items,
-                      nextCursor = more.nextCursor
-                    )
-                  } catch (_: Exception) {}
-                }
-              }
-            },
-            modifier = modifier
-          )
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
           return
         }
+        val followingModel: com.example.ui.model.FollowingViewModel = viewModel(
+          key = "following_${session.personId}_$followingRetry",
+          factory = remember(context.applicationContext) {
+            com.example.ui.model.FollowingViewModel.factory(context.applicationContext)
+          }
+        )
+        FollowingScreen(
+          viewModel = followingModel,
+          onBack = { navStack = navStack.dropLast(1) },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },
+          onDiscoverOffers = {
+            navStack = emptyList()
+            showProfile = false
+          },
+          modifier = modifier
+        )
+        return
       }
       is OffersDestination.ConversationThread -> {
         val threadModel: ConversationThreadViewModel = viewModel(
