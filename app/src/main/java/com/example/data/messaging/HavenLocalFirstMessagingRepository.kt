@@ -40,6 +40,7 @@ interface MessagingRepository {
   suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean>
   suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
   suspend fun loadOlderMessages(conversationId: String): Result<Boolean>
+  suspend fun hasOlderMessages(conversationId: String): Boolean = true
   suspend fun sendMessage(
     conversationId: String,
     text: String,
@@ -75,6 +76,7 @@ class HavenLocalFirstMessagingRepository(
   private val syncStateDao: SyncStateDao = database.syncStateDao()
 
   private val outboxMutex = Mutex()
+  private val threadMutex = Mutex()
   private val boundOwnerPersonId = SessionManager.session.value.personId
 
   init {
@@ -157,6 +159,11 @@ class HavenLocalFirstMessagingRepository(
   override suspend fun syncThreadHistory(
     conversationId: String,
     ownerPersonId: String?
+  ): Result<Unit> = threadMutex.withLock { syncLatestPage(conversationId, ownerPersonId) }
+
+  private suspend fun syncLatestPage(
+    conversationId: String,
+    ownerPersonId: String?
   ): Result<Unit> = withContext(ioDispatcher) {
     val actor = SessionManager.session.value.personId
     if (enforceOwnership && (actor == null || actor != ownerPersonId)) return@withContext Result.failure(IllegalStateException("Account changed"))
@@ -169,15 +176,29 @@ class HavenLocalFirstMessagingRepository(
     }
 
     val page = result.getOrThrow()
-    if (syncStateDao.getSyncState("thread_$conversationId") == null)
+    val previousCursor = syncStateDao.getSyncState("thread_$conversationId")
+    val knownServerIds = messageDao.getMessages(conversationId).mapNotNull { it.serverId }.toSet()
+    // Keep scroll progress when newest data overlaps known history. A disjoint
+    // page means a reconnect gap: page back from there instead of skipping it.
+    val overlaps = page.messages.any { it.serverId in knownServerIds }
+    if (previousCursor == null || knownServerIds.isEmpty() || !overlaps) {
       syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
+    }
     mergeThreadPage(conversationId, page)
     val existing = messageDao.getMessages(conversationId)
     upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
     Result.success(Unit)
   }
 
-  override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = withContext(ioDispatcher) {
+  override suspend fun hasOlderMessages(conversationId: String): Boolean = withContext(ioDispatcher) {
+    syncStateDao.getSyncState("thread_$conversationId")?.nextCursor != null
+  }
+
+  override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = threadMutex.withLock {
+    loadOlderPage(conversationId)
+  }
+
+  private suspend fun loadOlderPage(conversationId: String): Result<Boolean> = withContext(ioDispatcher) {
     val actor = SessionManager.session.value.personId
     if (enforceOwnership && (actor == null || conversationDao.getConversation(conversationId)?.ownerPersonId != actor))
       return@withContext Result.failure(IllegalStateException("Account changed"))

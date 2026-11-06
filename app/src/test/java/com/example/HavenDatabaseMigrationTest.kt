@@ -18,7 +18,9 @@ class HavenDatabaseMigrationTest {
   @Test fun upgradesAiStudioVersionThree() = verifyUpgrade(3, true)
   @Test fun upgradesVersionTwoThroughBothMigrations() = verifyUpgrade(2, false)
 
-  private fun verifyUpgrade(oldVersion: Int, hadLocation: Boolean) {
+  @Test fun migratesProvenSenderDespiteSharedConversationOwner() = verifyUpgrade(3, false, "verified-owner")
+
+  private fun verifyUpgrade(oldVersion: Int, hadLocation: Boolean, sender: String = "me") {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val name = "migration-$oldVersion-$hadLocation.db"
     context.deleteDatabase(name)
@@ -29,6 +31,14 @@ class HavenDatabaseMigrationTest {
       initial.openHelper.writableDatabase.execSQL(
         "INSERT INTO message_outbox (clientMessageId, conversationId, text, createdAt, retryCount, lastAttemptAt, status) VALUES ('pending-id', 'conversation-id', 'Keep my message', 1, 0, 0, 'PENDING')"
       )
+      kotlinx.coroutines.runBlocking {
+        initial.conversationDao().upsertConversation(com.example.data.messaging.db.ConversationEntity(
+          id = "conversation-id", ownerPersonId = "another-account", otherUserId = "peer", displayName = "Peer",
+          handle = "peer", avatarUrl = null, lastMessageBody = "", lastMessageAt = "", lastMessageTimestamp = 0, isUnread = false))
+        initial.messageDao().insertMessage(com.example.data.messaging.db.MessageEntity(
+          clientMessageId = "pending-id", conversationId = "conversation-id", senderPersonId = sender,
+          isFromMe = true, text = "Keep my message", timestamp = 1, status = "SENDING"))
+      }
       initial.close()
       SQLiteDatabase.openDatabase(context.getDatabasePath(name).path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
         if (!hadLocation) db.execSQL("ALTER TABLE feed_offers DROP COLUMN location")
@@ -49,7 +59,7 @@ class HavenDatabaseMigrationTest {
         }
         db.query("SELECT ownerPersonId FROM message_outbox WHERE clientMessageId = 'pending-id'").use { cursor ->
           assertEquals(true, cursor.moveToFirst())
-          assertEquals(true, cursor.isNull(0))
+          assertEquals(if (sender == "me") null else sender, if (cursor.isNull(0)) null else cursor.getString(0))
         }
         db.query("SELECT location FROM feed_offers LIMIT 1").close()
       } finally {

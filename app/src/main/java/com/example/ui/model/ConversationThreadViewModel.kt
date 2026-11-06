@@ -151,9 +151,11 @@ class ConversationThreadViewModel(
       val syncResult = repository.syncThreadHistory(convId, owner)
       if (generation != request) return@launch
       if (syncResult.isSuccess) repository.markConversationRead(convId)
+      val hasOlder = if (syncResult.isSuccess) repository.hasOlderMessages(convId) else _uiState.value.hasOlder
       _uiState.update {
         it.copy(
           isSyncing = false,
+          hasOlder = hasOlder,
           syncError = if (syncResult.isFailure) "Offline - viewing cached messages" else null
         )
       }

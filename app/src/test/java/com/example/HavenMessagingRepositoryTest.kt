@@ -344,4 +344,28 @@ class HavenMessagingRepositoryTest {
     assertEquals("ack-server", acknowledged.serverId)
   }
 
+  @Test
+  fun newestRefreshPreservesScrollCursorAndReopensDisconnectedGap() = runTest(testDispatcher) {
+    fun page(id: String, cursor: String?) = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "gap-thread",
+      otherPerson = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+      messages = listOf(com.example.data.messaging.transport.RemoteMessageDto(
+        serverId = id, clientMessageId = id, conversationId = "gap-thread", senderPersonId = "peer",
+        isFromMe = false, text = id, timestampIso = "2026-11-06T00:00:00Z", timestampMillis = 1)),
+      nextCursor = cursor, isUnread = false)
+    transport.threadPages["latest"] = page("known-latest", "older-a")
+    transport.threadPages["older-a"] = page("known-older", "older-b")
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    repository.loadOlderMessages("gap-thread").getOrThrow()
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    assertEquals("older-b", database.syncStateDao().getSyncState("thread_gap-thread")!!.nextCursor)
+    // More than one newest page arrived while offline: no overlap with cache.
+    transport.threadPages["latest"] = page("new-disjoint-page", "reconnect-gap")
+    transport.threadPages["reconnect-gap"] = page("missed-middle-message", "older-b")
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    repository.loadOlderMessages("gap-thread").getOrThrow()
+    assertEquals(listOf(null, "older-a", null, null, "reconnect-gap"), transport.requestedThreadCursors)
+    assertTrue(database.messageDao().getMessages("gap-thread").any { it.text == "missed-middle-message" })
+  }
+
 }
