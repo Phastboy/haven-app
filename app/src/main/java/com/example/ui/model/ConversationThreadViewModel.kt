@@ -137,6 +137,7 @@ class ConversationThreadViewModel(
     pollJob?.cancel()
     refreshJob?.cancel()
     olderJob?.cancel()
+    _uiState.update { it.copy(isSyncing = false, isLoadingOlder = false) }
   }
 
   /** Re-reads server state, for example when the app returns to the foreground. */

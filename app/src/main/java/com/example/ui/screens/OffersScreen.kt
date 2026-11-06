@@ -52,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -197,6 +198,7 @@ fun OffersScreen(
 
   // Provider profile state
   val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
+  val currentProviderHandle by rememberUpdatedState(activeProviderHandle)
   var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
   var providerLoading by remember { mutableStateOf(false) }
   var providerError by remember { mutableStateOf<String?>(null) }
@@ -466,14 +468,14 @@ fun OffersScreen(
                 scope.launch {
                   try {
                     val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
-                    if (SessionManager.session.value.personId == actor && activeProviderHandle == handle) {
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
                       providerProfile = providerProfile?.let {
                         if (it.person.id == person.id) it.copy(person = it.person.copy(isFollowing = confirmed)) else it
                       }
                     }
                   } catch (cancelled: CancellationException) { throw cancelled }
                   catch (_: Exception) {
-                    if (SessionManager.session.value.personId == actor && activeProviderHandle == handle)
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
                       providerError = "Couldn’t update following. Please try again."
                   } finally { followPending = false }
                 }
@@ -1078,15 +1080,14 @@ fun OffersScreen(
           }
         }
 
-        val unreadCount = messagesState.items.count { it.isUnread }
-        val hasUnread = messagesState.globalUnread || unreadCount > 0
+        val hasUnread = messagesState.globalUnread
         FeedNavItem(
           label = "Messages",
           activeIcon = Icons.Filled.ChatBubble,
           inactiveIcon = Icons.Outlined.ChatBubbleOutline,
           selected = showMessages,
-          badgeCount = unreadCount,
-          hasUnreadDot = hasUnread && unreadCount == 0
+          badgeCount = 0,
+          hasUnreadDot = hasUnread
         ) {
           if (session.isAuthenticated) {
             showProfile = false

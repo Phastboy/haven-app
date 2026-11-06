@@ -27,7 +27,7 @@ behavior; byte-for-byte equality is not assumed. Updating an installed APK
 requires the same application ID and signing identity plus a suitable version
 code. Each signer needs the matching Google Android OAuth registration.
 Keep the existing AI Studio signing configuration intact. Arrange any release
-key through secure secret storage ;
+key through secure secret storage;
 never put private keys/passwords into chat, Git, or build logs.
 
 Current CI: Temurin JDK 17; Gradle wrapper 9.3.1; SDK android-36.1;
@@ -48,7 +48,8 @@ AI Studio signer parity, Google sign-in, or production release signing.
 
 ## Required audit before release approval
 
-These remain open; newly added UI and a successful compile are not acceptance.
+Checked entries indicate implemented repairs. Unchecked entries remain gates;
+new UI and successful compilation are not acceptance.
 
 - [x] Implement isolation of saved state and distance by account AND reference context. Per-query snapshots hold contextual
   values; public offer rows exclude them. Capture request identity before

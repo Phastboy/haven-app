@@ -10,6 +10,7 @@ plugins {
 
 android {
   namespace = "com.example"
+  buildToolsVersion = "36.0.0"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
