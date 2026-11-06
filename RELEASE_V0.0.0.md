@@ -17,8 +17,8 @@ Ask AI Studio for this report, without uploading private keys or passwords:
 > variant; `./gradlew --version`; installed compile SDK and build-tools versions;
 > application ID, version name and code; signing certificate SHA-256; names of
 > build-time configuration inputs and which differ from repository defaults
-> (redact secret values); and the APK SHA-256. State whether you can sign the
-> final APK with the same key used for the working Google sign-in build.
+> (redact secret values); and the APK SHA-256. State whether the original
+> keystore can be exported securely; AI Studio cannot sign our builds for us.
 > Do not modify code or regenerate signing keys while collecting this report.
 
 A baseline APK and its build log allow inspection of actual manifest, signer,
@@ -27,12 +27,12 @@ behavior; byte-for-byte equality is not assumed. Updating an installed APK
 requires the same application ID and signing identity plus a suitable version
 code. Each signer needs the matching Google Android OAuth registration.
 Keep the existing AI Studio signing configuration intact. Arrange any release
-key through secure secret storage or have AI Studio sign the final artifact;
+key through secure secret storage ;
 never put private keys/passwords into chat, Git, or build logs.
 
 Current CI: Temurin JDK 17; Gradle wrapper 9.3.1; SDK android-36.1;
 build-tools 36.0.0; `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`.
-CI generates a debug key if absent; its APK is testing-only and does not prove
+CI restores a persistent testing key and verifies its fingerprint. Its APK does not prove
 AI Studio signer parity, Google sign-in, or production release signing.
 
 ## Confirmed blocker addressed on this branch
@@ -41,7 +41,7 @@ AI Studio signer parity, Google sign-in, or production release signing.
   migrates both historical version-3 schemas (with/without `location`), including
   the version-2 chain. Destructive fallback is removed to protect messages and
   outbox data. Tests reconstruct old schemas and exercise Room validation and
-  pending-outbox preservation. CI execution remains pending.
+  pending-outbox preservation. Use PR #17 checks for execution evidence.
 - Unsupported database versions fail rather than silently erase user data.
   Historical version-1 schema/migration evidence is still needed if such APKs
   were distributed; do not infer support from a clean installation test.
@@ -50,14 +50,14 @@ AI Studio signer parity, Google sign-in, or production release signing.
 
 These remain open; newly added UI and a successful compile are not acceptance.
 
-- [ ] Isolate saved state and distance by account AND reference context. Query
-  keys alone are insufficient while globally shared offer rows contain both.
-  Capture request identity before suspension; reject stale results after switch.
-- [ ] Prove account changes cannot expose or send another person's cached
+- [x] Implement isolation of saved state and distance by account AND reference context. Per-query snapshots hold contextual
+  values; public offer rows exclude them. Capture request identity before
+  suspension and reject stale responses.
+- [x] Add account guards and regression coverage so account changes cannot expose or send another person's cached
   messages/outbox; verify pending/acknowledged message reconciliation under races.
-- [ ] Bound SSE reconnection/auth retries; close streams on leaving/background/
+- [x] Bound SSE reconnection/auth retries; close streams on leaving/background/
   sign-out/account switch; prevent overlapping resyncs and polling jobs.
-- [ ] Follow/unfollow: pending guard, server-confirmed state, visible failure,
+- [x] Follow/unfollow implementation: pending guard, server-confirmed state, visible failure,
   cancellation and profile/account-change protection.
 - [ ] Audit profile/avatar edits, deletion, offer attachments, unread status,
   collection pagination, explicit proximity on/change/off and expired references.
@@ -71,3 +71,10 @@ These remain open; newly added UI and a successful compile are not acceptance.
   including keyboard/back navigation, older-message scrolling and genuine offers.
 
 No release/tag/publication is authorized by completing this preparation document.
+
+## Testing build handoff
+
+See `ANDROID_BUILD_HANDOFF.md` for the pinned build recipe, persistent testing
+signer fingerprints, OAuth registration action, secure backup location and APK
+provenance. This checklist marks implementation separately from CI/device/live
+acceptance; the overall release remains unapproved.
