@@ -1,5 +1,12 @@
 # Native page API handoff — v0.8.5 live
 
+> Current inventory (2026-11-06): this document preserves the original page batch
+> and its contracts. Native create/edit and messaging are now merged; see
+> `MOBILE_OFFER_LIFECYCLE.md` and `MOBILE_NATIVE_API_BACKLOG.md`. Remaining API
+> work and the source-inspected Android tasks are in `MOBILE_NATIVE_API_SWEEP.md`
+> and `MOBILE_AI_STUDIO_HANDOFF.md`; new sweep routes are not deployed yet.
+
+
 Backend PR #53 merged at `d2c166a`; release v0.8.5 was published on 2026-11-02
 and is live. Production smoke checks returned 200 for public feed, detail and
 provider profile, and 401 for anonymous private lists and save/unsave writes.
@@ -9,10 +16,9 @@ passed build/tests/lint in run 41419917646. Inspect that implementation before
 duplicating detail/save work in AI Studio. Device fidelity remains unaccepted.
 
 Base URL: `https://haven.apps.mistral.run`.
-Use native Google sign-in (`POST /api/v1/auth/google`) and rotating bearer tokens
-for private requests. The browser PKCE routes and `/auth/callback` no longer
-exist; the app never opens a browser for authentication.
-Do not request backend credentials or change backend code from AI Studio.
+Use native Google sign-in (`POST /api/v1/auth/google`) with rotating bearer tokens
+for private requests. Do not request backend credentials or change backend code
+from AI Studio.
 
 ## Five prototype screens
 
@@ -64,19 +70,119 @@ in light and dark mode. Skeleton shimmers should match gallery, text, identity,
 card, and list-row geometry; only show them during actual pending work. Preserve
 Back behavior, scroll position, system insets and accessible control labels.
 
+## Follow and unfollow (v0.8.6 branch, not deployed)
+
+Native clients can follow a person without opening the web profile. This is
+implemented on `feat/p1b-conversation-thread` and is **not deployed**.
+
+- `POST /api/v1/profiles/{handle}/follow` follows idempotently.
+- `DELETE /api/v1/profiles/{handle}/follow` unfollows idempotently.
+- Both require a valid bearer token; cookie-only writes return 401.
+- Both return `{ "is_following": true/false }` after storage confirms the change.
+- The caller cannot follow themself: that returns 400.
+- Unknown handles return 404.
+- `GET /api/v1/profiles/{handle}` includes `person.is_following` for an
+  authenticated viewer. The field is **omitted** for guests, so absence is not
+  the same as false; only act on it when a viewer is signed in.
+- Repeat taps are safe; the server is idempotent. Keep the previous state on
+  failure and offer retry. Responses are `private, no-store`.
+
+## Conversation thread (v0.8.6 branch, not deployed)
+
+Native clients can read and send in an existing conversation without opening the
+web thread. This contract is implemented on `feat/p1b-conversation-thread`; it is
+**not released or deployed**, and the Android app is not wired to it yet.
+
+`GET /api/v1/conversations/{id}?after=...` requires the authenticated person and
+returns:
+
+```json
+{
+  "conversation_id": "uuid",
+  "other_person": { "id": "...", "handle": "...", "display_name": "...", "avatar_url": null },
+  "messages": [
+    {
+      "id": "uuid",
+      "sender_id": "uuid",
+      "body": "text",
+      "offer": { "title": "...", "slug": "...", "cover_url": null, "is_available": true },
+      "created_at": "2026-11-03T12:00:00Z"
+    }
+  ],
+  "next_cursor": "opaque",
+  "is_unread": true
+}
+```
+
+- Messages are oldest-to-newest within a page; pass `next_cursor` as `after` to
+  fetch older messages. Null means the start of the conversation.
+- `offer` is null when the message tagged no offer. `is_available` is false if the
+  tagged offer no longer exists.
+- Unknown conversations and conversations the caller is not part of both return
+  **404** (IDOR rule; never 403).
+- Reading the thread marks it read. `is_unread` reflects the state **before** this
+  read, and is scoped to this conversation, not the global inbox badge.
+- Response headers are `private, no-store` with `Vary: Authorization, Cookie`.
+
+`POST /api/v1/conversations/{id}/messages` requires a bearer token (cookie-only
+writes return 401) and accepts:
+
+```json
+{ "body": "Hello", "offer_id": "optional uuid" }
+```
+
+- `body` uses the existing `MessageBody` validation: non-blank, at most 2000
+  characters; failures return 400.
+- `offer_id` is optional. If present it must belong to one of the two participants;
+  anything else returns 400. Empty/whitespace is treated as omitted.
+- The sender always comes from the token; the client cannot supply a sender id.
+- Success returns `{ "message_id": "uuid", "conversation_id": "uuid" }` with
+  `private, no-store`.
+- Unknown conversations and non-participants return **404**. Malformed JSON and
+  malformed cursors return 400.
+
+## Offer inquiry send (branch, not deployed)
+
+Native clients can start a conversation about an offer without opening the web
+offer page. This is implemented on `feat/p1c-inquiry-send`; it is **not yet
+released or deployed**, and the Android app is not wired to it yet.
+
+`POST /api/v1/offers/{slug}/inquiries` requires a bearer token (cookie-only
+writes return 401) and accepts:
+
+```json
+{ "body": "Is this still available?" }
+```
+
+- `body` uses the existing `MessageBody` validation: non-blank, at most 2000
+  characters; failures return 400.
+- The sender always comes from the token; the client cannot supply a sender id.
+- Only published offers can be inquired about. Unknown and unpublished offers
+  both return **404**, so existence is not disclosed.
+- Inquiring about your own offer returns 400.
+- Repeating the request reuses the canonical conversation for the pair and
+  appends another message; it never creates a duplicate conversation.
+- The stored message is tagged with the offer, so the native thread, web thread
+  and offer inquirers list all report the same context.
+- Success returns `{ "conversation_id": "uuid", "message_id": "uuid" }` with
+  `private, no-store` and `Vary: Authorization, Cookie`. Open
+  `GET /api/v1/conversations/{conversation_id}` next.
+
 ## Current boundaries
 
 My offers exposes published offers using the existing profile listing, not drafts
 or a new offer-management API. Saved excludes deleted/unpublished offers; it does
-not return unavailable tombstone rows. Following is a read API; native follow,
-unfollow, create/edit/delete, inquiry/send, and profile edit writes are outside this
-batch. Open supported existing web journeys for those actions. Never simulate a
-successful action or make dormant prototype samples reachable at runtime.
+not return unavailable tombstone rows. Following is a read API; native
+follow/unfollow and thread read/send are live in v0.8.61. Native inquiry send is
+implemented on `feat/p1c-inquiry-send` but not deployed. Native offer
+create/edit/delete and profile edit writes remain outside this batch. Open
+supported existing web journeys for those actions. Never simulate a successful
+action or make dormant prototype samples reachable at runtime.
 
 Source compile/CI success does not establish deployment or device visual fidelity.
 
 Local HTTP verification now covers all five reads and the authenticated
-save/readback/list/unsave round trip: [curl results](https://github.com/Phastboy/haven/blob/main/expts/rust/verification/native-api-v085/RESULT.md).
+save/readback/list/unsave round trip: [curl results](verification/native-api-v085/RESULT.md).
 Forty recorded checks passed on the native-auth-configured local server. Read the
 report's remaining fixture, pagination, isolation and media limits before acceptance.
 
@@ -89,6 +195,8 @@ production save/readback/restart checks. Preserve backend price_display, real
 provider navigation and Back during loading/error; these regressions are covered
 by NativeOfferDetailReviewTest. Feed skeletons and profile action placement shipped
 in PR #8. Appearance belongs in the profile action group; Sign out follows offers.
-Messages is an integrated inbox with web thread handoff; native history/send/live
-updates still require a separate backend contract. Build/test/lint in CI to preserve
-the owner's data budget. Keep backend changes within v0.8.*.
+Messages is an integrated inbox with web thread handoff. Native thread read/send
+and follow/unfollow are live in v0.8.61. An inquiry-send contract is defined above
+on the P1c branch, but it is not deployed or wired into Android; live updates
+remain outside this batch. Build/test/lint in CI to preserve the owner's data
+budget. Keep backend changes within v0.8.*.

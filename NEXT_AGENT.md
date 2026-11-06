@@ -1,5 +1,15 @@
 # Start here — Haven mobile/backend pickup, 2026-11-02
 
+> 2026-11-06 AI Studio pickup: read `MOBILE_AI_STUDIO_HANDOFF.md` first. It was
+> written after inspecting main `5d1b681`, including the new collection ViewModels.
+> Backend v0.8.64 and native create/edit are merged/deployed; new parity APIs in
+> backend PR #63 are not deployed. Exact contracts: `MOBILE_NATIVE_API_SWEEP.md`.
+> Merge thread rendering fix PR #15 first (CI passed); don't duplicate it. Follow,
+> profile/avatar, deletion, scope/proximity/cache, global unread and live updates
+> still require the Android integrations listed in the handoff. Physical-device
+> acceptance remains owner-led later; simulator Google sign-in already worked.
+
+
 > 2026-11-05 branch implementation: native create/edit is in Android draft PR #14,
 > depending on backend draft PR #62. Uses real owner APIs, staged photos, signed
 > public offer locations and recoverable partial saves. These APIs are not deployed.
