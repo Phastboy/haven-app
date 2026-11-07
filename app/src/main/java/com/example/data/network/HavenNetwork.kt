@@ -26,9 +26,11 @@ import kotlinx.coroutines.isActive
 
 /** One explicitly selected Kotlin CIO engine. No implicit Java/OkHttp engine discovery. */
 object HavenCioClient {
-  val client: HttpClient by lazy { create(redirects = false) }
+  val client: HttpClient by lazy { createApiClient() }
   // Public image/CDN redirects never inherit an API bearer token.
   val imageClient: HttpClient by lazy { create(redirects = true) }
+
+  internal fun createApiClient(): HttpClient = create(redirects = false)
 
   private fun create(redirects: Boolean): HttpClient = HttpClient(CIO) {
     expectSuccess = false

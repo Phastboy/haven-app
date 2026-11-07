@@ -118,9 +118,13 @@ class MinimalFeedRobolectricTest {
   @Test fun `loaded photograph renders in both themes with the same card geometry`() {
     val mode = mutableStateOf(ThemeMode.LIGHT)
     val saved = mutableStateOf(false)
+    val photograph = File(compose.activity.cacheDir, "card-lamp.jpg")
+    compose.activity.resources.openRawResource(R.drawable.lamp_craft).use { input ->
+      photograph.outputStream().use { output -> input.copyTo(output) }
+    }
     val photoOffer = offer.copy(
       title = "Handcrafted reading lamp", makerName = "Ade Home Supplies", priceDisplay = "NGN 85,000",
-      coverUrl = "android.resource://${compose.activity.packageName}/${R.drawable.lamp_craft}"
+      coverUrl = photograph.absolutePath
     )
     compose.setContent { HavenTheme(mode.value) {
       Column(Modifier.width(205.dp).background(HavenColors.Canvas).padding(16.dp)) {

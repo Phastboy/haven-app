@@ -34,7 +34,6 @@ class HavenAuthClient(
 
   companion object {
     const val HOST = "haven.apps.mistral.run"
-    private const val BASE = "https://$HOST"
     const val TAG = "HavenAuthDiag"
 
     /** Web OAuth client ID; also the audience of Google ID tokens. */
