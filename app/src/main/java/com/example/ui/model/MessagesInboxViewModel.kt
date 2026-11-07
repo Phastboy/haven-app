@@ -115,7 +115,7 @@ class MessagesInboxViewModel(
       job = viewModelScope.launch {
         try {
           val page = repository.load(null)
-          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread)
+          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread, unreadConfirmed = _state.value.unreadConfirmed)
         } catch (cancelled: CancellationException) {
           throw cancelled
         } catch (_: Exception) {

@@ -439,4 +439,22 @@ class HavenMessagingRepositoryTest {
     } finally { session.signOut() }
   }
 
+  @Test
+  fun inquiryCompletionCannotReopenConversationAfterAccountInvalidation() = runTest(testDispatcher) {
+    val response = kotlinx.coroutines.CompletableDeferred<Result<String>>()
+    val wire = object : com.example.data.messaging.MessagingRepository by repository {
+      override suspend fun startOfferInquiry(offerSlug: String, text: String): Result<String> = response.await()
+    }
+    val model = com.example.ui.model.InquiryComposeViewModel(wire)
+    model.openOffer("offer", "Offer", "Provider")
+    model.onTextChanged("Hello")
+    model.send()
+    testScheduler.runCurrent()
+    model.clear()
+    response.complete(Result.success("old-conversation"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(null, model.state.value.startedConversationId)
+    assertEquals(null, model.state.value.target)
+  }
+
 }
