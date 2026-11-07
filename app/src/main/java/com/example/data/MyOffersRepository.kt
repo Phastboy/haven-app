@@ -30,9 +30,11 @@ class HavenMyOffersRepository(
     }
   }
 
-  override suspend fun deleteOffer(slug: String): Result<Boolean> = runCatching {
-    val raw = auth.authenticatedMutation("DELETE", "/api/v1/offers/${Uri.encode(slug)}", expectedPersonId = ownerPersonId)
-    JSONObject(raw).getBoolean("deleted")
+  override suspend fun deleteOffer(slug: String): Result<Boolean> = withContext(Dispatchers.IO) {
+    runCatching {
+      val raw = auth.authenticatedMutation("DELETE", "/api/v1/offers/${Uri.encode(slug)}", expectedPersonId = ownerPersonId)
+      JSONObject(raw).getBoolean("deleted")
+    }
   }
 
   companion object {
