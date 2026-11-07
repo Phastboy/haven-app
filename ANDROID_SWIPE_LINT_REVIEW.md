@@ -43,7 +43,7 @@ no replacement cryptography or signing identities are invented.
 
 Gradle 9.9.0 (verified distribution checksum), AGP 9.5.1, Kotlin/Compose compiler
 2.4.21, KSP 2.3.13, Compose BOM 2026.09.00, Room 2.8.5 and Robolectric 4.17 are
-pinned. Compile/target API 37; CI installs the matching platform and uses Temurin
+pinned. Compile API 37.2 / target 37; CI installs the matching platform and uses Temurin
 21.0.13+9. Active AndroidX/coroutines/Credential Manager dependencies are updated
 from official Maven metadata. Unused Firebase/Retrofit/Moshi/camera/navigation
 scaffold declarations/plugins are removed instead of retained or upgraded as dead

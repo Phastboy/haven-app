@@ -6,8 +6,8 @@ plugins {
 
 android {
   namespace = "com.example"
-  buildToolsVersion = "36.0.0"
-  compileSdk = 37
+  buildToolsVersion = "37.0.0"
+  compileSdk { version = release(37) { minorApiLevel = 2 } }
 
   defaultConfig {
     applicationId = "com.aistudio.haven.xvykpt"

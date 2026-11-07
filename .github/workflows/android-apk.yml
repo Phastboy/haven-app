@@ -26,7 +26,7 @@ jobs:
           java-version: '21.0.13+9'
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK platform
-        run: sdkmanager 'platforms;android-37' 'build-tools;36.0.0'
+        run: android --no-metrics sdk install platforms/android-37.2 build-tools/37.0.0
       - name: Install persistent testing signer
         env:
           HAVEN_TEST_KEYSTORE_BASE64: ${{ secrets.HAVEN_TEST_KEYSTORE_BASE64 }}
@@ -97,7 +97,7 @@ jobs:
           IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
           apk=app/build/outputs/apk/debug/app-debug.apk
-          tools="$ANDROID_HOME/build-tools/36.0.0"
+          tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > apk-provenance.txt
           if [[ "$IS_FORK" != "true" ]]; then
             grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' apk-provenance.txt
@@ -121,7 +121,7 @@ jobs:
           mkdir -p release-assets
           apk=release-assets/haven-v0.0.1.apk
           cp app/build/outputs/apk/release/app-release.apk "$apk"
-          tools="$ANDROID_HOME/build-tools/36.0.0"
+          tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
