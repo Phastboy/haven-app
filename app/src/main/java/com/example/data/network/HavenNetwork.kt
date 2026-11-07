@@ -106,7 +106,7 @@ class HavenNetwork(
       if (response.status.value == 200) {
         val channel = response.bodyAsChannel()
         while (currentCoroutineContext().isActive) {
-          val line = channel.readUTF8Line(64 * 1024) ?: break
+          val line = channel.readLineStrict(limit = 64 * 1024L, lineEnding = LineEnding.Lenient) ?: break
           if (!onLine(line)) break
         }
       }

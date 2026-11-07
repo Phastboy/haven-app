@@ -17,6 +17,11 @@ existing certificate checks. AI Studio reports are historical; inspect exact CI.
   both variants, runs regressions on API 35/37 and rejects lint warnings.
 - CI checks the resolved runtime for unwanted Retrofit/OkHttp/Java HTTP engines.
   Its runtime-dependencies.txt is included in verification reports.
+- Kotlin-only means our app and test source files, not third-party implementation
+  languages. AndroidX Test uses matching alpha03 test releases (Espresso 3.8.0,
+  core/runner 1.8.0, ext JUnit 1.4.0): published Espresso 3.7.0 sources reflect
+  `InputManager.getInstance()`, which fails on API 37. The newer implementation
+  obtains the input service from Context. These are test-only dependencies.
 
 Use CI to preserve the owner's local data budget:
 

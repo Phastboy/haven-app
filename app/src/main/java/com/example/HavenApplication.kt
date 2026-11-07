@@ -19,7 +19,7 @@ class HavenApplication : Application(), SingletonImageLoader.Factory {
 
   override fun newImageLoader(context: PlatformContext): ImageLoader {
     return ImageLoader.Builder(context)
-      .components { add(KtorNetworkFetcherFactory(httpClient = HavenCioClient.imageClient)) }
+      .components { add(KtorNetworkFetcherFactory(httpClient = { HavenCioClient.imageClient })) }
       .memoryCache {
         MemoryCache.Builder()
           .maxSizePercent(context, 0.25) // Allocate up to 25% of application memory for bitmap caching

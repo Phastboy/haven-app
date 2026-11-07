@@ -59,7 +59,7 @@ jobs:
       - name: Ensure Gradle wrapper is executable
         run: chmod +x ./gradlew
       - name: Build, test, and lint
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: ./gradlew --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
       - name: Verify Kotlin CIO runtime dependencies
         run: |
           ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > runtime-dependencies.txt

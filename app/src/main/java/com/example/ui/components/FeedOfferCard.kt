@@ -125,7 +125,7 @@ fun FeedOfferCard(
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
       modifier = Modifier.fillMaxWidth().testTag("offer_maker_${offer.id}").then(
-        if (providerClickable) Modifier.clickable { onOpenProvider?.invoke(offer.makerHandle) } else Modifier
+        if (providerClickable) Modifier.clickable { onOpenProvider(offer.makerHandle) } else Modifier
       )
     )
   }

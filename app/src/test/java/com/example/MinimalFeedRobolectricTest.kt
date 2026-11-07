@@ -36,6 +36,16 @@ import com.example.ui.theme.HavenColors
 import com.example.ui.theme.HavenTheme
 import com.example.ui.theme.ThemeMode
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
+import coil3.EventListener
+import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.size.Size
+import coil3.size.SizeResolver
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -51,6 +61,12 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MinimalFeedRobolectricTest {
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+  private var originalImageLoader: coil3.ImageLoader? = null
+
+  @OptIn(DelicateCoilApi::class)
+  @After fun restoreImageLoader() {
+    originalImageLoader?.let(SingletonImageLoader::setUnsafe)
+  }
   private val offer = FeedOffer("compact", "chair", "Ergonomic office chair with a very long title",
     "Ade Office Supplies with a long provider name", "NGN 1,250,000", null, 2400.0)
 
@@ -115,6 +131,7 @@ class MinimalFeedRobolectricTest {
     assertOneLine("offer_price_compact")
   }
 
+  @OptIn(DelicateCoilApi::class)
   @Test fun `loaded photograph renders in both themes with the same card geometry`() {
     val mode = mutableStateOf(ThemeMode.LIGHT)
     val saved = mutableStateOf(false)
@@ -122,6 +139,21 @@ class MinimalFeedRobolectricTest {
     compose.activity.resources.openRawResource(R.drawable.lamp_craft).use { input ->
       photograph.outputStream().use { output -> input.copyTo(output) }
     }
+    val imageFailure = AtomicReference<Throwable?>(null)
+    val imageStage = AtomicReference("not started")
+    val loader = SingletonImageLoader.get(compose.activity)
+    originalImageLoader = loader
+    SingletonImageLoader.setUnsafe(loader.newBuilder().eventListener(object : EventListener() {
+      override fun onStart(request: ImageRequest) { imageStage.set("started") }
+      override fun resolveSizeStart(request: ImageRequest, sizeResolver: SizeResolver) {
+        imageStage.set("resolving size")
+      }
+      override fun resolveSizeEnd(request: ImageRequest, size: Size) { imageStage.set("size: $size") }
+      override fun onError(request: ImageRequest, result: ErrorResult) {
+        imageFailure.set(result.throwable)
+      }
+      override fun onSuccess(request: ImageRequest, result: SuccessResult) { imageStage.set("decoded") }
+    }).build())
     val photoOffer = offer.copy(
       title = "Handcrafted reading lamp", makerName = "Ade Home Supplies", priceDisplay = "NGN 85,000",
       coverUrl = photograph.absolutePath
@@ -131,8 +163,13 @@ class MinimalFeedRobolectricTest {
         FeedOfferCard(photoOffer, showDistance = true, saved = saved.value, onOpen = {})
       }
     } }
-    compose.waitUntil(10_000) {
-      compose.onAllNodesWithTag("offer_image_compact", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    try {
+      compose.waitUntil(10_000) {
+        imageFailure.get()?.let { throw AssertionError("Photo decoding failed", it) }
+        compose.onAllNodesWithTag("offer_image_compact", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+      }
+    } catch (failure: Throwable) {
+      throw AssertionError("Photo did not render; last Coil stage: ${imageStage.get()}", imageFailure.get() ?: failure)
     }
     for (theme in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
       compose.runOnIdle { mode.value = theme; saved.value = theme == ThemeMode.DARK }

@@ -115,6 +115,7 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
+  testImplementation(libs.androidx.espresso.core)
   testImplementation(libs.androidx.junit)
   testImplementation(libs.junit)
   testImplementation(libs.ktor.client.mock)
