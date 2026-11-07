@@ -71,7 +71,8 @@ new UI and successful compilation are not acceptance.
 - [ ] Physical Android and authenticated production acceptance remain separate,
   including keyboard/back navigation, older-message scrolling and genuine offers.
 
-No release/tag/publication is authorized by completing this preparation document.
+The owner authorized merge and release preparation on 2026-11-07. Public
+publication is held until the owner confirms Google sign-in after configuration.
 
 ## Testing build handoff
 

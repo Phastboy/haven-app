@@ -1,6 +1,6 @@
-# Start here — v0.0.0 testing APK preparation, 2026-11-06
+# Start here — v0.0.0 release preparation, 2026-11-06
 
-Work branch: `fix/v0.0.0-release-readiness`; draft PR #17. Baseline main:
+Work branch: `fix/v0.0.0-release-readiness`; PR #17. Baseline main:
 `3191ee27386baedc6dc6c709e6e09b65a8688e8c` (AI Studio update already pulled).
 Read `RELEASE_V0.0.0.md` and `ANDROID_BUILD_HANDOFF.md` first. Check the latest
 PR commit/checks before continuing; earlier green runs are not final evidence.
