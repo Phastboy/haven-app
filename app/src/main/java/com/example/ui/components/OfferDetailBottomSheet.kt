@@ -55,8 +55,8 @@ fun OfferDetailBottomSheet(
   offer: Offer,
   onDismiss: () -> Unit,
   onToggleFavorite: (String) -> Unit,
-  onProposeExchange: (Offer) -> Unit = {},
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onProposeExchange: (Offer) -> Unit = {}
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 

@@ -79,10 +79,10 @@ fun ProviderProfileScreen(
   onOpenOffer: (String) -> Unit,
   onMessageProvider: (String) -> Unit,
   onFollowProvider: (String) -> Unit,
+  modifier: Modifier = Modifier,
   onLoadMore: () -> Unit = {},
   isOwnProfile: Boolean = false,
-  isFollowing: Boolean = false,
-  modifier: Modifier = Modifier
+  isFollowing: Boolean = false
 ) {
   BackHandler(onBack = onBack)
 

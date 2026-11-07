@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -39,6 +39,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import coil3.EventListener
 import coil3.SingletonImageLoader
+import coil3.imageDecoderEnabled
 import coil3.annotation.DelicateCoilApi
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
@@ -143,7 +144,9 @@ class MinimalFeedRobolectricTest {
     val imageStage = AtomicReference("not started")
     val loader = SingletonImageLoader.get(compose.activity)
     originalImageLoader = loader
-    SingletonImageLoader.setUnsafe(loader.newBuilder().eventListener(object : EventListener() {
+    // Robolectric's native ImageDecoder FileSource fails with "Only supported on Android".
+    // Exercise Coil's real BitmapFactory fallback with the unchanged JPEG and card renderer.
+    SingletonImageLoader.setUnsafe(loader.newBuilder().imageDecoderEnabled(false).eventListener(object : EventListener() {
       override fun onStart(request: ImageRequest) { imageStage.set("started") }
       override fun resolveSizeStart(request: ImageRequest, sizeResolver: SizeResolver) {
         imageStage.set("resolving size")

@@ -82,9 +82,9 @@ fun NativeConversationThreadScreen(
   onInputChanged: (String) -> Unit,
   onSendMessage: () -> Unit,
   onRetryMessage: (String) -> Unit,
+  modifier: Modifier = Modifier,
   onLoadOlder: () -> Unit = {},
-  onOpenProfile: ((String) -> Unit)? = null,
-  modifier: Modifier = Modifier
+  onOpenProfile: ((String) -> Unit)? = null
 ) {
   val listState = rememberLazyListState()
   val isDragged by listState.interactionSource.collectIsDraggedAsState()

@@ -78,5 +78,20 @@ legacy launcher resource resolution, Ktor status/body and multipart fields,
 stream cancellation, refresh rotation/cancellation and sign-out races. The root
 pager regressions run on both API 35 and 37. Exact build/test/lint results belong in the
 closing PR description; source implementation alone is not proof they passed.
+
+CI `42395058536` verified all 14 pager tests after the AndroidX Test input-service
+fix. The sole remaining test failure exposed Robolectric's native ImageDecoder
+FileSource limitation (`Only supported on Android`). The photo regression uses
+Coil's supported BitmapFactory decoder in tests only, retaining real JPEG decode,
+pixel checks and the production card. Production decoder selection is unchanged;
+physical-device photo acceptance remains separate. Compose test rules use the
+current v2 APIs and their standard test dispatcher, rather than suppressing the
+deprecated rule warnings.
+
+The upgraded lint additionally identified 20 Modifier parameter ordering issues,
+two composition reads of frequently changing scroll values and one empty super
+call. These are corrected directly; scroll persistence now uses snapshotFlow.
+Five primitive-state hints are corrected as well. No lint baseline or suppression
+is used. Final verification still determines the final count.
 Physical Samsung swipes, system edge-back, TalkBack and launcher rendering still
 need device acceptance and must not be inferred from CI.

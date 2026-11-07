@@ -72,10 +72,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun EditProfileScreen(
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onSaveSuccess: () -> Unit = {},
   initialProfile: ProfileOverview? = null,
-  viewModel: EditProfileViewModel = viewModel(factory = EditProfileViewModel.factory(LocalContext.current)),
-  modifier: Modifier = Modifier
+  viewModel: EditProfileViewModel = viewModel(factory = EditProfileViewModel.factory(LocalContext.current))
 ) {
   LaunchedEffect(initialProfile) {
     viewModel.initialize(initialProfile)

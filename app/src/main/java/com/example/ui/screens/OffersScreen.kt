@@ -143,8 +143,8 @@ fun OffersScreen(
   viewModel: OffersViewModel,
   onNavigateBack: () -> Unit,
   onNavigateToSignIn: () -> Unit,
-  onSignOut: () -> Unit = {},
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onSignOut: () -> Unit = {}
 ) {
   val state by viewModel.uiState.collectAsState()
   val session by SessionManager.session.collectAsState()
@@ -205,15 +205,17 @@ fun OffersScreen(
     initialFirstVisibleItemIndex = viewModel.scrollIndex,
     initialFirstVisibleItemScrollOffset = viewModel.scrollOffset
   )
-  LaunchedEffect(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset) {
-    viewModel.updateScrollPosition(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+  LaunchedEffect(gridState, viewModel) {
+    androidx.compose.runtime.snapshotFlow {
+      gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
+    }.collect { (index, offset) -> viewModel.updateScrollPosition(index, offset) }
   }
 
   val activeSlug = (currentDestination as? OffersDestination.OfferDetail)?.slug
   var detail by remember(session.personId) { mutableStateOf<OfferDetail?>(null) }
   var detailLoading by remember { mutableStateOf(false) }
   var detailError by remember { mutableStateOf<String?>(null) }
-  var detailRetry by remember { mutableStateOf(0) }
+  var detailRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var savedStates by remember(session.personId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
   var savingSlugs by remember(session.personId) { mutableStateOf<Set<String>>(emptySet()) }
   var saveError by remember { mutableStateOf<String?>(null) }
@@ -224,7 +226,7 @@ fun OffersScreen(
   var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
   var providerLoading by remember { mutableStateOf(false) }
   var providerError by remember { mutableStateOf<String?>(null) }
-  var providerRetry by remember { mutableStateOf(0) }
+  var providerRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
 
   // My offers state
@@ -232,21 +234,21 @@ fun OffersScreen(
   var myOffers by remember(session.personId) { mutableStateOf<PaginatedOffers?>(null) }
   var myOffersLoading by remember { mutableStateOf(false) }
   var myOffersError by remember { mutableStateOf<String?>(null) }
-  var myOffersRetry by remember { mutableStateOf(0) }
+  var myOffersRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
   // Saved offers state
   val isSavedOffersActive = currentDestination is OffersDestination.SavedOffers
   var savedOffers by remember(session.personId) { mutableStateOf<PaginatedOffers?>(null) }
   var savedOffersLoading by remember { mutableStateOf(false) }
   var savedOffersError by remember { mutableStateOf<String?>(null) }
-  var savedOffersRetry by remember { mutableStateOf(0) }
+  var savedOffersRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
   // Following state
   val isFollowingActive = currentDestination is OffersDestination.Following
   var following by remember(session.personId) { mutableStateOf<PaginatedFollowing?>(null) }
   var followingLoading by remember { mutableStateOf(false) }
   var followingError by remember { mutableStateOf<String?>(null) }
-  var followingRetry by remember { mutableStateOf(0) }
+  var followingRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
   var browserError by remember { mutableStateOf<String?>(null) }
   fun openWeb(path: String) {

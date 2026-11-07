@@ -59,9 +59,9 @@ import com.example.ui.theme.InterFontFamily
 fun SignInScreen(
   viewModel: SignInViewModel,
   onNavigateBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onStartGoogleSignIn: () -> Unit = {},
-  onNavigateToOffers: () -> Unit = {},
-  modifier: Modifier = Modifier
+  onNavigateToOffers: () -> Unit = {}
 ) {
   val uiState by viewModel.uiState.collectAsState()
   val scrollState = rememberScrollState()

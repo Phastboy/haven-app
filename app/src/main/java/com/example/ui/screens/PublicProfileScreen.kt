@@ -86,6 +86,7 @@ data class PublicProfileOfferItem(
 @Composable
 fun PublicProfileScreen(
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onOpenOffer: (Offer) -> Unit = {},
   makerName: String = "Adaeze Obi",
   makerHandle: String = "adaeze-obi",
@@ -94,8 +95,7 @@ fun PublicProfileScreen(
   avatarUrl: String = DEFAULT_MAKER_AVATAR_URL,
   isOwnerInitial: Boolean = false,
   isFollowingInitial: Boolean = true,
-  isEmptyInitial: Boolean = false,
-  modifier: Modifier = Modifier
+  isEmptyInitial: Boolean = false
 ) {
   BackHandler { onBack() }
 

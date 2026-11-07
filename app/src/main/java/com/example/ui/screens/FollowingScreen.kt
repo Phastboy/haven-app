@@ -58,12 +58,12 @@ import com.example.ui.model.FollowingViewModel
 
 @Composable
 fun FollowingScreen(
-  viewModel: FollowingViewModel = viewModel(factory = FollowingViewModel.factory(LocalContext.current)),
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+  viewModel: FollowingViewModel = viewModel(factory = FollowingViewModel.factory(LocalContext.current)),
   onOpenProvider: (String) -> Unit = {},
   onOpenWebFollow: (String) -> Unit = {},
-  onDiscoverOffers: () -> Unit = {},
-  modifier: Modifier = Modifier
+  onDiscoverOffers: () -> Unit = {}
 ) {
   val state by viewModel.state.collectAsState()
   FollowingScreen(
@@ -93,11 +93,11 @@ fun FollowingScreen(
   onOpenProvider: (String) -> Unit,
   onOpenWebFollow: (String) -> Unit,
   onDiscoverOffers: () -> Unit,
+  modifier: Modifier = Modifier,
   onLoadMore: () -> Unit = {},
   onUnfollow: ((String) -> Unit)? = null,
   pagingError: String? = null,
-  loadingMore: Boolean = false,
-  modifier: Modifier = Modifier
+  loadingMore: Boolean = false
 ) {
   BackHandler(onBack = onBack)
 

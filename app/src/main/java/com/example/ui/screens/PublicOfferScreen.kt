@@ -103,13 +103,13 @@ private const val MAKER_AVATAR_URL =
 fun PublicOfferScreen(
   offer: Offer,
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onOpenMakerProfile: (String) -> Unit = {},
   onManageOffer: () -> Unit = {},
   onSendMessage: (String) -> Unit = {},
   onSignInToMessage: () -> Unit = {},
   isOwnerInitial: Boolean = false,
-  isAuthenticated: Boolean = true,
-  modifier: Modifier = Modifier
+  isAuthenticated: Boolean = true
 ) {
   BackHandler { onBack() }
 

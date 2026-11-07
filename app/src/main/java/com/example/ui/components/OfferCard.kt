@@ -48,9 +48,9 @@ import com.example.ui.theme.InterFontFamily
 @Composable
 fun OfferCard(
   offer: Offer?,
+  modifier: Modifier = Modifier,
   onClick: () -> Unit = {},
   onToggleFavorite: () -> Unit = {},
-  modifier: Modifier = Modifier,
   isLoading: Boolean = false
 ) {
   if (isLoading || offer == null) {
