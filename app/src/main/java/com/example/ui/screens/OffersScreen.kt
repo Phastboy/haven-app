@@ -281,6 +281,7 @@ fun OffersScreen(
       messagesModel.clear()
     } else messagesModel.loadUnread(person)
   }
+  var rootResumeGeneration by remember(session.personId) { androidx.compose.runtime.mutableIntStateOf(0) }
   ObserveRootTabSelection(
     state = rootTabs,
     authenticated = session.isAuthenticated,
@@ -289,21 +290,16 @@ fun OffersScreen(
     onSelected = { tab -> session.personId?.let { person ->
       when (tab) {
         RootTab.OFFERS -> Unit
-        RootTab.MESSAGES -> messagesModel.load(person)
-        RootTab.PROFILE -> profileModel.load(person)
+        RootTab.MESSAGES -> messagesModel.load(person, force = true)
+        RootTab.PROFILE -> profileModel.load(person, force = true)
       }
-    } }
+    } },
+    activationKey = rootResumeGeneration
   )
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    rootResumeGeneration++
     session.personId?.let { person ->
       messagesModel.loadUnread(person)
-      if (currentDestination == null && !rootTabs.pager.isScrollInProgress) {
-        when (rootTabs.settledTab) {
-          RootTab.OFFERS -> Unit
-          RootTab.MESSAGES -> messagesModel.load(person, force = true)
-          RootTab.PROFILE -> profileModel.load(person, force = true)
-        }
-      }
     }
   }
 
@@ -1099,9 +1095,8 @@ fun OffersScreen(
           if (navStack.isNotEmpty()) {
             navStack = emptyList()
           }
-          if (rootTabs.currentTab != RootTab.OFFERS) {
-            rootTabs.select(RootTab.OFFERS)
-          } else if (wasAlreadyOnOffers) {
+          rootTabs.select(RootTab.OFFERS)
+          if (wasAlreadyOnOffers) {
             scope.launch { gridState.animateScrollToItem(0) }
             viewModel.refresh()
           }

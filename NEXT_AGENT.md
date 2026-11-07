@@ -1,8 +1,8 @@
 # Current review — AI Studio swipe navigation and lint cleanup
 
 Owner requested review/corrective PR(s) for issues #21 and #19 after AI Studio's
-main commit `2621d00`. Work branch: `fix/review-swipe-and-lint`. Do not merge,
-tag or publish without the owner's instruction. Keep Android 0.0.1 / code 11.
+main commit `2621d00`. Work branch: `fix/review-swipe-and-lint`. The owner has authorized merge and release after review resolution and passing CI.
+Release target: Android 0.0.2 / code 12; see RELEASE_V0.0.2.md.
 Owner now requires full lint resolution, including dependency/toolchain/SDK
 updates. Use Ktor CIO throughout networking and Kotlin-only application sources;
 no Retrofit/OkHttp/Java HTTP engines. Page swipes are interior gestures and must
@@ -13,7 +13,7 @@ corrections and warning accounting. Verify exact PR CI before claiming a pass.
 Android builds/tests/lints run in CI to preserve the local data budget.
 Samsung touch/edge-back/launcher acceptance remains separate.
 
-# Start here — Android v0.0.1 released; warning cleanup next
+# Historical — Android v0.0.1 release and warning handoff (superseded)
 
 Android PR #18 was squash-merged at `02262bc77b3b2252d0c8e958ce5c92bf47e09ae5`.
 Release `v0.0.1` is published, versionCode `11`. CI/CD has attached the signed

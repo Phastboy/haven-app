@@ -238,16 +238,23 @@ class HavenAuthClient(
     return true
   }
 
-  suspend fun signOut(): Unit = sessionMutex.withLock {
-    signOutLocked()
+  suspend fun signOut(): Unit = withContext(NonCancellable) {
+    sessionMutex.withLock { signOutLocked() }
   }
 
   private suspend fun signOutLocked(): Unit {
     logDiagnostic("SESSION", "SIGN_OUT", "User requested sign out. Clearing tokens and session.")
-    val refresh = store.refreshToken
-    store.refreshToken = null
-    accessToken = null
-    SessionManager.signOut()
+    val refresh = try { store.refreshToken } catch (_: Exception) {
+      // Revocation is best effort; a locked/unavailable Keystore must not retain a local login.
+      null
+    }
+    try {
+      store.refreshToken = null
+      store.clearNativeNonce()
+    } finally {
+      accessToken = null
+      SessionManager.signOut()
+    }
     if (refresh != null) {
       try { request("POST", "/api/v1/auth/revoke", JSONObject().put("refresh_token", refresh)) }
       catch (_: Exception) { /* Local sign-out wins even if offline. */ }

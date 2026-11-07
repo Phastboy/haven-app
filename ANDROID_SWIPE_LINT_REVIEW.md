@@ -93,5 +93,28 @@ two composition reads of frequently changing scroll values and one empty super
 call. These are corrected directly; scroll persistence now uses snapshotFlow.
 Five primitive-state hints are corrected as well. No lint baseline or suppression
 is used. Final verification still determines the final count.
+
+## Review resolution and authorized release
+
+Owner authorized merge/publication of v0.0.2/code 12 after review resolution.
+Sign-out now completes its mutex/revocation operation despite cancellation and
+clears local credentials/session even when token decryption is unavailable.
+Explicit permanent invalidation and API 33+ corrupted/missing-key codes reset the
+device key and credentials; unclassified/provider failures stay retryable.
+Regression tests cover the default missing-provider path and fresh sign-in after
+key replacement. These match the documented Android Keystore exception contract:
+https://developer.android.com/reference/android/security/KeyStoreException
+
+Foreground activation is replayed after a pager animation settles, including
+return to the same settled tab. Offers always cancels a pending navigation job.
+Loading profile content uses its own scroll state so saved profile offsets survive
+restoration. Tests use the production inbox/profile renderers. Unread-only tests
+also verify that a supplied local repository is neither observed nor refreshed.
+SSE heartbeats reset the failure budget without invalidating content; genuine
+consecutive failed connections retain the five-attempt cap.
+
+CI checkout does not persist credentials. PR caches are read-only and published
+release builds disable Gradle action caching. Release assets remain automatic.
+Exact final CI evidence is recorded on PR #24, not inferred from earlier passes.
 Physical Samsung swipes, system edge-back, TalkBack and launcher rendering still
 need device acceptance and must not be inferred from CI.

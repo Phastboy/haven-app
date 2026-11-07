@@ -59,11 +59,12 @@ fun ObserveRootTabSelection(
   authenticated: Boolean,
   rootVisible: Boolean,
   onSignIn: () -> Unit,
-  onSelected: (RootTab) -> Unit
+  onSelected: (RootTab) -> Unit,
+  activationKey: Int = 0
 ) {
   val signIn = rememberUpdatedState(onSignIn)
   val selected = rememberUpdatedState(onSelected)
-  LaunchedEffect(state, authenticated, rootVisible) {
+  LaunchedEffect(state, authenticated, rootVisible, activationKey) {
     if (!rootVisible) return@LaunchedEffect
     snapshotFlow { if (state.pager.isScrollInProgress) null else state.settledTab }
       .filterNotNull().distinctUntilChanged().collect { tab ->

@@ -1,8 +1,8 @@
 # Haven Android build and release handoff — current review
 
-Current corrective PR: #24, based on main `2621d00`. Android version remains
-0.0.1 / versionCode 11. Published 0.0.1 assets were attached by CI/CD; this PR does
-not authorize another tag/publication. Preserve both signing configurations and
+Current corrective PR: #24, based on main `2621d00`. Release target is
+0.0.2 / versionCode 12. The owner authorized resolving reviews, merging and
+publishing this patch. Published 0.0.1 assets were attached by CI/CD. Preserve both signing configurations and
 existing certificate checks. AI Studio reports are historical; inspect exact CI.
 
 ## Source and pinned recipe
@@ -71,15 +71,16 @@ builds verify the expected release signer, package, code/name and absence of the
 application-debuggable flag. Forks perform debug-only verification with an
 ephemeral signer and cannot produce the distributable release artifact.
 
-Successful runs upload haven-android-release-apk containing haven-v0.0.1.apk,
+Successful runs upload haven-android-release-apk containing haven-v0.0.2.apk,
 SHA256SUMS, manifest.txt and apk-provenance.txt. Provenance records actual source
 commit, variant, workflow run and toolchain. PR builds may use a temporary merge
 commit; final distribution must reference the verified main/tag commit.
 
 The published-release event builds and attaches the release APK and evidence to
 the public GitHub release. Draft creation does not invoke that publication job.
-The owner authorized merge/release preparation and requires final Google sign-in
-confirmation before public publication. Hold the release as a draft until then.
+The owner authorized merge and publication after review resolution and passing CI.
+Use the published-release workflow to attach assets automatically; do not manually
+upload APKs or metadata. Device findings will be tracked in separate issues.
 
 CI is not physical-device or authenticated production acceptance. Remaining
 journey, legacy unknown-owner draft recovery, visual and physical-device gates

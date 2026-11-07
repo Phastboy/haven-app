@@ -5,6 +5,7 @@ import com.example.auth.HavenAuthClient
 import com.example.data.network.HavenNetwork
 import com.example.ui.model.SessionManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -12,10 +13,11 @@ import kotlinx.coroutines.withContext
 
 class ConversationEventsListener(
   private val auth: HavenAuthClient,
-  private val network: HavenNetwork = HavenNetwork.shared
+  private val network: HavenNetwork = HavenNetwork.shared,
+  private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
   suspend fun listenToConversationEvents(conversationId: String, onInvalidation: suspend () -> Unit) =
-    withContext(Dispatchers.IO) {
+    withContext(dispatcher) {
       val actor = SessionManager.session.value.personId ?: return@withContext
       var failures = 0
       var refreshed = false
@@ -26,11 +28,12 @@ class ConversationEventsListener(
           var event: String? = null
           val status = network.events("/api/v1/conversations/${Uri.encode(conversationId)}/events", token) { line ->
             if (SessionManager.session.value.personId != actor) false else {
+              // Heartbeats prove a healthy stream too; quiet threads must keep reconnecting.
+              failures = 0
               when {
                 line.startsWith("event:") -> event = line.substring(6).trim()
                 line.isEmpty() -> {
                   if (event == "resync" || event == "changed") {
-                    failures = 0
                     onInvalidation()
                   }
                   event = null

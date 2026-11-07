@@ -17,6 +17,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
@@ -128,12 +129,51 @@ class HavenAuthTransportTest {
       val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
       val restoring = launch { auth.restore() }
       dispatched.await()
-      val signOut = launch { auth.signOut() }
+      val signOut = launch(start = CoroutineStart.UNDISPATCHED) { auth.signOut() }
+      // The request has entered signOut and is waiting behind the rotating refresh.
+      signOut.cancel()
       reply.complete(Unit)
       restoring.join(); signOut.join()
       assertNull(store.refreshToken)
       assertFalse(SessionManager.session.value.isAuthenticated)
       assertTrue(revoked.orEmpty().contains("new-refresh"))
+    } finally { client.close() }
+  }
+
+  @Test fun `unavailable keystore cannot retain a signed in session during sign out`() = runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val unreadable = SecureAuthStore(context) { throw java.io.IOException("Keystore unavailable") }
+    SessionManager.signInPerson("owner", "Real person", "real-person")
+    var requests = 0
+    val client = client(MockEngine { requests++; respond("{}", HttpStatusCode.OK) })
+    try {
+      HavenAuthClient(unreadable, HavenNetwork(client, "https://haven.test")).signOut()
+      assertFalse(SessionManager.session.value.isAuthenticated)
+      assertNull(store.refreshToken)
+      assertEquals(0, requests)
+    } finally { client.close() }
+  }
+
+  @Test fun `cancellation during revocation still completes server sign out`() = runTest {
+    val dispatched = CompletableDeferred<Unit>()
+    val reply = CompletableDeferred<Unit>()
+    var revoked = false
+    val client = client(MockEngine {
+      dispatched.complete(Unit)
+      reply.await()
+      revoked = true
+      respond("{}", HttpStatusCode.OK)
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      val signOut = launch(start = CoroutineStart.UNDISPATCHED) { auth.signOut() }
+      dispatched.await()
+      signOut.cancel()
+      reply.complete(Unit)
+      signOut.join()
+      assertTrue(revoked)
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
     } finally { client.close() }
   }
 }

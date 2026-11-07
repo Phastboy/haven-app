@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -122,6 +125,33 @@ class ProfileAndThemeRobolectricTest {
     assertNull(offerDistanceLabel(Double.NaN))
     assertNull(offerDistanceLabel(-1.0))
     assertEquals("250 m", offerDistanceLabel(250.0))
+  }
+  @Test fun `restored profile offset survives loading before content returns`() {
+    val profile = ProfileOverview("person", "real-person", "Real person",
+      null, "Joined November 2026", "A provider biography for scroll restoration.\n".repeat(40), 0, 2, 1, emptyList())
+    val current = mutableStateOf<ProfileOverview?>(profile)
+    lateinit var scroll: ScrollState
+    val restoration = StateRestorationTester(compose)
+    restoration.setContent {
+      scroll = rememberScrollState()
+      HavenTheme {
+        ProfileScreen(ProfileUiState(profile = current.value, loading = current.value == null),
+          {}, {}, {}, scrollState = scroll)
+      }
+    }
+    compose.onNodeWithTag("profile_link_appearance").performScrollTo()
+    compose.waitForIdle()
+    val offset = scroll.value
+    assertTrue(offset > 0)
+    compose.runOnIdle { current.value = null }
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
+    restoration.emulateSavedInstanceStateRestore()
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
+    compose.runOnIdle { current.value = profile }
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
   }
   @Test fun `profile has real identity and persisted appearance without spec controls`() {
     ThemeManager.setMode(ThemeMode.LIGHT, ApplicationProvider.getApplicationContext())

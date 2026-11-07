@@ -85,6 +85,9 @@ fun ProfileScreen(
     onDispose { onModalVisibilityChanged(false) }
   }
   val profile = state.profile
+  // Loading/error content must not measure against and clamp the retained profile offset.
+  val loadingScrollState = rememberScrollState()
+  val contentScrollState = if (profile == null) loadingScrollState else scrollState
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("profile_screen")) {
     HavenTopBarContainer {
       Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
@@ -97,7 +100,7 @@ fun ProfileScreen(
         }
       }
     }
-    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState).padding(16.dp),
+    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(contentScrollState).padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally) {
       if (state.loading) CircularProgressIndicator(Modifier.padding(24.dp).testTag("profile_loading"), color = HavenColors.Primary)
       state.error?.let { error ->

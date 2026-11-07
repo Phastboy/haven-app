@@ -40,6 +40,7 @@ class RootTabsRobolectricTest {
   private val rootVisible = mutableStateOf(true)
   private val blocked = mutableStateOf(false)
   private val selected = mutableListOf<RootTab>()
+  private val activation = mutableIntStateOf(0)
   private var signIns = 0
   private lateinit var inboxScroll: androidx.compose.foundation.lazy.LazyListState
 
@@ -48,7 +49,7 @@ class RootTabsRobolectricTest {
       tabs = rememberRootTabsState(actor.value)
       dragScope = rememberCoroutineScope()
       inboxScroll = key(actor.value) { rememberLazyListState() }
-      ObserveRootTabSelection(tabs, actor.value != null, rootVisible.value, { signIns++ }, { selected += it })
+      ObserveRootTabSelection(tabs, actor.value != null, rootVisible.value, { signIns++ }, { selected += it }, activation.intValue)
       Column(Modifier.fillMaxSize()) {
         if (rootVisible.value) HavenRootPager(
           tabs, actor.value != null, !blocked.value,
@@ -64,8 +65,12 @@ class RootTabsRobolectricTest {
                 items(40) { Text("Offer $it", Modifier.fillMaxWidth().height(80.dp)) }
               }
             }
-            RootTab.MESSAGES -> LazyColumn(Modifier.fillMaxSize().testTag("inbox_page"), state = inboxScroll) {
-              items(40) { Text("Message $it", Modifier.fillMaxWidth().height(80.dp)) }
+            RootTab.MESSAGES -> Box(Modifier.fillMaxSize().testTag("inbox_page")) {
+              com.example.ui.screens.MessagesInboxScreen(
+                com.example.ui.model.MessagesInboxUiState(items = List(40) { index ->
+                  com.example.data.InboxConversation("conversation-$index", "peer-$index", "Person $index",
+                    "person-$index", null, "A conversation", "2026-11-07T10:00:00Z", false)
+                }), {}, {}, {}, listState = inboxScroll)
             }
             RootTab.PROFILE -> Box(Modifier.fillMaxSize().testTag("profile_page")) { Text("Profile") }
           }
@@ -153,10 +158,34 @@ class RootTabsRobolectricTest {
     assertEquals(listOf(RootTab.OFFERS), selected.distinct())
   }
 
+  @Test fun `resume during a cancelled drag reactivates the previously settled inbox`() {
+    show()
+    select(RootTab.MESSAGES)
+    val before = selected.size
+    val release = CompletableDeferred<Unit>()
+    compose.runOnIdle {
+      dragScope.launch {
+        tabs.pager.scroll {
+          scrollBy(tabs.pager.layoutInfo.pageSize * 0.3f)
+          release.await()
+          scrollBy(-tabs.pager.layoutInfo.pageSize * 0.3f)
+        }
+      }
+    }
+    compose.waitForIdle()
+    compose.runOnIdle { activation.intValue++ }
+    compose.waitForIdle()
+    assertEquals(before, selected.size)
+    compose.runOnIdle { release.complete(Unit) }
+    compose.waitForIdle()
+    assertEquals(before + 1, selected.size)
+    assertEquals(RootTab.MESSAGES, selected.last())
+  }
+
   @Test fun `inbox scroll survives tab changes and visiting a child route`() {
     show()
     select(RootTab.MESSAGES)
-    compose.onNodeWithTag("inbox_page").performScrollToIndex(20)
+    compose.onNodeWithTag("messages_list").performScrollToIndex(20)
     compose.waitForIdle()
     val index = inboxScroll.firstVisibleItemIndex
     assertTrue(index > 0)
