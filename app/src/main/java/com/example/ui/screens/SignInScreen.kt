@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -177,18 +176,13 @@ fun SignInScreen(
             testTag = "google_sign_in_button"
           )
 
-          // Divider: 1px line with "or" in center
+          // Separate authentication choices with space, without a decorative rule.
           Box(
             modifier = Modifier
               .fillMaxWidth()
               .padding(vertical = 28.dp),
             contentAlignment = Alignment.Center
           ) {
-            HorizontalDivider(
-              color = HavenColors.BorderSubtle,
-              thickness = 1.dp,
-              modifier = Modifier.fillMaxWidth()
-            )
             Text(
               text = "or",
               fontFamily = InterFontFamily,
