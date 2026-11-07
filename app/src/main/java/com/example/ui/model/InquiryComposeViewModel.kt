@@ -52,6 +52,15 @@ class InquiryComposeViewModel(
   private val _state = MutableStateFlow(InquiryComposeUiState())
   val state = _state.asStateFlow()
 
+  private var generation = 0L
+  private var sendJob: kotlinx.coroutines.Job? = null
+
+  fun clear() {
+    generation++
+    sendJob?.cancel()
+    _state.value = InquiryComposeUiState()
+  }
+
   fun openOffer(slug: String, offerTitle: String, makerName: String) {
     _state.value = InquiryComposeUiState(
       target = InquiryTarget.Offer(slug, offerTitle, makerName)
@@ -93,11 +102,13 @@ class InquiryComposeViewModel(
     }
 
     _state.update { it.copy(isSending = true, error = null) }
-    viewModelScope.launch {
+    val request = generation
+    sendJob = viewModelScope.launch {
       val result = when (target) {
         is InquiryTarget.Offer -> repository.startOfferInquiry(target.slug, body)
         is InquiryTarget.Person -> repository.startProfileInquiry(target.handle, body)
       }
+      if (request != generation) return@launch
       result.fold(
         onSuccess = { conversationId ->
           _state.value = InquiryComposeUiState(startedConversationId = conversationId)

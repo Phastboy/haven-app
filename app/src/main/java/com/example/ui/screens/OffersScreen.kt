@@ -147,6 +147,12 @@ fun OffersScreen(
     InquiryComposeViewModel.factory(context.applicationContext)
   })
   val inquiryState by inquiryModel.state.collectAsState()
+  DisposableEffect(inquiryModel, session.personId) {
+    val actor = session.personId
+    onDispose {
+      if (SessionManager.session.value.personId != actor) inquiryModel.clear()
+    }
+  }
   val navigationSaver = remember {
     androidx.compose.runtime.saveable.listSaver<List<OffersDestination>, String>(
       save = { stack -> stack.map { destination -> when (destination) {
@@ -545,8 +551,8 @@ fun OffersScreen(
         if (session.isAuthenticated) {
           val editor: com.example.ui.model.OfferEditorViewModel = viewModel(
             key = "offer_editor_${session.personId}_${currentDestination.entryKey}",
-            factory = remember(currentDestination.entryKey) {
-              com.example.ui.model.OfferEditorViewModel.factory(context.applicationContext, currentDestination.id)
+            factory = remember(currentDestination.entryKey, session.personId) {
+              com.example.ui.model.OfferEditorViewModel.factory(context.applicationContext, currentDestination.id, session.personId)
             }
           )
           NativeOfferEditorScreen(editor, editing = currentDestination.id != null,
@@ -568,8 +574,8 @@ fun OffersScreen(
         }
         val myOffersModel: com.example.ui.model.MyOffersViewModel = viewModel(
           key = "my_offers_${session.personId}_$myOffersRetry",
-          factory = remember(context.applicationContext) {
-            com.example.ui.model.MyOffersViewModel.factory(context.applicationContext)
+          factory = remember(context.applicationContext, session.personId) {
+            com.example.ui.model.MyOffersViewModel.factory(context.applicationContext, session.personId)
           }
         )
         MyOffersScreen(
@@ -1080,7 +1086,8 @@ fun OffersScreen(
           }
         }
 
-        val hasUnread = messagesState.globalUnread
+        val hasUnread = if (messagesState.unreadConfirmed) messagesState.globalUnread
+          else messagesState.globalUnread || messagesState.items.any { it.isUnread }
         FeedNavItem(
           label = "Messages",
           activeIcon = Icons.Filled.ChatBubble,

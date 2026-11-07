@@ -31,7 +31,8 @@ key through secure secret storage;
 never put private keys/passwords into chat, Git, or build logs.
 
 Current CI: Temurin JDK 17; Gradle wrapper 9.3.1; SDK android-36.1;
-build-tools 36.0.0; `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`.
+build-tools 36.0.0; `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, plus
+`:app:assembleRelease :app:lintRelease` with protected release signing secrets.
 CI restores a persistent testing key and verifies its fingerprint. Its APK does not prove
 AI Studio signer parity, Google sign-in, or production release signing.
 
@@ -109,3 +110,7 @@ manifest.txt and apk-provenance.txt. Publishing v0.0.0 subsequently builds and
 attaches verified release assets automatically. Final publication is held until
 the owner confirms Google sign-in after OAuth configuration. A draft release
 is not public launch acceptance; physical/live journey gates remain separate.
+
+Fork PRs run debug-only verification and do not build, validate or upload the
+signed release APK. Same-repository/main runs additionally require release signing
+secrets and run :app:assembleRelease :app:lintRelease; see ANDROID_BUILD_HANDOFF.md.

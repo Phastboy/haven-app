@@ -31,13 +31,8 @@ class HavenMessagesRepository(private val auth: HavenAuthClient) : MessagesInbox
   }
 
   override suspend fun getGlobalUnread(): Boolean = withContext(Dispatchers.IO) {
-    try {
-      val raw = auth.authenticatedGet("/api/v1/conversations/unread")
-      val json = JSONObject(raw)
-      json.optBoolean("unread", json.optBoolean("unread_exists", false))
-    } catch (_: Exception) {
-      false
-    }
+    val raw = auth.authenticatedGet("/api/v1/conversations/unread")
+    JSONObject(raw).getBoolean("unread")
   }
 
   companion object {

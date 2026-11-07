@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface OutboxDao {
 
-  @Query("SELECT * FROM message_outbox WHERE status = 'PENDING' ORDER BY createdAt ASC")
+  @Query("SELECT * FROM message_outbox WHERE status IN ('PENDING', 'UNCONFIRMED') ORDER BY createdAt ASC")
   suspend fun getPendingOutbox(): List<OutboxEntity>
 
   @Query("SELECT COUNT(*) FROM message_outbox")

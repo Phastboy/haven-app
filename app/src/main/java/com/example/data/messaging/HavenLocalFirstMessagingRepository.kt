@@ -166,7 +166,9 @@ class HavenLocalFirstMessagingRepository(
     ownerPersonId: String?
   ): Result<Unit> = withContext(ioDispatcher) {
     val actor = SessionManager.session.value.personId
-    if (enforceOwnership && (actor == null || actor != ownerPersonId)) return@withContext Result.failure(IllegalStateException("Account changed"))
+    val owner = ownerPersonId ?: conversationDao.getConversation(conversationId)?.ownerPersonId
+    if (enforceOwnership && (actor == null || actor != owner)) return@withContext Result.failure(IllegalStateException("Account changed"))
+    processOutbox()
     val result = transport.getThread(conversationId)
     if (enforceOwnership && SessionManager.session.value.personId != actor) return@withContext Result.failure(IllegalStateException("Account changed"))
     if (result.isFailure) {
@@ -186,7 +188,7 @@ class HavenLocalFirstMessagingRepository(
     }
     mergeThreadPage(conversationId, page)
     val existing = messageDao.getMessages(conversationId)
-    upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
+    upsertConversationFromThread(conversationId, owner, page, existing)
     Result.success(Unit)
   }
 
@@ -204,8 +206,10 @@ class HavenLocalFirstMessagingRepository(
       return@withContext Result.failure(IllegalStateException("Account changed"))
     val cursor = syncStateDao.getSyncState("thread_$conversationId")?.nextCursor
       ?: return@withContext Result.success(false)
-    transport.getThread(conversationId, cursor).map { page ->
-      check(!enforceOwnership || SessionManager.session.value.personId == actor) { "Account changed" }
+    val result = transport.getThread(conversationId, cursor)
+    if (enforceOwnership && SessionManager.session.value.personId != actor)
+      return@withContext Result.failure(IllegalStateException("Account changed"))
+    result.map { page ->
       mergeThreadPage(conversationId, page)
       syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
       page.nextCursor != null
@@ -448,17 +452,16 @@ class HavenLocalFirstMessagingRepository(
           }
         } else {
           // Delivery failed
-          val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "Failed to send message"
+          val error = result.exceptionOrNull()
+          val unconfirmed = error is java.io.IOException &&
+            (error !is com.example.auth.HavenAuthClient.HttpException || error.statusCode >= 500)
+          val errorMsg = if (unconfirmed) "Delivery unconfirmed; checking when connected" else error?.localizedMessage ?: "Failed to send message"
           messageDao.updateMessageStatus(
             clientMessageId = entry.clientMessageId,
-            status = MessageDeliveryStatus.FAILED,
-            errorMessage = errorMsg,
-            retryIncrement = 1
-          )
-          outboxDao.markAttempt(
-            clientMessageId = entry.clientMessageId,
-            status = "FAILED"
-          )
+            status = if (unconfirmed) MessageDeliveryStatus.SENDING else MessageDeliveryStatus.FAILED,
+            errorMessage = errorMsg, retryIncrement = 1)
+          outboxDao.markAttempt(clientMessageId = entry.clientMessageId,
+            status = if (unconfirmed) "UNCONFIRMED" else "FAILED")
         }
       }
     }

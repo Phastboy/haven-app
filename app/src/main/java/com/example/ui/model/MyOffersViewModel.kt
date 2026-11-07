@@ -123,10 +123,10 @@ class MyOffersViewModel(
   }
 
   companion object {
-    fun factory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    fun factory(context: Context, ownerPersonId: String? = SessionManager.session.value.personId): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val repo = HavenMyOffersRepository.create(context)
+        val repo = HavenMyOffersRepository.create(context, ownerPersonId)
         return MyOffersViewModel(repo) as T
       }
     }

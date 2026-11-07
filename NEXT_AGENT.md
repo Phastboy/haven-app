@@ -75,3 +75,7 @@ manifest.txt and apk-provenance.txt. Publishing v0.0.0 subsequently builds and
 attaches verified release assets automatically. Final publication is held until
 the owner confirms Google sign-in after OAuth configuration. A draft release
 is not public launch acceptance; physical/live journey gates remain separate.
+
+Fork PRs run debug-only verification and do not build, validate or upload the
+signed release APK. Same-repository/main runs additionally require release signing
+secrets and run :app:assembleRelease :app:lintRelease; see ANDROID_BUILD_HANDOFF.md.

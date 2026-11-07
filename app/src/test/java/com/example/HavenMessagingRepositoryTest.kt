@@ -368,4 +368,75 @@ class HavenMessagingRepositoryTest {
     assertTrue(database.messageDao().getMessages("gap-thread").any { it.text == "missed-middle-message" })
   }
 
+  @Test
+  fun lostAcknowledgementIsRecoveredByReplayingOriginalIdBeforeThreadMerge() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val serverId = java.util.UUID.randomUUID().toString()
+    val owner = java.util.UUID.randomUUID().toString()
+    val ids = mutableListOf<String>()
+    var committed = false
+    val wire = object : com.example.data.messaging.transport.MessagingTransport by transport {
+      override suspend fun sendMessage(conversationId: String, clientMessageId: String, text: String, offerId: String?): Result<com.example.data.messaging.transport.SendMessageAckDto> {
+        ids.add(clientMessageId.removePrefix("msg-"))
+        val ack = com.example.data.messaging.transport.SendMessageAckDto(serverId, clientMessageId, conversationId, "2026-11-07T00:00:00Z", 1)
+        if (!committed) { committed = true; return Result.failure(java.io.IOException("Response lost after commit")) }
+        return Result.success(ack)
+      }
+      override suspend fun getThread(conversationId: String, after: String?): Result<com.example.data.messaging.transport.ConversationThreadPageDto> = Result.success(
+        com.example.data.messaging.transport.ConversationThreadPageDto(conversationId,
+          com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+          listOf(com.example.data.messaging.transport.RemoteMessageDto(serverId, serverId, conversationId, owner, true, "Delivered once", "2026-11-07T00:00:00Z", 1)), null, false))
+    }
+    val repo = HavenLocalFirstMessagingRepository(database, wire, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher, enforceOwnership = false)
+    testScheduler.runCurrent()
+    val localId = repo.sendMessage("lost-ack", "Delivered once", senderPersonId = owner)
+    testScheduler.runCurrent()
+    assertEquals("UNCONFIRMED", database.outboxDao().getPendingOutbox().single().status)
+    repo.syncThreadHistory("lost-ack", owner).getOrThrow()
+    val rows = database.messageDao().getMessages("lost-ack")
+    assertEquals(1, rows.size)
+    assertEquals(localId, rows.single().clientMessageId)
+    assertEquals(serverId, rows.single().serverId)
+    assertEquals("SENT", rows.single().status)
+    assertEquals(2, ids.size)
+    assertEquals(ids[0], ids[1])
+    java.util.UUID.fromString(ids[0])
+    assertTrue(database.outboxDao().getPendingOutbox().isEmpty())
+  }
+
+  @Test
+  fun omittedThreadOwnerUsesVerifiedStoredOwner() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      database.conversationDao().upsertConversation(ConversationEntity("owned", "owner-a", "peer", "Peer", "peer", null, "", "", 0, false))
+      val repo = HavenLocalFirstMessagingRepository(database, transport, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher)
+      testScheduler.runCurrent()
+      assertTrue(repo.syncThreadHistory("owned").isSuccess)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun accountSwitchDuringOlderPageReturnsFailureWithoutThrowing() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      database.conversationDao().upsertConversation(ConversationEntity("owned", "owner-a", "peer", "Peer", "peer", null, "", "", 0, false))
+      database.syncStateDao().upsertSyncState(com.example.data.messaging.db.SyncStateEntity("thread_owned", "older"))
+      val wire = object : com.example.data.messaging.transport.MessagingTransport by transport {
+        override suspend fun getThread(conversationId: String, after: String?): Result<com.example.data.messaging.transport.ConversationThreadPageDto> {
+          session.signInPerson("owner-b", "B", "owner-b")
+          return Result.success(com.example.data.messaging.transport.ConversationThreadPageDto(conversationId,
+            com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null), emptyList(), null, false))
+        }
+      }
+      val repo = HavenLocalFirstMessagingRepository(database, wire, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher)
+      testScheduler.runCurrent()
+      assertTrue(repo.loadOlderMessages("owned").isFailure)
+      assertEquals("older", database.syncStateDao().getSyncState("thread_owned")!!.nextCursor)
+    } finally { session.signOut() }
+  }
+
 }

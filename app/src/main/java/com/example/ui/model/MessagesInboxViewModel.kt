@@ -27,7 +27,8 @@ data class MessagesInboxUiState(
   val loading: Boolean = false,
   val loadingMore: Boolean = false,
   val error: String? = null,
-  val globalUnread: Boolean = false
+  val globalUnread: Boolean = false,
+  val unreadConfirmed: Boolean = false
 )
 
 class MessagesInboxViewModel(
@@ -55,9 +56,11 @@ class MessagesInboxViewModel(
     unreadJob = viewModelScope.launch {
       try {
         val hasUnread = repository.getGlobalUnread()
-        if (actor == requestedActor) _state.update { it.copy(globalUnread = hasUnread) }
+        if (actor == requestedActor) _state.update { it.copy(globalUnread = hasUnread, unreadConfirmed = true) }
       } catch (cancelled: CancellationException) { throw cancelled }
-      catch (_: Exception) {}
+      catch (_: Exception) {
+        if (actor == requestedActor) _state.update { it.copy(unreadConfirmed = false) }
+      }
     }
   }
 
