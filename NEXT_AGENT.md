@@ -26,7 +26,7 @@ checks before claiming they passed.
 
 ## Signing and remaining acceptance
 
-Candidate versionName/code: 0.0.0 / 9. CI has a persistent testing signer and
+Candidate versionName/code: 0.0.0 / 10. CI has a persistent testing signer and
 verifies its fingerprint; the private backup is ignored by Git. Register this
 signer's SHA-1 for native Google OAuth before testing sign-in. AI Studio signer
 parity is unresolved until its quota resets and its build/export report arrives.
@@ -51,3 +51,27 @@ state, GPS inference or proximity exclusion. General discovery is default;
 proximity is explicit apply/change/off, separate from the offer's public location.
 Use Haven theme tokens and prototypes; keep runtime samples out of integrated UI.
 Run Android build/tests/lint in CI, preserving the owner's local data budget.
+
+## Release preparation — 2026-11-07
+
+AI Studio main update `8fbf547` is integrated; its original report is preserved
+in `AI_STUDIO_BUILD_EVIDENCE.md` with disputed claims identified. CI builds both
+variants, runs 94 debug unit/Robolectric tests and both lints, verifies release
+package/version/certificate and rejects a debuggable release APK. Candidate
+versionName/code: 0.0.0 / 10, increasing from distributed testing code 9.
+
+The initial direct-download release retains our owned persistent certificate
+(SHA-1 86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59), so Google
+OAuth registration and installation continuity remain valid. This deliberately
+establishes that certificate as the initial distribution identity; it must be
+preserved for future updates. It is not the AI Studio certificate. The release
+keystore uses alias upload and a random password held in Actions secrets
+HAVEN_RELEASE_KEYSTORE_BASE64 / HAVEN_RELEASE_KEYSTORE_PASSWORD. Ignored local
+backups are .signing/haven-release.p12 and .signing/release-password; keep secure
+owner-managed backups. Neither keystore nor password is committed.
+
+Successful CI uploads haven-android-release-apk with haven-v0.0.0.apk, SHA256SUMS,
+manifest.txt and apk-provenance.txt. Publishing v0.0.0 subsequently builds and
+attaches verified release assets automatically. Final publication is held until
+the owner confirms Google sign-in after OAuth configuration. A draft release
+is not public launch acceptance; physical/live journey gates remain separate.

@@ -17,7 +17,7 @@ android {
     applicationId = "com.aistudio.haven.xvykpt"
     minSdk = 24
     targetSdk = 36
-    versionCode = 9
+    versionCode = 10
     versionName = "0.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -43,6 +43,7 @@ android {
 
   buildTypes {
     release {
+      isDebuggable = false
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

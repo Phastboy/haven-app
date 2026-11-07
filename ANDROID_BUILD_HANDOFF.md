@@ -7,7 +7,7 @@ AI Studio parity is still unconfirmed; its requested report is listed below.
 
 - Repository: Phastboy/haven-app; release work: `fix/v0.0.0-release-readiness`, PR #17.
 - Application ID: `com.aistudio.haven.xvykpt`; namespace: `com.example`.
-- Candidate versionName/code: `0.0.0` / `9`. Confirm no higher code was distributed.
+- Candidate versionName/code: `0.0.0` / `10`. Confirm no higher code was distributed.
 - Variant: `debug`, testing only. Not Play/store release signing.
 - CI JDK: Temurin 17.0.21+9. Java source/target compatibility: 11.
 - Gradle wrapper: 9.3.1, distribution checksum pinned in
@@ -77,3 +77,27 @@ cannot sign our builds for us; fingerprints alone cannot reproduce a private key
 Pin the confirmed recipe in repository files and update this document when an
 intentional change is made. Do not assume byte-for-byte reproducibility merely
 because source and variant match; transitive dependency locking is not yet set up.
+
+## Release preparation — 2026-11-07
+
+AI Studio main update `8fbf547` is integrated; its original report is preserved
+in `AI_STUDIO_BUILD_EVIDENCE.md` with disputed claims identified. CI builds both
+variants, runs 94 debug unit/Robolectric tests and both lints, verifies release
+package/version/certificate and rejects a debuggable release APK. Candidate
+versionName/code: 0.0.0 / 10, increasing from distributed testing code 9.
+
+The initial direct-download release retains our owned persistent certificate
+(SHA-1 86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59), so Google
+OAuth registration and installation continuity remain valid. This deliberately
+establishes that certificate as the initial distribution identity; it must be
+preserved for future updates. It is not the AI Studio certificate. The release
+keystore uses alias upload and a random password held in Actions secrets
+HAVEN_RELEASE_KEYSTORE_BASE64 / HAVEN_RELEASE_KEYSTORE_PASSWORD. Ignored local
+backups are .signing/haven-release.p12 and .signing/release-password; keep secure
+owner-managed backups. Neither keystore nor password is committed.
+
+Successful CI uploads haven-android-release-apk with haven-v0.0.0.apk, SHA256SUMS,
+manifest.txt and apk-provenance.txt. Publishing v0.0.0 subsequently builds and
+attaches verified release assets automatically. Final publication is held until
+the owner confirms Google sign-in after OAuth configuration. A draft release
+is not public launch acceptance; physical/live journey gates remain separate.
