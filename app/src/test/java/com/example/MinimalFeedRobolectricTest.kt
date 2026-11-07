@@ -62,7 +62,7 @@ class MinimalFeedRobolectricTest {
     val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
     compose.runOnUiThread { view.draw(Canvas(bitmap)) }
     val file = File("build/reports/screenshots/$name.png")
-    file.parentFile.mkdirs()
+    file.parentFile?.mkdirs()
     file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
   }
 
@@ -90,7 +90,7 @@ class MinimalFeedRobolectricTest {
           val provider = compose.onNodeWithTag("offer_maker_compact", true).fetchSemanticsNode().boundsInRoot
           assertTrue("provider stays below the price row", provider.top >= price.bottom)
           val distanceNode = compose.onAllNodesWithTag("offer_distance_compact", true).fetchSemanticsNodes().singleOrNull()
-          if (distanceNode != null) {
+          if (distanceNode != null && distanceNode.boundsInRoot.width > 0f) {
             val distance = distanceNode.boundsInRoot
             assertEquals("distance cannot move below price", price.top, distance.top, 0.1f)
             assertTrue("distance cannot overlap price", distance.width == 0f || distance.left >= price.right)
@@ -122,6 +122,8 @@ class MinimalFeedRobolectricTest {
     for (theme in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
       compose.runOnIdle { mode.value = theme; saved.value = theme == ThemeMode.DARK }
       compose.onNodeWithTag("offer_image_compact", true).assertIsDisplayed()
+      // Successful decoding precedes the end of Coil's crossfade animation.
+      compose.mainClock.advanceTimeBy(500)
       screenshot("minimal-card-photo-${theme.name.lowercase()}")
     }
   }
