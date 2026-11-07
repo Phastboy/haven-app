@@ -1,8 +1,9 @@
 # Start here — Android native parity handoff, 2026-11-06
 
-Read `MOBILE_AI_STUDIO_HANDOFF.md`, `MOBILE_NATIVE_API_SWEEP.md` and
-`MOBILE_NATIVE_API_BACKLOG.md` first. This pickup supersedes older browser-thread
-and native-create/edit-draft statements in the historical project records.
+Read `ANDROID_BUILD_HANDOFF.md`, `MOBILE_AI_STUDIO_HANDOFF.md`, `MOBILE_NATIVE_API_SWEEP.md` and
+`MOBILE_NATIVE_API_BACKLOG.md` first. For outside-of-AI-Studio Gradle builds, toolchain versions,
+and APK verification evidence, see `ANDROID_BUILD_HANDOFF.md`. This pickup supersedes older
+browser-thread and native-create/edit-draft statements in the historical project records.
 
 ## Backend release is available
 

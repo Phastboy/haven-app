@@ -201,12 +201,13 @@ fun MyOffersScreen(
           onClick = onCreateOffer,
           modifier = Modifier
             .size(44.dp)
-            .testTag("create_offer_action_button")
+            .testTag("my_offers_create_button")
         ) {
           Icon(
             Icons.Outlined.Add,
             contentDescription = "Create offer",
-            tint = HavenColors.TextPrimary
+            tint = HavenColors.TextPrimary,
+            modifier = Modifier.testTag("create_offer_action_button")
           )
         }
       }
