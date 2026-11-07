@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,7 +79,6 @@ fun MessagesInboxScreen(
       else -> LazyColumn(Modifier.fillMaxSize().testTag("messages_list")) {
         items(state.items, key = InboxConversation::id) { item ->
           InboxConversationRow(item, onClick = { onSelectConversation(item.id) })
-          HorizontalDivider(color = HavenColors.BorderSubtle, modifier = Modifier.padding(start = 16.dp))
         }
         if (state.nextCursor != null) item {
           if (state.error != null) Text(state.error, color = HavenColors.TextSecondary,

@@ -55,7 +55,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -194,7 +193,6 @@ fun PublicOfferScreen(
             variant = HavenBackButtonVariant.FLOATING,
             size = 40.dp,
             iconSize = 20.dp,
-            elevation = 2.dp,
             testTag = "public_offer_back_button"
           )
 
@@ -209,7 +207,6 @@ fun PublicOfferScreen(
               },
               size = 40.dp,
               iconSize = 20.dp,
-              elevation = 2.dp,
               testTag = "public_offer_heart_button"
             )
           }
@@ -661,7 +658,6 @@ fun PublicOfferScreen(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .shadow(8.dp, RoundedCornerShape(8.dp))
           .clip(RoundedCornerShape(8.dp))
           .background(HavenColors.TextPrimary)
           .padding(horizontal = 16.dp, vertical = 12.dp)

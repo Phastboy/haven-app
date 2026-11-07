@@ -6,7 +6,9 @@ Type: patch / fix. Version name `0.0.1`, versionCode `11`, following source
 ## Changes
 
 - Flat safe-area containers and welcome/sign-in actions remove unwanted outlines.
-  Existing input boundaries and focus/interaction feedback remain.
+  Decorative avatar/attachment/message outlines, inbox/profile dividers, floating
+  control shadows and toast shadows are also removed. Existing input boundaries,
+  selection-state boundaries and focus/interaction feedback remain.
 - Startup waits for refresh plus verified identity before showing authenticated
   Offers. No saved credentials or confirmed refresh rejection opens Welcome.
   Network/server failure with retained credentials shows retry; it never clears

@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -100,8 +98,8 @@ fun ProfileScreen(
       }
       if (profile != null) {
         Spacer(Modifier.height(16.dp))
-        Box(Modifier.size(96.dp).clip(CircleShape).background(HavenColors.SurfaceContainer)
-          .border(1.dp, HavenColors.BorderSubtle, CircleShape), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(96.dp).clip(CircleShape).background(HavenColors.SurfaceContainer),
+          contentAlignment = Alignment.Center) {
           val initial: @Composable () -> Unit = {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
               Text(profile.displayName.take(1).uppercase(), fontSize = 32.sp, color = HavenColors.TextPrimary)
@@ -119,25 +117,21 @@ fun ProfileScreen(
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp).testTag("profile_bio"))
         }
         TextButton(onClick = { onOpenEditProfile?.invoke() ?: onOpenWeb("/profile/edit") }, modifier = Modifier.padding(top = 16.dp)
-          .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(24.dp)).testTag("profile_edit_button")) {
+          .testTag("profile_edit_button")) {
           Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
           Text("Edit profile", modifier = Modifier.padding(start = 8.dp))
         }
         Spacer(Modifier.height(24.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-          .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(12.dp))) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
           ProfileRow("My offers", "${profile.offerCount} ${if (profile.offerCount == 1L) "offer" else "offers"}", Icons.Outlined.GridView) {
             onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers")
           }
-          HorizontalDivider(color = HavenColors.BorderSubtle)
           ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) {
             onOpenSavedOffers?.invoke() ?: onOpenWeb("/profile/saved")
           }
-          HorizontalDivider(color = HavenColors.BorderSubtle)
           ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) {
             onOpenFollowing?.invoke() ?: onOpenWeb("/profile/following")
           }
-          HorizontalDivider(color = HavenColors.BorderSubtle)
           ProfileRow("Appearance", ThemeManager.themeMode.title, Icons.Outlined.Palette,
             tag = "profile_link_appearance") { appearance = true }
         }

@@ -2,7 +2,6 @@ package com.example.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -136,7 +135,6 @@ fun AttachOfferBottomSheet(
               .fillMaxWidth()
               .clip(RoundedCornerShape(8.dp))
               .background(HavenColors.SurfaceContainer)
-              .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(8.dp))
               .clickable { onSelectOffer(offer) }
               .padding(10.dp)
               .testTag("select_offer_${offer.id}"),

@@ -3,7 +3,7 @@ package com.example.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -31,7 +30,7 @@ import com.example.ui.theme.HavenColors
 
 /**
  * Reusable Save/Favorite Button for Haven offers:
- * - Circular pill with 2dp shadow and subtle border (matching the 32x32dp design specification)
+ * - Flat circular pill without a border or shadow (matching the 32x32dp design specification)
  * - Tactile spring scale feedback when tapped (active:scale-95)
  * - Filled heart icon when saved; outlined heart icon when unsaved
  * - Monastic styling adhering strictly to Haven's greyscale design language
@@ -44,7 +43,6 @@ fun HavenSaveButton(
   modifier: Modifier = Modifier,
   size: Dp = 32.dp,
   iconSize: Dp = 16.dp,
-  elevation: Dp = 2.dp,
   backgroundColor: Color = HavenColors.Canvas.copy(alpha = 0.95f),
   contentDescription: String = if (isSaved) "Remove from saved" else "Save offer",
   testTag: String = "save_offer_button"
@@ -61,13 +59,11 @@ fun HavenSaveButton(
     modifier = modifier
       .size(size)
       .scale(scale)
-      .shadow(elevation = elevation, shape = CircleShape)
       .clip(CircleShape)
       .background(backgroundColor)
-      .border(0.5.dp, HavenColors.BorderSubtle.copy(alpha = 0.6f), CircleShape)
       .clickable(
         interactionSource = interactionSource,
-        indication = null,
+        indication = LocalIndication.current,
         role = Role.Button,
         onClick = onToggle
       )

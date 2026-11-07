@@ -442,7 +442,6 @@ fun ReferenceLocationScreen(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(1.dp, HavenColors.BorderSubtle)
         .havenBottomSafePadding()
         .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp)

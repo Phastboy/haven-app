@@ -46,7 +46,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -588,7 +587,6 @@ fun EditProfileScreen(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .shadow(8.dp, RoundedCornerShape(8.dp))
           .clip(RoundedCornerShape(8.dp))
           .background(HavenColors.TextPrimary)
           .padding(horizontal = 16.dp, vertical = 14.dp)
