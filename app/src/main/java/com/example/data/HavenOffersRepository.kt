@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.net.Uri
+import androidx.core.net.toUri
 import com.example.auth.HavenAuthClient
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -84,7 +85,7 @@ class HavenOffersRepository(
   private val auth: HavenAuthClient? = null
 ) : OffersRepository {
   override suspend fun fetch(query: OffersQuery): OffersPage = withContext(Dispatchers.IO) {
-    val uri = Uri.parse("https://${HavenAuthClient.HOST}/api/v1/offers").buildUpon()
+    val uri = "https://${HavenAuthClient.HOST}/api/v1/offers".toUri().buildUpon()
     if (query.search.isNotBlank()) uri.appendQueryParameter("q", query.search.trim())
     if (query.category.isNotBlank()) uri.appendQueryParameter("category", query.category)
     if (query.currency.isNotBlank()) uri.appendQueryParameter("currency", query.currency)

@@ -1,6 +1,7 @@
 package com.example.auth
 
 import android.content.Context
+import androidx.core.content.edit
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -43,7 +44,7 @@ class SecureAuthStore(context: Context) {
     cipher.init(Cipher.ENCRYPT_MODE, key())
     val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
     val bytes = cipher.iv + encrypted
-    preferences.edit().putString(name, Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
+    preferences.edit { putString(name, Base64.encodeToString(bytes, Base64.NO_WRAP)) }
   }
 
   private fun get(name: String): String? {
@@ -55,7 +56,7 @@ class SecureAuthStore(context: Context) {
       cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
       String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
     } catch (_: Exception) {
-      preferences.edit().remove(name).apply()
+      preferences.edit { remove(name) }
       null
     }
   }
@@ -63,7 +64,7 @@ class SecureAuthStore(context: Context) {
   /** Stores the single-use nonce sent with a native Google ID token request. */
   fun saveNativeNonce(nonce: String) {
     put("native_nonce", nonce)
-    preferences.edit().putLong("native_nonce_until", System.currentTimeMillis() + 10 * 60 * 1000).apply()
+    preferences.edit { putLong("native_nonce_until", System.currentTimeMillis() + 10 * 60 * 1000) }
   }
 
   /** Returns the pending native nonce once, or null when absent or expired. */
@@ -71,18 +72,24 @@ class SecureAuthStore(context: Context) {
     val nonce = get("native_nonce")
     val valid = nonce != null &&
       System.currentTimeMillis() <= preferences.getLong("native_nonce_until", 0)
-    preferences.edit().remove("native_nonce").remove("native_nonce_until").apply()
+    preferences.edit {
+      remove("native_nonce")
+      remove("native_nonce_until")
+    }
     return if (valid) nonce else null
   }
 
   fun clearNativeNonce() {
-    preferences.edit().remove("native_nonce").remove("native_nonce_until").apply()
+    preferences.edit {
+      remove("native_nonce")
+      remove("native_nonce_until")
+    }
   }
 
   var refreshToken: String?
     get() = get("refresh_token")
     set(value) {
-      if (value == null) preferences.edit().remove("refresh_token").apply()
+      if (value == null) preferences.edit { remove("refresh_token") }
       else put("refresh_token", value)
     }
 }

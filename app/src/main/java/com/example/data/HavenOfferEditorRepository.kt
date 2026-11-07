@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import com.example.auth.HavenAuthClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -42,7 +43,7 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
     places(JSONObject(auth.authenticatedMutation("POST", "/api/v1/me/offer-places/search", JSONObject().put("query", query), expectedPersonId = ownerPersonId)).getJSONArray("items"))
   }
   suspend fun upload(id: String, image: EditorImage): EditableOffer = withContext(Dispatchers.IO) {
-    val bytes = context.contentResolver.openInputStream(Uri.parse(image.url))?.use { stream ->
+    val bytes = context.contentResolver.openInputStream(image.url.toUri())?.use { stream ->
       val buffer = java.io.ByteArrayOutputStream()
       val chunk = ByteArray(8192)
       while (true) {
