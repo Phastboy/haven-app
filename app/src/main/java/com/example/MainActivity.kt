@@ -101,8 +101,8 @@ class MainActivity : ComponentActivity() {
       message = "Starting native Google Sign-in flow with Android Credential Manager."
     )
     lifecycleScope.launch {
-      val nonce = auth.beginNativeGoogle()
       val errorMsg: String? = try {
+        val nonce = withContext(Dispatchers.IO) { auth.beginNativeGoogle() }
         HavenAuthClient.logDiagnostic(
           flow = "NATIVE_GOOGLE",
           step = "INVOKING_NATIVE_GOOGLE_SIGN_IN",
