@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,11 +73,17 @@ fun ProfileScreen(
   onOpenFollowing: (() -> Unit)? = null,
   onOpenOffer: ((String) -> Unit)? = null,
   onOpenPublicProfile: ((String) -> Unit)? = null,
-  onOpenEditProfile: (() -> Unit)? = null
+  onOpenEditProfile: (() -> Unit)? = null,
+  scrollState: ScrollState = rememberScrollState(),
+  onModalVisibilityChanged: (Boolean) -> Unit = {}
 ) {
   val context = LocalContext.current
   var appearance by remember { mutableStateOf(false) }
   var confirmSignOut by remember { mutableStateOf(false) }
+  DisposableEffect(appearance, confirmSignOut) {
+    onModalVisibilityChanged(appearance || confirmSignOut)
+    onDispose { onModalVisibilityChanged(false) }
+  }
   val profile = state.profile
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("profile_screen")) {
     HavenTopBarContainer {
@@ -89,7 +97,7 @@ fun ProfileScreen(
         }
       }
     }
-    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(scrollState).padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally) {
       if (state.loading) CircularProgressIndicator(Modifier.padding(24.dp).testTag("profile_loading"), color = HavenColors.Primary)
       state.error?.let { error ->

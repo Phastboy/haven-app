@@ -3,8 +3,6 @@ package com.example.ui.screens
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -76,6 +74,16 @@ import com.example.data.PaginatedFollowing
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.runtime.key
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.ui.components.CategoryScrollBoundary
+import com.example.ui.components.HavenRootPager
+import com.example.ui.components.ObserveRootTabSelection
+import com.example.ui.components.RootTab
+import com.example.ui.components.rememberRootTabsState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import com.example.ui.components.HavenEmptyState
@@ -142,7 +150,11 @@ fun OffersScreen(
   val session by SessionManager.session.collectAsState()
   val uriHandler = LocalUriHandler.current
   val base = "https://${HavenAuthClient.HOST}"
-  val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
+  val rootTabs = rememberRootTabsState(session.personId)
+  val inboxScroll = key(session.personId) { rememberLazyListState() }
+  val profileScroll = key(session.personId) { rememberScrollState() }
+  val categoryScroll = key(session.personId) { rememberScrollState() }
+  var profileModalOpen by remember(session.personId) { mutableStateOf(false) }
   val context = LocalContext.current
   val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
   val nativePagesRepo = remember(context.applicationContext) { HavenNativePagesRepository(HavenAuthClient.shared(context.applicationContext)) }
@@ -260,29 +272,36 @@ fun OffersScreen(
     MessagesInboxViewModel.factory(context.applicationContext)
   })
   val messagesState by messagesModel.state.collectAsState()
-  LaunchedEffect(pagerState.currentPage, session.personId) {
+  LaunchedEffect(session.personId) {
     val person = session.personId
     if (person == null) {
       profileModel.clear()
       messagesModel.clear()
-    } else {
-      messagesModel.load(person)
-      if (pagerState.currentPage == 2) profileModel.load(person)
-      if (pagerState.currentPage == 1) messagesModel.load(person)
-    }
+    } else messagesModel.loadUnread(person)
   }
+  ObserveRootTabSelection(
+    state = rootTabs,
+    authenticated = session.isAuthenticated,
+    rootVisible = currentDestination == null,
+    onSignIn = onNavigateToSignIn,
+    onSelected = { tab -> session.personId?.let { person ->
+      when (tab) {
+        RootTab.OFFERS -> Unit
+        RootTab.MESSAGES -> messagesModel.load(person)
+        RootTab.PROFILE -> profileModel.load(person)
+      }
+    } }
+  )
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-    session.personId?.let { personId ->
-      messagesModel.load(personId, force = false)
-      if (pagerState.currentPage == 2) profileModel.load(personId, force = true)
-      if (pagerState.currentPage == 1) messagesModel.load(personId, force = true)
-    }
-  }
-  LaunchedEffect(pagerState.currentPage, session.isAuthenticated) {
-    if (!session.isAuthenticated && pagerState.currentPage != 0) {
-      HavenAuthClient.logDiagnostic("UI", "NAVIGATE_TO_SIGN_IN", "Protected tab reached while unauthenticated; navigating to Sign In screen.")
-      onNavigateToSignIn()
-      pagerState.scrollToPage(0)
+    session.personId?.let { person ->
+      messagesModel.loadUnread(person)
+      if (currentDestination == null && !rootTabs.pager.isScrollInProgress) {
+        when (rootTabs.settledTab) {
+          RootTab.OFFERS -> Unit
+          RootTab.MESSAGES -> messagesModel.load(person, force = true)
+          RootTab.PROFILE -> profileModel.load(person, force = true)
+        }
+      }
     }
   }
 
@@ -617,7 +636,7 @@ fun OffersScreen(
           onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
           onBrowseOffers = {
             navStack = emptyList()
-            scope.launch { pagerState.animateScrollToPage(0) }
+            rootTabs.select(RootTab.OFFERS)
           },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           modifier = modifier
@@ -643,7 +662,7 @@ fun OffersScreen(
           onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },
           onDiscoverOffers = {
             navStack = emptyList()
-            scope.launch { pagerState.animateScrollToPage(0) }
+            rootTabs.select(RootTab.OFFERS)
           },
           modifier = modifier
         )
@@ -686,19 +705,20 @@ fun OffersScreen(
   BackHandler {
     when {
       navStack.isNotEmpty() -> navStack = navStack.dropLast(1)
-      pagerState.currentPage != 0 -> scope.launch { pagerState.animateScrollToPage(0) }
+      rootTabs.currentTab != RootTab.OFFERS -> rootTabs.select(RootTab.OFFERS)
       else -> onNavigateBack()
     }
   }
 
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("offers_screen")) {
-    HorizontalPager(
-      state = pagerState,
+    HavenRootPager(
+      state = rootTabs,
+      authenticated = session.isAuthenticated,
       modifier = Modifier.weight(1f).fillMaxWidth(),
-      userScrollEnabled = navStack.isEmpty() && !state.isFilterSheetVisible && browserError == null
-    ) { page ->
-      when (page) {
-        0 -> Column(Modifier.fillMaxSize()) {
+      swipeEnabled = navStack.isEmpty() && !state.isFilterSheetVisible && browserError == null && !profileModalOpen
+    ) { tab ->
+      when (tab) {
+        RootTab.OFFERS -> Column(Modifier.fillMaxSize()) {
           HavenTopBarContainer(backgroundColor = HavenColors.Canvas) {
       val isFeedDisabled = (browserError ?: state.error) != null && state.items.isEmpty()
       Column(modifier = if (isFeedDisabled) Modifier.alpha(0.45f) else Modifier) {
@@ -812,7 +832,9 @@ fun OffersScreen(
           }
           Row(
             Modifier
-              .horizontalScroll(rememberScrollState())
+              .nestedScroll(CategoryScrollBoundary)
+              .horizontalScroll(categoryScroll)
+              .testTag("offer_categories")
               .padding(horizontal = 16.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
@@ -1014,7 +1036,7 @@ fun OffersScreen(
     }
 
         }
-        1 -> {
+        RootTab.MESSAGES -> {
           if (session.isAuthenticated) {
             MessagesInboxScreen(
               state = messagesState,
@@ -1023,13 +1045,14 @@ fun OffersScreen(
               onSelectConversation = { id ->
                 navStack = navStack + OffersDestination.ConversationThread(id)
               },
-              modifier = Modifier.fillMaxSize()
+              modifier = Modifier.fillMaxSize(),
+              listState = inboxScroll
             )
           } else {
             Box(Modifier.fillMaxSize())
           }
         }
-        2 -> {
+        RootTab.PROFILE -> {
           if (session.isAuthenticated) {
             val visibleProfile = if (profileState.profile?.let { it.id != session.personId } == true)
               com.example.ui.model.ProfileUiState(loading = true) else profileState
@@ -1044,7 +1067,9 @@ fun OffersScreen(
               onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
               onOpenPublicProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
               onOpenEditProfile = { navStack = navStack + OffersDestination.EditProfile },
-              modifier = Modifier.fillMaxSize()
+              modifier = Modifier.fillMaxSize(),
+              scrollState = profileScroll,
+              onModalVisibilityChanged = { profileModalOpen = it }
             )
           } else {
             Box(Modifier.fillMaxSize())
@@ -1066,14 +1091,14 @@ fun OffersScreen(
           label = "Offers",
           activeIcon = Icons.Filled.GridView,
           inactiveIcon = Icons.Outlined.GridView,
-          selected = pagerState.currentPage == 0
+          selected = rootTabs.currentTab == RootTab.OFFERS
         ) {
-          val wasAlreadyOnOffers = pagerState.currentPage == 0 && navStack.isEmpty()
+          val wasAlreadyOnOffers = rootTabs.currentTab == RootTab.OFFERS && navStack.isEmpty()
           if (navStack.isNotEmpty()) {
             navStack = emptyList()
           }
-          if (pagerState.currentPage != 0) {
-            scope.launch { pagerState.animateScrollToPage(0) }
+          if (rootTabs.currentTab != RootTab.OFFERS) {
+            rootTabs.select(RootTab.OFFERS)
           } else if (wasAlreadyOnOffers) {
             scope.launch { gridState.animateScrollToItem(0) }
             viewModel.refresh()
@@ -1086,14 +1111,13 @@ fun OffersScreen(
           label = "Messages",
           activeIcon = Icons.Filled.ChatBubble,
           inactiveIcon = Icons.Outlined.ChatBubbleOutline,
-          selected = pagerState.currentPage == 1 && session.isAuthenticated,
+          selected = rootTabs.currentTab == RootTab.MESSAGES && session.isAuthenticated,
           badgeCount = 0,
           hasUnreadDot = hasUnread
         ) {
           if (session.isAuthenticated) {
             if (navStack.isNotEmpty()) navStack = emptyList()
-            scope.launch { pagerState.animateScrollToPage(1) }
-            session.personId?.let { messagesModel.load(it) }
+            rootTabs.select(RootTab.MESSAGES)
           } else {
             HavenAuthClient.logDiagnostic("UI", "NAVIGATE_TO_SIGN_IN", "Messages tab clicked while unauthenticated; navigating to Sign In screen.")
             onNavigateToSignIn()
@@ -1104,12 +1128,12 @@ fun OffersScreen(
           label = if (session.isAuthenticated) "Profile" else "Log in",
           activeIcon = Icons.Filled.Person,
           inactiveIcon = Icons.Outlined.PersonOutline,
-          selected = pagerState.currentPage == 2 && session.isAuthenticated,
+          selected = rootTabs.currentTab == RootTab.PROFILE && session.isAuthenticated,
           isLogInAction = !session.isAuthenticated
         ) {
           if (session.isAuthenticated) {
             if (navStack.isNotEmpty()) navStack = emptyList()
-            scope.launch { pagerState.animateScrollToPage(2) }
+            rootTabs.select(RootTab.PROFILE)
           } else {
             HavenAuthClient.logDiagnostic("UI", "NAVIGATE_TO_SIGN_IN", "Log in tab clicked while unauthenticated; navigating to Sign In screen.")
             onNavigateToSignIn()
@@ -1118,7 +1142,7 @@ fun OffersScreen(
       }
     }
   }
-  if (pagerState.currentPage != 0 && browserError != null) AlertDialog(
+  if (rootTabs.currentTab != RootTab.OFFERS && browserError != null) AlertDialog(
     onDismissRequest = { browserError = null }, title = { Text("Couldn’t open page") },
     text = { Text(browserError ?: "") },
     confirmButton = { TextButton(onClick = { browserError = null }) { Text("Close") } })
@@ -1173,7 +1197,7 @@ private fun RowScope.FeedNavItem(
     modifier = Modifier
       .weight(1f)
       .height(58.dp)
-      .clickable(onClick = onClick)
+      .selectable(selected = selected, role = Role.Tab, onClick = onClick)
       .testTag(tag),
     contentAlignment = Alignment.Center
   ) {

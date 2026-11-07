@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +51,8 @@ fun MessagesInboxScreen(
   onRetry: () -> Unit,
   onLoadMore: () -> Unit,
   onSelectConversation: (String) -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  listState: LazyListState = rememberLazyListState()
 ) {
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("messages_inbox_screen")) {
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas) {
@@ -76,7 +79,7 @@ fun MessagesInboxScreen(
         Text("When you message someone about an offer or someone reaches out to you, conversations will appear here.",
           color = HavenColors.TextSecondary, fontFamily = InterFontFamily, fontSize = 14.sp)
       }
-      else -> LazyColumn(Modifier.fillMaxSize().testTag("messages_list")) {
+      else -> LazyColumn(Modifier.fillMaxSize().testTag("messages_list"), state = listState) {
         items(state.items, key = InboxConversation::id) { item ->
           InboxConversationRow(item, onClick = { onSelectConversation(item.id) })
         }
