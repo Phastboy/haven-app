@@ -5,10 +5,10 @@
 
 # Haven Android — Reproducible Build Handoff
 
-Date: 2026-11-07  
-Package: `com.aistudio.haven.xvykpt`  
-Application ID: `com.aistudio.haven.xvykpt`  
-Target Host: `https://haven.apps.mistral.run`  
+Date: 2026-11-07
+Package: `com.aistudio.haven.xvykpt`
+Application ID: `com.aistudio.haven.xvykpt`
+Target Host: `https://haven.apps.mistral.run`
 Base Source Commit: `5d1b6813ffd7925d2dfa4e766717d291f007c070` (plus subsequent native parity and build fixes)
 
 ---
