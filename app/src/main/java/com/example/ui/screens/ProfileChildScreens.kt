@@ -51,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -118,7 +117,6 @@ fun SavedOffersScreen(
     // Back-only Top Bar with status bar safe integration
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -351,8 +349,7 @@ private fun SavedOfferCard(
             .size(32.dp)
             .clip(CircleShape)
             .background(HavenColors.Canvas.copy(alpha = 0.95f))
-            .clickable { onRemove() }
-            .shadow(2.dp, CircleShape),
+            .clickable { onRemove() },
           contentAlignment = Alignment.Center
         ) {
           Icon(
@@ -439,7 +436,6 @@ fun FollowingScreen(
   ) {
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -713,7 +709,6 @@ fun MyOffersScreen(
   ) {
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -920,7 +915,6 @@ fun MyOffersScreen(
               .clip(RoundedCornerShape(28.dp))
               .background(HavenColors.SurfaceCard)
               .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(28.dp))
-              .shadow(24.dp, RoundedCornerShape(28.dp))
               .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null

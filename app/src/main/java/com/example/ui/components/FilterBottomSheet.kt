@@ -107,7 +107,6 @@ fun FilterBottomSheet(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .border(width = 1.dp, color = HavenColors.BorderSubtle)
           .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -320,7 +319,6 @@ fun FilterBottomSheet(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .border(1.dp, HavenColors.BorderSubtle)
           .background(HavenColors.Canvas)
           .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

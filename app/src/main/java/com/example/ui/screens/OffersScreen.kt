@@ -99,6 +99,8 @@ import com.example.ui.model.ProfileViewModel
 import com.example.ui.model.MessagesInboxViewModel
 import com.example.ui.model.ConversationThreadViewModel
 import com.example.ui.model.InquiryComposeViewModel
+import com.example.ui.components.FeedHeaderLayout
+import com.example.ui.components.FeedActionButton
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.OfferCardSkeleton
 import com.example.ui.components.shimmerBackground
@@ -704,19 +706,12 @@ fun OffersScreen(
           navStack = navStack + OffersDestination.ConversationThread(id)
         }, modifier = Modifier.weight(1f))
     } else {
-    HavenTopBarContainer(backgroundColor = HavenColors.Canvas, showBottomBorder = false) {
+    HavenTopBarContainer(backgroundColor = HavenColors.Canvas) {
       val isFeedDisabled = (browserError ?: state.error) != null && state.items.isEmpty()
       Column(modifier = if (isFeedDisabled) Modifier.alpha(0.45f) else Modifier) {
-        Row(
-          Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
+        FeedHeaderLayout(search = { searchModifier ->
           Row(
-            Modifier
-              .weight(1f)
+            searchModifier
               .height(40.dp)
               .clip(RoundedCornerShape(20.dp))
               .background(HavenColors.SurfaceContainer)
@@ -733,7 +728,8 @@ fun OffersScreen(
                   lineHeight = 18.sp,
                   fontFamily = InterFontFamily,
                   color = HavenColors.TextSecondary,
-                  maxLines = 1
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
               BasicTextField(
@@ -756,58 +752,25 @@ fun OffersScreen(
               }
             }
           }
-          Box(
-            modifier = Modifier
-              .size(40.dp)
-              .clip(RoundedCornerShape(20.dp))
-              .background(HavenColors.SurfaceContainer)
-              .clickable(enabled = !isFeedDisabled && state.currencies.isNotEmpty(), onClick = viewModel::openFilterSheet)
-              .testTag("open_filters_button"),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Outlined.Tune, "Filters", tint = HavenColors.TextPrimary, modifier = Modifier.size(18.dp))
-            if (state.activeFilterCount > 0) {
-              Box(
-                Modifier
-                  .align(Alignment.TopEnd)
-                  .padding(top = 8.dp, end = 8.dp)
-                  .size(7.dp)
-                  .clip(RoundedCornerShape(4.dp))
-                  .background(HavenColors.Primary)
-              )
-            }
-          }
-          IconButton(
-            onClick = { navStack = navStack + OffersDestination.ReferenceLocation },
-            enabled = !isFeedDisabled,
-            modifier = Modifier
-              .size(40.dp)
-              .background(
-                if (state.activeReference != null) HavenColors.Primary else HavenColors.SurfaceContainer,
-                RoundedCornerShape(20.dp)
-              )
-              .testTag("choose_location_button")
-          ) {
-            Icon(
-              Icons.Outlined.LocationOn,
-              "Choose a place on Haven",
-              tint = if (state.activeReference != null) HavenColors.TextOnDark else HavenColors.TextPrimary,
-              modifier = Modifier.size(18.dp)
-            )
-          }
-          IconButton(
+        }, actions = {
+          FeedActionButton(
+            icon = Icons.Outlined.Tune, description = "Filters", tag = "open_filters_button",
+            enabled = !isFeedDisabled && state.currencies.isNotEmpty(),
+            badge = state.activeFilterCount > 0, onClick = viewModel::openFilterSheet
+          )
+          FeedActionButton(
+            icon = Icons.Outlined.LocationOn, description = "Choose a place on Haven", tag = "choose_location_button",
+            enabled = !isFeedDisabled, emphasized = state.activeReference != null,
+            onClick = { navStack = navStack + OffersDestination.ReferenceLocation }
+          )
+          FeedActionButton(
+            icon = Icons.Outlined.Add, description = "Post an offer", tag = "post_offer_button",
+            enabled = !isFeedDisabled, emphasized = true,
             onClick = {
-              if (session.isAuthenticated) run { navStack = navStack + OffersDestination.OfferEditor() } else onNavigateToSignIn()
-            },
-            enabled = !isFeedDisabled,
-            modifier = Modifier
-              .size(40.dp)
-              .background(HavenColors.Primary, RoundedCornerShape(20.dp))
-              .testTag("post_offer_button")
-          ) {
-            Icon(Icons.Outlined.Add, "Post an offer", tint = HavenColors.TextOnDark, modifier = Modifier.size(20.dp))
-          }
-        }
+              if (session.isAuthenticated) navStack = navStack + OffersDestination.OfferEditor() else onNavigateToSignIn()
+            }
+          )
+        })
         if (!isFeedDisabled) {
           if (state.activeReference != null) {
             Row(
@@ -933,6 +896,7 @@ fun OffersScreen(
       items(state.items, key = { it.id }) { offer ->
         FeedOfferCard(
           offer = offer,
+          showDistance = state.activeReference != null,
           saved = savedStates[offer.slug] ?: (offer.isSaved == true),
           saving = offer.slug in savingSlugs,
           onSave = { saveOffer(offer.slug) },
@@ -1059,8 +1023,6 @@ fun OffersScreen(
     }
     HavenBottomBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showTopBorder = true,
-      borderColor = HavenColors.BorderSubtle
     ) {
       Row(
         Modifier

@@ -127,7 +127,6 @@ fun NativeConversationThreadScreen(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
     ) {
       Spacer(modifier = Modifier.windowInsetsTopHeight(HavenInsets.statusBarsAndCutouts))
 
@@ -164,8 +163,7 @@ fun NativeConversationThreadScreen(
             modifier = Modifier
               .size(40.dp)
               .clip(CircleShape)
-              .background(HavenColors.SurfaceContainer)
-              .border(1.dp, HavenColors.BorderSubtle, CircleShape),
+              .background(HavenColors.SurfaceContainer),
             contentAlignment = Alignment.Center
           ) {
             if (!avatarUrl.isNullOrBlank()) {
@@ -315,7 +313,6 @@ fun NativeConversationThreadScreen(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
         .windowInsetsPadding(HavenInsets.bottomWithIme.only(WindowInsetsSides.Bottom))
         .padding(horizontal = 12.dp, vertical = 10.dp)
         .testTag("thread_composer_bar")
@@ -328,7 +325,6 @@ fun NativeConversationThreadScreen(
             .padding(bottom = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(HavenColors.SurfaceContainer)
-            .border(1.dp, HavenColors.BorderDefault, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 6.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
@@ -450,16 +446,6 @@ private fun NativeMessageBubble(
           )
         )
         .background(if (isMe) HavenColors.Primary else HavenColors.SurfaceContainer)
-        .border(
-          width = if (isMe) 0.dp else 1.dp,
-          color = if (isMe) Color.Transparent else HavenColors.BorderSubtle,
-          shape = RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = if (isMe) 16.dp else 4.dp,
-            bottomEnd = if (isMe) 4.dp else 16.dp
-          )
-        )
         .padding(12.dp)
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

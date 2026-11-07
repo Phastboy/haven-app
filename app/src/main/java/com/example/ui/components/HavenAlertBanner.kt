@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +35,6 @@ fun HavenAlertBanner(
     modifier = modifier
       .fillMaxWidth()
       .background(color = HavenColors.SurfaceContainer, shape = RoundedCornerShape(8.dp))
-      .border(width = 1.dp, color = HavenColors.BorderStrong, shape = RoundedCornerShape(8.dp))
       .padding(12.dp)
       .testTag(testTag),
     horizontalArrangement = Arrangement.spacedBy(10.dp),

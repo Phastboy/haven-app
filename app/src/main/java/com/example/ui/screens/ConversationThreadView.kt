@@ -108,7 +108,6 @@ fun ConversationThreadView(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
     ) {
       // Dynamic height for status bar + camera punch holes / notches
       Spacer(modifier = Modifier.windowInsetsTopHeight(HavenInsets.statusBarsAndCutouts))
@@ -146,8 +145,7 @@ fun ConversationThreadView(
             modifier = Modifier
               .size(40.dp)
               .clip(CircleShape)
-              .background(HavenColors.SurfaceContainer)
-              .border(1.dp, HavenColors.BorderSubtle, CircleShape),
+              .background(HavenColors.SurfaceContainer),
             contentAlignment = Alignment.Center
           ) {
             if (!conversation.avatarUrl.isNullOrBlank()) {
@@ -250,7 +248,6 @@ fun ConversationThreadView(
             modifier = Modifier
               .clip(RoundedCornerShape(16.dp))
               .background(HavenColors.Canvas)
-              .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(16.dp))
               .padding(horizontal = 14.dp, vertical = 6.dp)
           ) {
             Text(
@@ -281,7 +278,6 @@ fun ConversationThreadView(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
         .windowInsetsPadding(HavenInsets.bottomWithIme.only(WindowInsetsSides.Bottom))
         .padding(horizontal = 12.dp, vertical = 10.dp)
         .testTag("conversation_composer_bar")
@@ -294,7 +290,6 @@ fun ConversationThreadView(
             .padding(bottom = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(HavenColors.SurfaceContainer)
-            .border(1.dp, HavenColors.BorderDefault, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 6.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
@@ -361,7 +356,6 @@ fun ConversationThreadView(
             .size(44.dp)
             .clip(CircleShape)
             .background(if (pendingAttachedOffer != null) HavenColors.SurfaceContainer else HavenColors.Canvas)
-            .border(1.dp, HavenColors.BorderDefault, CircleShape)
             .testTag("attach_offer_button")
         ) {
           Icon(
@@ -458,16 +452,6 @@ private fun MessageBubbleItem(
           )
         )
         .background(if (isMe) HavenColors.Primary else HavenColors.SurfaceContainer)
-        .border(
-          width = if (isMe) 0.dp else 1.dp,
-          color = if (isMe) Color.Transparent else HavenColors.BorderSubtle,
-          shape = RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = if (isMe) 16.dp else 4.dp,
-            bottomEnd = if (isMe) 4.dp else 16.dp
-          )
-        )
         .padding(12.dp)
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

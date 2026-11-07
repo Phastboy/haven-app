@@ -86,12 +86,13 @@ class ProfileAndThemeRobolectricTest {
         val contentColor = LocalContentColor.current
         SideEffect { foreground = contentColor }
         Column(Modifier.width(180.dp).background(HavenColors.Canvas)) {
-          FeedOfferCard(offer, onOpen = {})
+          FeedOfferCard(offer, showDistance = true, onOpen = {})
         }
       }
     }
     compose.onNodeWithTag("offer_title_test", useUnmergedTree = true).assertIsDisplayed()
-    compose.onNodeWithText("Real person · 1.3 km", useUnmergedTree = true).assertIsDisplayed()
+    compose.onNodeWithText("Real person", useUnmergedTree = true).assertIsDisplayed()
+    compose.onNodeWithText("1.3 km", useUnmergedTree = true).assertIsDisplayed()
     assertEquals(if (mode == ThemeMode.DARK) HavenDarkPalette.textPrimary else HavenLightPalette.textPrimary, foreground)
     for (tag in listOf("offer_title_test", "offer_price_test")) {
       val pixels = captureNodeBitmap(tag).asImageBitmap().toPixelMap()

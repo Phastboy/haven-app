@@ -3,7 +3,7 @@ package com.example.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -32,13 +31,13 @@ import com.example.ui.theme.HavenColors
 
 enum class HavenBackButtonVariant {
   STANDARD, // Top bar style (48x48dp touch area, clean icon)
-  FLOATING  // Floating circular pill (40x40dp pill, 2dp elevation, subtle border, spring animation)
+  FLOATING  // Floating circular pill (40x40dp pill, flat fill, spring animation)
 }
 
 /**
  * Reusable Back Navigation Button for Haven:
  * - STANDARD: Clean 48x48dp touch target for top app bars across all child screens
- * - FLOATING: 40x40dp circular pill with 2dp shadow, subtle hairline border, and spring press feedback (matching HavenSaveButton)
+ * - FLOATING: 40x40dp flat circular pill with spring press feedback (matching HavenSaveButton)
  * - Monastic greyscale styling ensuring visual harmony across all child and detail screens
  */
 @Composable
@@ -51,7 +50,6 @@ fun HavenBackButton(
   iconSize: Dp = if (variant == HavenBackButtonVariant.FLOATING) 20.dp else 24.dp,
   icon: ImageVector = Icons.AutoMirrored.Outlined.ArrowBack,
   backgroundColor: Color = if (variant == HavenBackButtonVariant.FLOATING) HavenColors.Canvas.copy(alpha = 0.95f) else Color.Transparent,
-  elevation: Dp = if (variant == HavenBackButtonVariant.FLOATING) 2.dp else 0.dp,
   tint: Color = if (enabled) HavenColors.TextPrimary else HavenColors.TextMuted,
   contentDescription: String = "Navigate back",
   testTag: String = "back_button"
@@ -69,14 +67,12 @@ fun HavenBackButton(
       modifier = modifier
         .size(size)
         .scale(scale)
-        .shadow(elevation = elevation, shape = CircleShape)
         .clip(CircleShape)
         .background(backgroundColor)
-        .border(0.5.dp, HavenColors.BorderSubtle.copy(alpha = 0.6f), CircleShape)
         .clickable(
           enabled = enabled,
           interactionSource = interactionSource,
-          indication = null,
+          indication = LocalIndication.current,
           role = Role.Button,
           onClick = onBack
         )

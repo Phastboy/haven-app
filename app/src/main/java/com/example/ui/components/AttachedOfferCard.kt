@@ -2,7 +2,6 @@ package com.example.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,7 +45,6 @@ fun AttachedOfferCard(
   isFromMe: Boolean = false
 ) {
   val containerBg = if (isFromMe) Color.White.copy(alpha = 0.12f) else HavenColors.Canvas
-  val borderColor = if (isFromMe) Color.White.copy(alpha = 0.25f) else HavenColors.BorderDefault
   val titleColor = if (isFromMe) HavenColors.TextOnDark else HavenColors.TextPrimary
   val priceColor = if (isFromMe) HavenColors.TextOnDark.copy(alpha = 0.9f) else HavenColors.TextPrimary
 
@@ -55,7 +53,6 @@ fun AttachedOfferCard(
       .fillMaxWidth()
       .clip(RoundedCornerShape(8.dp))
       .background(containerBg)
-      .border(1.dp, borderColor, RoundedCornerShape(8.dp))
       .clickable { onOfferClick() }
       .padding(8.dp)
       .testTag("attached_offer_${offer.id}"),

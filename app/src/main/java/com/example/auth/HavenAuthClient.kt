@@ -176,6 +176,10 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     }
   }
 
+  /** Presence is not proof of authentication; it distinguishes retry from signed out. */
+  @Synchronized
+  fun hasSavedSession(): Boolean = store.refreshToken != null
+
   /** Restores a session by rotating the stored refresh token, then checking /me. */
   @Synchronized
   fun restore(): Boolean {
