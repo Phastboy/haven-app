@@ -27,7 +27,8 @@ data class MessagesInboxUiState(
   val loading: Boolean = false,
   val loadingMore: Boolean = false,
   val error: String? = null,
-  val globalUnread: Boolean = false
+  val globalUnread: Boolean = false,
+  val unreadConfirmed: Boolean = false
 )
 
 class MessagesInboxViewModel(
@@ -39,20 +40,27 @@ class MessagesInboxViewModel(
   private var actor: String? = null
   private var job: Job? = null
   private var observeJob: Job? = null
+  private var unreadJob: Job? = null
 
   fun clear() {
     job?.cancel()
+    unreadJob?.cancel()
     observeJob?.cancel()
     actor = null
     _state.value = MessagesInboxUiState()
   }
 
   fun refreshUnread() {
-    viewModelScope.launch {
+    val requestedActor = actor ?: return
+    if (unreadJob?.isActive == true) return
+    unreadJob = viewModelScope.launch {
       try {
         val hasUnread = repository.getGlobalUnread()
-        _state.update { it.copy(globalUnread = hasUnread) }
-      } catch (_: Exception) {}
+        if (actor == requestedActor) _state.update { it.copy(globalUnread = hasUnread, unreadConfirmed = true) }
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) {
+        if (actor == requestedActor) _state.update { it.copy(unreadConfirmed = false) }
+      }
     }
   }
 
@@ -61,6 +69,7 @@ class MessagesInboxViewModel(
       refreshUnread()
       return
     }
+    if (actor != personId) clear()
     job?.cancel()
     actor = personId
 
@@ -106,7 +115,7 @@ class MessagesInboxViewModel(
       job = viewModelScope.launch {
         try {
           val page = repository.load(null)
-          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread)
+          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread, unreadConfirmed = _state.value.unreadConfirmed)
         } catch (cancelled: CancellationException) {
           throw cancelled
         } catch (_: Exception) {
@@ -127,7 +136,7 @@ class MessagesInboxViewModel(
         if (actor == personId) {
           _state.value = _state.value.copy(
             loadingMore = false,
-            error = if (result.isFailure && _state.value.items.isEmpty()) "Couldn’t load more messages. Please try again." else null
+            error = if (result.isFailure) "Couldn’t load more messages. Please try again." else null
           )
         }
       }

@@ -88,23 +88,28 @@ class MyOffersViewModel(
     _state.update {
       it.copy(
         pendingDeleteSlugs = it.pendingDeleteSlugs + slug,
-        offers = currentOffers.copy(items = currentOffers.items.filter { item -> item.slug != slug }),
-        actionMessage = "Deleted “${offer.title}”."
+        actionMessage = null
       )
     }
 
     viewModelScope.launch {
       repository.deleteOffer(slug)
-        .onSuccess {
-          _state.update { it.copy(pendingDeleteSlugs = it.pendingDeleteSlugs - slug) }
-          onSuccess()
+        .onSuccess { deleted ->
+          if (deleted) {
+            _state.update { current -> current.copy(
+              pendingDeleteSlugs = current.pendingDeleteSlugs - slug,
+              offers = current.offers?.copy(items = current.items.filter { it.slug != slug }),
+              actionMessage = "Deleted “${offer.title}”.") }
+            onSuccess()
+          } else {
+            _state.update { it.copy(pendingDeleteSlugs = it.pendingDeleteSlugs - slug,
+              actionMessage = "Deletion wasn’t confirmed. Refresh your offers before retrying.") }
+          }
         }
         .onFailure { error ->
           if (error is CancellationException) throw error
           _state.update { current ->
-            val restored = (current.offers?.items.orEmpty() + offer).distinctBy { it.id }
             current.copy(
-              offers = current.offers?.copy(items = restored),
               pendingDeleteSlugs = current.pendingDeleteSlugs - slug,
               actionMessage = "Couldn’t delete “${offer.title}”. Please try again."
             )
@@ -118,10 +123,10 @@ class MyOffersViewModel(
   }
 
   companion object {
-    fun factory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    fun factory(context: Context, ownerPersonId: String? = SessionManager.session.value.personId): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val repo = HavenMyOffersRepository.create(context)
+        val repo = HavenMyOffersRepository.create(context, ownerPersonId)
         return MyOffersViewModel(repo) as T
       }
     }

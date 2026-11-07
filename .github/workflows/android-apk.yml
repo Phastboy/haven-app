@@ -8,9 +8,14 @@ on:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
@@ -18,20 +23,50 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.21+9'
       - uses: android-actions/setup-android@v4
       - name: Install Android SDK platform
         run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
-      - name: Generate CI debug keystore
+      - name: Install persistent testing signer
+        env:
+          HAVEN_TEST_KEYSTORE_BASE64: ${{ secrets.HAVEN_TEST_KEYSTORE_BASE64 }}
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
-          if [[ ! -f debug.keystore ]]; then
-            keytool -genkeypair -noprompt -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug, O=Android, C=US"
+          umask 077
+          if [[ -n "$HAVEN_TEST_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$HAVEN_TEST_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+          elif [[ "$IS_FORK" == "true" ]]; then
+            keytool -genkeypair -noprompt -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Fork Verification Only, O=Haven, C=NG"
+          else
+            echo 'Missing persistent testing signer. Restore HAVEN_TEST_KEYSTORE_BASE64; do not generate a replacement.' >&2
+            exit 1
+          fi
+      - name: Install release signer
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.HAVEN_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          umask 077
+          if [[ "$IS_FORK" == "true" ]]; then
+            echo 'Fork builds verify debug only.'
+          else
+            test -n "$RELEASE_KEYSTORE"
+            test -n "$RELEASE_PASSWORD"
+            printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/haven-release.p12"
           fi
       - uses: gradle/actions/setup-gradle@v4
       - name: Ensure Gradle wrapper is executable
         run: chmod +x ./gradlew
       - name: Build, test, and lint
         run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Build release APK and lint
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/haven-release.p12
+          STORE_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease :app:lintRelease
       - name: Upload verification reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,19 +74,64 @@ jobs:
           name: haven-android-verification-reports
           path: |
             app/build/reports/lint-results-debug.*
+            app/build/reports/lint-results-release.*
             app/build/reports/screenshots/
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
+      - name: Record APK provenance and verify signer
+        env:
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/apksigner" verify --verbose --print-certs "$apk" > apk-provenance.txt
+          if [[ "$IS_FORK" != "true" ]]; then
+            grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' apk-provenance.txt
+          fi
+          printf '\nSource commit: %s\nVariant: debug (testing only)\n' "$(git rev-parse HEAD)" >> apk-provenance.txt
+          printf 'Workflow: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> apk-provenance.txt
+          ./gradlew --version >> apk-provenance.txt
+          "$tools/aapt" dump badging "$apk" >> apk-provenance.txt
+          sha256sum "$apk" > apk-sha256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: haven-android-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-provenance.txt
+            apk-sha256.txt
           if-no-files-found: error
-      - name: Attach testing APK to release
+      - name: Verify release identity and provenance
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          mkdir -p release-assets
+          apk=release-assets/haven-v0.0.0.apk
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
+          grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
+          "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
+          grep -q "package: name='com.aistudio.haven.xvykpt' versionCode='10' versionName='0.0.0'" release-assets/manifest.txt
+          if grep -q 'application-debuggable' release-assets/manifest.txt; then
+            echo 'Release APK must not be debuggable' >&2
+            exit 1
+          fi
+          printf '\nSource commit: %s\nVariant: release\nWorkflow: %s/%s/actions/runs/%s\n' "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-assets/apk-provenance.txt
+          ./gradlew --version >> release-assets/apk-provenance.txt
+          cd release-assets
+          sha256sum haven-v0.0.0.apk > SHA256SUMS
+      - name: Upload release candidate
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: haven-android-release-apk
+          path: release-assets/
+          if-no-files-found: error
+      - name: Attach verified APK to published release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk haven-android-testing.apk
-          gh release upload "$GITHUB_REF_NAME" haven-android-testing.apk --clobber
+          test "$GITHUB_REF_NAME" = v0.0.0
+          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.0.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber

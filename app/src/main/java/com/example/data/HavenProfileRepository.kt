@@ -25,9 +25,10 @@ interface ProfileRepository {
   suspend fun removeAvatar(): Result<ProfileOverview>
 }
 
-class HavenProfileRepository(private val auth: HavenAuthClient) : ProfileRepository {
+class HavenProfileRepository(private val auth: HavenAuthClient,
+  private val ownerPersonId: String? = com.example.ui.model.SessionManager.session.value.personId) : ProfileRepository {
   override suspend fun load(): ProfileOverview = withContext(Dispatchers.IO) {
-    parseProfile(auth.authenticatedGet("/api/v1/me/profile"))
+    parseProfile(auth.authenticatedGet("/api/v1/me/profile", expectedPersonId = ownerPersonId))
   }
 
   override suspend fun updateProfile(
@@ -45,9 +46,9 @@ class HavenProfileRepository(private val auth: HavenAuthClient) : ProfileReposit
           put("bio", bio.trim())
         }
       }
-      auth.authenticatedMutation("POST", "/api/v1/me/profile", payload)
+      auth.authenticatedMutation("POST", "/api/v1/me/profile", payload, expectedPersonId = ownerPersonId)
       val updated = load()
-      com.example.ui.model.SessionManager.signInPerson(updated.id, updated.displayName, updated.handle)
+      com.example.ui.model.SessionManager.updateProfileIfCurrent(updated.id, updated.displayName, updated.handle)
       updated
     }
   }
@@ -62,7 +63,8 @@ class HavenProfileRepository(private val auth: HavenAuthClient) : ProfileReposit
         fieldName = "avatar",
         filename = "avatar.jpg",
         bytes = bytes,
-        mimeType = mimeType
+        mimeType = mimeType,
+        expectedPersonId = ownerPersonId
       )
       load()
     }
@@ -70,7 +72,7 @@ class HavenProfileRepository(private val auth: HavenAuthClient) : ProfileReposit
 
   override suspend fun removeAvatar(): Result<ProfileOverview> = withContext(Dispatchers.IO) {
     runCatching {
-      auth.authenticatedMutation("DELETE", "/api/v1/me/avatar")
+      auth.authenticatedMutation("DELETE", "/api/v1/me/avatar", expectedPersonId = ownerPersonId)
       load()
     }
   }

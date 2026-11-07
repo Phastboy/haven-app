@@ -15,7 +15,8 @@ import org.json.JSONObject
  * paging contract; thread reads and sends map the native JSON routes.
  */
 class HavenProductionMessagingTransport(
-  private val auth: HavenAuthClient
+  private val auth: HavenAuthClient,
+  private val ownerPersonId: String? = com.example.ui.model.SessionManager.session.value.personId
 ) : MessagingTransport {
 
   override suspend fun getConversations(cursor: String?): Result<ConversationInboxPageDto> =
@@ -23,7 +24,7 @@ class HavenProductionMessagingTransport(
       runCatching {
         val query = cursor?.let { "?after=${Uri.encode(it)}" }.orEmpty()
         val parsed = HavenMessagesRepository.parseInbox(
-          auth.authenticatedGet("/api/v1/conversations$query")
+          auth.authenticatedGet("/api/v1/conversations$query", expectedPersonId = ownerPersonId)
         )
         ConversationInboxPageDto(
           items = parsed.items.map { item ->
@@ -51,7 +52,7 @@ class HavenProductionMessagingTransport(
       val query = after?.let { "?after=${Uri.encode(it)}" }.orEmpty()
       parseThread(
         auth.authenticatedGet(
-          "/api/v1/conversations/${Uri.encode(conversationId)}$query"
+          "/api/v1/conversations/${Uri.encode(conversationId)}$query", expectedPersonId = ownerPersonId
         )
       )
     }
@@ -107,7 +108,7 @@ class HavenProductionMessagingTransport(
         payload.put("offer_id", offerId.trim())
       }
       val response = JSONObject(
-        auth.authenticatedMutation("POST", path, payload)
+        auth.authenticatedMutation("POST", path, payload, expectedPersonId = ownerPersonId)
       )
       val now = System.currentTimeMillis()
       SendMessageAckDto(

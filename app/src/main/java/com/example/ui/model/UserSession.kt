@@ -3,6 +3,7 @@ package com.example.ui.model
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /** Public person fields confirmed by GET /api/v1/me. */
 data class UserSession(
@@ -12,6 +13,9 @@ data class UserSession(
   val displayName: String = "Guest Member",
   val email: String? = null
 ) {
+  fun sameAccount(other: UserSession): Boolean =
+    personId == other.personId && isAuthenticated == other.isAuthenticated
+
   val initial: String get() = displayName.firstOrNull()?.uppercase() ?: "H"
 }
 
@@ -21,6 +25,12 @@ object SessionManager {
 
   fun signInPerson(id: String, displayName: String, handle: String) {
     _session.value = UserSession(true, id, handle, displayName)
+  }
+
+  fun updateProfileIfCurrent(id: String, displayName: String, handle: String) {
+    _session.update { current ->
+      if (current.personId == id) current.copy(displayName = displayName, handle = handle) else current
+    }
   }
 
   fun signOut() {

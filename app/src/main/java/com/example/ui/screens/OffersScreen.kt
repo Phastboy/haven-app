@@ -52,6 +52,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -139,10 +143,16 @@ fun OffersScreen(
   val detailRepository = remember(context.applicationContext) { HavenOfferDetailRepository(HavenAuthClient.shared(context.applicationContext)) }
   val nativePagesRepo = remember(context.applicationContext) { HavenNativePagesRepository(HavenAuthClient.shared(context.applicationContext)) }
   val scope = rememberCoroutineScope()
-  val inquiryModel: InquiryComposeViewModel = viewModel(factory = remember(context.applicationContext) {
+  val inquiryModel: InquiryComposeViewModel = viewModel(key = "InquiryComposeViewModel_${session.personId}", factory = remember(context.applicationContext) {
     InquiryComposeViewModel.factory(context.applicationContext)
   })
   val inquiryState by inquiryModel.state.collectAsState()
+  DisposableEffect(inquiryModel, session.personId) {
+    val actor = session.personId
+    onDispose {
+      if (SessionManager.session.value.personId != actor) inquiryModel.clear()
+    }
+  }
   val navigationSaver = remember {
     androidx.compose.runtime.saveable.listSaver<List<OffersDestination>, String>(
       save = { stack -> stack.map { destination -> when (destination) {
@@ -194,10 +204,12 @@ fun OffersScreen(
 
   // Provider profile state
   val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
-  var providerProfile by remember { mutableStateOf<ProviderProfile?>(null) }
+  val currentProviderHandle by rememberUpdatedState(activeProviderHandle)
+  var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
   var providerLoading by remember { mutableStateOf(false) }
   var providerError by remember { mutableStateOf<String?>(null) }
   var providerRetry by remember { mutableStateOf(0) }
+  var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
 
   // My offers state
   val isMyOffersActive = currentDestination is OffersDestination.MyOffers
@@ -236,11 +248,11 @@ fun OffersScreen(
     }
   }
 
-  val profileModel: ProfileViewModel = viewModel(factory = remember(context.applicationContext) {
+  val profileModel: ProfileViewModel = viewModel(key = "ProfileViewModel_${session.personId}", factory = remember(context.applicationContext) {
     ProfileViewModel.factory(context.applicationContext)
   })
   val profileState by profileModel.state.collectAsState()
-  val messagesModel: MessagesInboxViewModel = viewModel(factory = remember(context.applicationContext) {
+  val messagesModel: MessagesInboxViewModel = viewModel(key = "MessagesInboxViewModel_${session.personId}", factory = remember(context.applicationContext) {
     MessagesInboxViewModel.factory(context.applicationContext)
   })
   val messagesState by messagesModel.state.collectAsState()
@@ -453,22 +465,25 @@ fun OffersScreen(
             if (!session.isAuthenticated) {
               onNavigateToSignIn()
             } else {
-              val currentFollowing = providerProfile?.person?.isFollowing ?: false
-              val targetFollowing = !currentFollowing
-              providerProfile = providerProfile?.copy(
-                person = providerProfile!!.person.copy(isFollowing = targetFollowing)
-              )
-              scope.launch {
-                try {
-                  if (targetFollowing) {
-                    nativePagesRepo.follow(handle)
-                  } else {
-                    nativePagesRepo.unfollow(handle)
-                  }
-                } catch (_: Exception) {
-                  providerProfile = providerProfile?.copy(
-                    person = providerProfile!!.person.copy(isFollowing = currentFollowing)
-                  )
+              val actor = session.personId
+              val person = providerProfile?.person
+              if (person?.isFollowing != null && !followPending) {
+                val target = !person.isFollowing
+                followPending = true
+                providerError = null
+                scope.launch {
+                  try {
+                    val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
+                      providerProfile = providerProfile?.let {
+                        if (it.person.id == person.id) it.copy(person = it.person.copy(isFollowing = confirmed)) else it
+                      }
+                    }
+                  } catch (cancelled: CancellationException) { throw cancelled }
+                  catch (_: Exception) {
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
+                      providerError = "Couldn’t update following. Please try again."
+                  } finally { followPending = false }
                 }
               }
             }
@@ -536,8 +551,8 @@ fun OffersScreen(
         if (session.isAuthenticated) {
           val editor: com.example.ui.model.OfferEditorViewModel = viewModel(
             key = "offer_editor_${session.personId}_${currentDestination.entryKey}",
-            factory = remember(currentDestination.entryKey) {
-              com.example.ui.model.OfferEditorViewModel.factory(context.applicationContext, currentDestination.id)
+            factory = remember(currentDestination.entryKey, session.personId) {
+              com.example.ui.model.OfferEditorViewModel.factory(context.applicationContext, currentDestination.id, session.personId)
             }
           )
           NativeOfferEditorScreen(editor, editing = currentDestination.id != null,
@@ -559,8 +574,8 @@ fun OffersScreen(
         }
         val myOffersModel: com.example.ui.model.MyOffersViewModel = viewModel(
           key = "my_offers_${session.personId}_$myOffersRetry",
-          factory = remember(context.applicationContext) {
-            com.example.ui.model.MyOffersViewModel.factory(context.applicationContext)
+          factory = remember(context.applicationContext, session.personId) {
+            com.example.ui.model.MyOffersViewModel.factory(context.applicationContext, session.personId)
           }
         )
         MyOffersScreen(
@@ -625,16 +640,21 @@ fun OffersScreen(
       }
       is OffersDestination.ConversationThread -> {
         val threadModel: ConversationThreadViewModel = viewModel(
-          key = "thread_${currentDestination.conversationId}",
+          key = "thread_${session.personId}_${currentDestination.conversationId}",
           factory = remember(context.applicationContext) {
             ConversationThreadViewModel.factory(context.applicationContext)
           }
         )
-        LaunchedEffect(currentDestination.conversationId) {
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        DisposableEffect(threadModel, lifecycle, session.personId) {
           threadModel.openConversation(currentDestination.conversationId, session.personId)
-        }
-        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-          threadModel.refreshThread()
+          val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) threadModel.startLiveUpdates()
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) threadModel.stopLiveUpdates()
+          }
+          lifecycle.addObserver(observer)
+          if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) threadModel.startLiveUpdates()
+          onDispose { lifecycle.removeObserver(observer); threadModel.stopLiveUpdates() }
         }
         val threadState by threadModel.uiState.collectAsState()
         NativeConversationThreadScreen(
@@ -1066,15 +1086,15 @@ fun OffersScreen(
           }
         }
 
-        val unreadCount = messagesState.items.count { it.isUnread }
-        val hasUnread = messagesState.globalUnread || unreadCount > 0
+        val hasUnread = if (messagesState.unreadConfirmed) messagesState.globalUnread
+          else messagesState.globalUnread || messagesState.items.any { it.isUnread }
         FeedNavItem(
           label = "Messages",
           activeIcon = Icons.Filled.ChatBubble,
           inactiveIcon = Icons.Outlined.ChatBubbleOutline,
           selected = showMessages,
-          badgeCount = unreadCount,
-          hasUnreadDot = hasUnread && unreadCount == 0
+          badgeCount = 0,
+          hasUnreadDot = hasUnread
         ) {
           if (session.isAuthenticated) {
             showProfile = false

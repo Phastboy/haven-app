@@ -18,7 +18,7 @@ import com.example.data.offers.db.FeedQueryCacheEntity
     FeedOfferEntity::class,
     FeedQueryCacheEntity::class
   ],
-  version = 3,
+  version = 4,
   exportSchema = false
 )
 abstract class HavenDatabase : RoomDatabase() {
@@ -41,6 +41,31 @@ abstract class HavenDatabase : RoomDatabase() {
       }
     }
 
+    // AI Studio shipped two version-3 schemas: one before and one after location.
+    // Inspect the actual schema so both installations upgrade without data loss.
+    val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+      override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        val hasLocation = db.query("PRAGMA table_info(feed_offers)").use { cursor ->
+          val nameIndex = cursor.getColumnIndexOrThrow("name")
+          var found = false
+          while (cursor.moveToNext()) {
+            if (cursor.getString(nameIndex) == "location") found = true
+          }
+          found
+        }
+        if (!hasLocation) db.execSQL("ALTER TABLE feed_offers ADD COLUMN location TEXT")
+        db.execSQL("ALTER TABLE feed_query_cache ADD COLUMN contextJson TEXT NOT NULL DEFAULT '{}'")
+        db.execSQL("ALTER TABLE message_outbox ADD COLUMN ownerPersonId TEXT")
+        // Conversation rows were shared across accounts; they cannot prove who
+        // queued a legacy message. Only a real local sender identity can do so.
+        // Unknown 'me' drafts remain intact and quarantined from automatic sends.
+        db.execSQL("UPDATE message_outbox SET ownerPersonId = (SELECT senderPersonId FROM messages WHERE messages.clientMessageId = message_outbox.clientMessageId AND isFromMe = 1 AND senderPersonId != 'me' AND senderPersonId != '')")
+        // Legacy rows mixed saved/distance state between actors and references.
+        db.execSQL("DELETE FROM feed_query_cache")
+        db.execSQL("UPDATE feed_offers SET isSaved = NULL, distanceMeters = NULL")
+      }
+    }
+
     @Volatile
     private var instance: HavenDatabase? = null
 
@@ -51,8 +76,7 @@ abstract class HavenDatabase : RoomDatabase() {
           HavenDatabase::class.java,
           "haven.db"
         )
-          .addMigrations(MIGRATION_2_3)
-          .fallbackToDestructiveMigration()
+          .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
           .build()
           .also { instance = it }
       }

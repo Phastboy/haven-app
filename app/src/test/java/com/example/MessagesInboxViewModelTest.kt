@@ -87,4 +87,25 @@ class MessagesInboxViewModelTest {
     assertTrue(page.items.single().isUnread)
     assertEquals("cursor-2", page.nextCursor)
   }
+  @Test fun unreadFailureRetainsKnownIndicatorButNotFalseConfirmation() = runTest(dispatcher) {
+    var fail = false
+    val repo = object : MessagesInboxRepository {
+      override suspend fun load(after: String?) = ConversationInboxPage(listOf(inbox("cached").copy(isUnread = true)), null)
+      override suspend fun getGlobalUnread(): Boolean {
+        if (fail) throw java.io.IOException("Offline")
+        return true
+      }
+    }
+    val model = MessagesInboxViewModel(repo)
+    model.load("owner")
+    advanceUntilIdle()
+    assertTrue(model.state.value.globalUnread)
+    assertTrue(model.state.value.unreadConfirmed)
+    fail = true
+    model.refreshUnread()
+    advanceUntilIdle()
+    assertTrue(model.state.value.globalUnread)
+    assertEquals(false, model.state.value.unreadConfirmed)
+  }
+
 }

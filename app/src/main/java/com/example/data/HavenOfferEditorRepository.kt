@@ -21,9 +21,9 @@ data class OfferFormOptions(
   val recentPlaces: List<OfferPlace>, val defaultPlaceToken: String
 )
 
-class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val context: Context) {
+class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val context: Context, private val ownerPersonId: String? = com.example.ui.model.SessionManager.session.value.personId) {
   suspend fun options(): OfferFormOptions = withContext(Dispatchers.IO) {
-    val json = JSONObject(auth.authenticatedGet("/api/v1/me/offer-form"))
+    val json = JSONObject(auth.authenticatedGet("/api/v1/me/offer-form", expectedPersonId = ownerPersonId))
     val categories = json.getJSONArray("categories")
     val currencies = json.getJSONArray("currencies")
     OfferFormOptions(
@@ -33,13 +33,13 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
     )
   }
   suspend fun load(id: String): EditableOffer = withContext(Dispatchers.IO) {
-    parse(JSONObject(auth.authenticatedGet(path(id))))
+    parse(JSONObject(auth.authenticatedGet(path(id), expectedPersonId = ownerPersonId)))
   }
   suspend fun save(id: String?, input: JSONObject): EditableOffer = withContext(Dispatchers.IO) {
-    parse(JSONObject(auth.authenticatedMutation("POST", if (id == null) "/api/v1/me/offer-management" else path(id), input)))
+    parse(JSONObject(auth.authenticatedMutation("POST", if (id == null) "/api/v1/me/offer-management" else path(id), input, expectedPersonId = ownerPersonId)))
   }
   suspend fun search(query: String): List<OfferPlace> = withContext(Dispatchers.IO) {
-    places(JSONObject(auth.authenticatedMutation("POST", "/api/v1/me/offer-places/search", JSONObject().put("query", query))).getJSONArray("items"))
+    places(JSONObject(auth.authenticatedMutation("POST", "/api/v1/me/offer-places/search", JSONObject().put("query", query), expectedPersonId = ownerPersonId)).getJSONArray("items"))
   }
   suspend fun upload(id: String, image: EditorImage): EditableOffer = withContext(Dispatchers.IO) {
     val bytes = context.contentResolver.openInputStream(Uri.parse(image.url))?.use { stream ->
@@ -53,13 +53,13 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
       }
       buffer.toByteArray()
     } ?: throw IOException("Could not open this photo. Choose it again.")
-    parse(JSONObject(auth.authenticatedImageUpload(path(id) + "/images", bytes, image.uploadId)))
+    parse(JSONObject(auth.authenticatedImageUpload(path(id) + "/images", bytes, image.uploadId, expectedPersonId = ownerPersonId)))
   }
   suspend fun remove(id: String, imageId: String): EditableOffer = withContext(Dispatchers.IO) {
-    parse(JSONObject(auth.authenticatedMutation("POST", path(id) + "/images/remove", JSONObject().put("image_id", imageId))))
+    parse(JSONObject(auth.authenticatedMutation("POST", path(id) + "/images/remove", JSONObject().put("image_id", imageId), expectedPersonId = ownerPersonId)))
   }
   suspend fun reorder(id: String, images: List<EditorImage>): EditableOffer = withContext(Dispatchers.IO) {
-    parse(JSONObject(auth.authenticatedMutation("POST", path(id) + "/images/reorder", JSONObject().put("image_ids", JSONArray(images.map { it.id })))))
+    parse(JSONObject(auth.authenticatedMutation("POST", path(id) + "/images/reorder", JSONObject().put("image_ids", JSONArray(images.map { it.id })), expectedPersonId = ownerPersonId)))
   }
   private fun path(id: String) = "/api/v1/me/offer-management/${Uri.encode(id)}"
   companion object {

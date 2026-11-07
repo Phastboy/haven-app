@@ -174,10 +174,10 @@ class OfferEditorViewModel(
       state.images.size > 5 || (state.images.isEmpty() && !state.allowPrivateSave) -> "Add between one and five photos to publish."
       else -> null
     }
-    fun factory(context: Context, id: String?): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    fun factory(context: Context, id: String?, ownerPersonId: String? = com.example.ui.model.SessionManager.session.value.personId): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
-        OfferEditorViewModel(HavenOfferEditorRepository(HavenAuthClient.shared(context), context.applicationContext), extras.createSavedStateHandle(), id) as T
+        OfferEditorViewModel(HavenOfferEditorRepository(HavenAuthClient.shared(context), context.applicationContext, ownerPersonId), extras.createSavedStateHandle(), id) as T
     }
   }
 }

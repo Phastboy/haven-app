@@ -48,6 +48,7 @@ class HavenMessagingRepositoryTest {
       database = database,
       transport = transport,
       coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher),
+      enforceOwnership = false,
       ioDispatcher = testDispatcher
     )
   }
@@ -295,4 +296,165 @@ class HavenMessagingRepositoryTest {
     // Same serverId returned, deduplicated
     assertEquals(ack1.serverId, ack2.serverId)
   }
+  @Test
+  fun pendingOutboxCannotBeSentOrViewedByAnotherAccount() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      val scoped = HavenLocalFirstMessagingRepository(database, transport,
+        coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher), ioDispatcher = testDispatcher)
+      testScheduler.runCurrent()
+      database.conversationDao().upsertConversation(ConversationEntity(
+        id = "private-thread", ownerPersonId = "owner-a", otherUserId = "peer", displayName = "Peer",
+        handle = "peer", avatarUrl = null, lastMessageBody = "", lastMessageAt = "", lastMessageTimestamp = 0, isUnread = false))
+      database.messageDao().insertMessage(com.example.data.messaging.db.MessageEntity(
+        clientMessageId = "pending-a", conversationId = "private-thread", senderPersonId = "owner-a",
+        isFromMe = true, text = "Private draft", timestamp = 1, status = "SENDING"))
+      database.outboxDao().insert(com.example.data.messaging.db.OutboxEntity(
+        clientMessageId = "pending-a", conversationId = "private-thread", ownerPersonId = "owner-a", text = "Private draft"))
+      session.signInPerson("owner-b", "B", "owner-b")
+      scoped.processOutbox()
+      assertTrue(scoped.observeMessages("private-thread").first().isEmpty())
+      assertEquals(1, database.outboxDao().getPendingOutbox().size)
+      assertTrue(scoped.retryMessage("pending-a").isFailure)
+      session.signInPerson("owner-a", "A", "owner-a")
+      scoped.processOutbox()
+      assertTrue(database.outboxDao().getPendingOutbox().isEmpty())
+      assertEquals("SENT", database.messageDao().getMessageByClientId("pending-a")!!.status)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun remoteAcknowledgementDoesNotRestorePendingSnapshot() = runTest(testDispatcher) {
+    val local = com.example.data.messaging.db.MessageEntity(
+      clientMessageId = "pending-match", conversationId = "ack-thread", senderPersonId = "me",
+      isFromMe = true, text = "Delivered", timestamp = 1, status = "SENDING")
+    database.messageDao().insertMessage(local)
+    transport.threadPages["latest"] = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "ack-thread",
+      otherPerson = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+      messages = listOf(com.example.data.messaging.transport.RemoteMessageDto(
+        serverId = "ack-server", clientMessageId = "pending-match", conversationId = "ack-thread",
+        senderPersonId = "me", isFromMe = true, text = "Delivered", timestampIso = "2026-11-06T00:00:00Z", timestampMillis = 1)),
+      nextCursor = null, isUnread = false)
+    repository.syncThreadHistory("ack-thread", "owner").getOrThrow()
+    val acknowledged = database.messageDao().getMessageByClientId("pending-match")!!
+    assertEquals("SENT", acknowledged.status)
+    assertEquals("ack-server", acknowledged.serverId)
+  }
+
+  @Test
+  fun newestRefreshPreservesScrollCursorAndReopensDisconnectedGap() = runTest(testDispatcher) {
+    fun page(id: String, cursor: String?) = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "gap-thread",
+      otherPerson = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+      messages = listOf(com.example.data.messaging.transport.RemoteMessageDto(
+        serverId = id, clientMessageId = id, conversationId = "gap-thread", senderPersonId = "peer",
+        isFromMe = false, text = id, timestampIso = "2026-11-06T00:00:00Z", timestampMillis = 1)),
+      nextCursor = cursor, isUnread = false)
+    transport.threadPages["latest"] = page("known-latest", "older-a")
+    transport.threadPages["older-a"] = page("known-older", "older-b")
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    repository.loadOlderMessages("gap-thread").getOrThrow()
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    assertEquals("older-b", database.syncStateDao().getSyncState("thread_gap-thread")!!.nextCursor)
+    // More than one newest page arrived while offline: no overlap with cache.
+    transport.threadPages["latest"] = page("new-disjoint-page", "reconnect-gap")
+    transport.threadPages["reconnect-gap"] = page("missed-middle-message", "older-b")
+    repository.syncThreadHistory("gap-thread", "owner").getOrThrow()
+    repository.loadOlderMessages("gap-thread").getOrThrow()
+    assertEquals(listOf(null, "older-a", null, null, "reconnect-gap"), transport.requestedThreadCursors)
+    assertTrue(database.messageDao().getMessages("gap-thread").any { it.text == "missed-middle-message" })
+  }
+
+  @Test
+  fun lostAcknowledgementIsRecoveredByReplayingOriginalIdBeforeThreadMerge() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val serverId = java.util.UUID.randomUUID().toString()
+    val owner = java.util.UUID.randomUUID().toString()
+    val ids = mutableListOf<String>()
+    var committed = false
+    val wire = object : com.example.data.messaging.transport.MessagingTransport by transport {
+      override suspend fun sendMessage(conversationId: String, clientMessageId: String, text: String, offerId: String?): Result<com.example.data.messaging.transport.SendMessageAckDto> {
+        ids.add(clientMessageId.removePrefix("msg-"))
+        val ack = com.example.data.messaging.transport.SendMessageAckDto(serverId, clientMessageId, conversationId, "2026-11-07T00:00:00Z", 1)
+        if (!committed) { committed = true; return Result.failure(java.io.IOException("Response lost after commit")) }
+        return Result.success(ack)
+      }
+      override suspend fun getThread(conversationId: String, after: String?): Result<com.example.data.messaging.transport.ConversationThreadPageDto> = Result.success(
+        com.example.data.messaging.transport.ConversationThreadPageDto(conversationId,
+          com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+          listOf(com.example.data.messaging.transport.RemoteMessageDto(serverId, serverId, conversationId, owner, true, "Delivered once", "2026-11-07T00:00:00Z", 1)), null, false))
+    }
+    val repo = HavenLocalFirstMessagingRepository(database, wire, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher, enforceOwnership = false)
+    testScheduler.runCurrent()
+    val localId = repo.sendMessage("lost-ack", "Delivered once", senderPersonId = owner)
+    testScheduler.runCurrent()
+    assertEquals("UNCONFIRMED", database.outboxDao().getPendingOutbox().single().status)
+    repo.syncThreadHistory("lost-ack", owner).getOrThrow()
+    val rows = database.messageDao().getMessages("lost-ack")
+    assertEquals(1, rows.size)
+    assertEquals(localId, rows.single().clientMessageId)
+    assertEquals(serverId, rows.single().serverId)
+    assertEquals("SENT", rows.single().status)
+    assertEquals(2, ids.size)
+    assertEquals(ids[0], ids[1])
+    java.util.UUID.fromString(ids[0])
+    assertTrue(database.outboxDao().getPendingOutbox().isEmpty())
+  }
+
+  @Test
+  fun omittedThreadOwnerUsesVerifiedStoredOwner() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      database.conversationDao().upsertConversation(ConversationEntity("owned", "owner-a", "peer", "Peer", "peer", null, "", "", 0, false))
+      val repo = HavenLocalFirstMessagingRepository(database, transport, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher)
+      testScheduler.runCurrent()
+      assertTrue(repo.syncThreadHistory("owned").isSuccess)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun accountSwitchDuringOlderPageReturnsFailureWithoutThrowing() = runTest(testDispatcher) {
+    testScheduler.runCurrent()
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("owner-a", "A", "owner-a")
+    try {
+      database.conversationDao().upsertConversation(ConversationEntity("owned", "owner-a", "peer", "Peer", "peer", null, "", "", 0, false))
+      database.syncStateDao().upsertSyncState(com.example.data.messaging.db.SyncStateEntity("thread_owned", "older"))
+      val wire = object : com.example.data.messaging.transport.MessagingTransport by transport {
+        override suspend fun getThread(conversationId: String, after: String?): Result<com.example.data.messaging.transport.ConversationThreadPageDto> {
+          session.signInPerson("owner-b", "B", "owner-b")
+          return Result.success(com.example.data.messaging.transport.ConversationThreadPageDto(conversationId,
+            com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null), emptyList(), null, false))
+        }
+      }
+      val repo = HavenLocalFirstMessagingRepository(database, wire, kotlinx.coroutines.CoroutineScope(testDispatcher), testDispatcher)
+      testScheduler.runCurrent()
+      assertTrue(repo.loadOlderMessages("owned").isFailure)
+      assertEquals("older", database.syncStateDao().getSyncState("thread_owned")!!.nextCursor)
+    } finally { session.signOut() }
+  }
+
+  @Test
+  fun inquiryCompletionCannotReopenConversationAfterAccountInvalidation() = runTest(testDispatcher) {
+    val response = kotlinx.coroutines.CompletableDeferred<Result<String>>()
+    val wire = object : com.example.data.messaging.MessagingRepository by repository {
+      override suspend fun startOfferInquiry(offerSlug: String, text: String): Result<String> = response.await()
+    }
+    val model = com.example.ui.model.InquiryComposeViewModel(wire)
+    model.openOffer("offer", "Offer", "Provider")
+    model.onTextChanged("Hello")
+    model.send()
+    testScheduler.runCurrent()
+    model.clear()
+    response.complete(Result.success("old-conversation"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(null, model.state.value.startedConversationId)
+    assertEquals(null, model.state.value.target)
+  }
+
 }

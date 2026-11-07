@@ -185,6 +185,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     if (response.first == 401) {
       logDiagnostic("SESSION", "REFRESH_REJECTED_401", "Stored refresh token rejected (HTTP 401). Signing out locally.", isError = true)
       store.refreshToken = null
+      accessToken = null
       SessionManager.signOut()
       return false
     }
@@ -238,10 +239,15 @@ class HavenAuthClient(private val store: SecureAuthStore) {
 
   /** Serializes refresh rotation with restore/sign-out; never creates a fake session. */
   @Synchronized
-  fun authenticatedGet(path: String): String {
+  fun authenticatedGet(path: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
+    check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     var response = request("GET", path, null, accessToken)
-    if (response.first == 401 && restore()) response = request("GET", path, null, accessToken)
+    if (response.first == 401 && restore()) {
+      check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
+      response = request("GET", path, null, accessToken)
+    }
     if (response.first != 200) throw HttpException(response.first, response.second)
     return response.second
   }
@@ -253,11 +259,16 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   @Synchronized
-  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null): String {
+  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
     require(method == "POST" || method == "DELETE" || method == "PATCH")
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
+    check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     var response = request(method, path, body, accessToken)
-    if (response.first == 401 && restore()) response = request(method, path, body, accessToken)
+    if (response.first == 401 && restore()) {
+      check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
+      response = request(method, path, body, accessToken)
+    }
     if (response.first !in 200..299) throw HttpException(response.first, response.second)
     return response.second
   }
@@ -269,9 +280,12 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     filename: String,
     bytes: ByteArray,
     idempotencyKey: String? = null,
-    mimeType: String = "image/jpeg"
+    mimeType: String = "image/jpeg",
+    expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"
   ): String {
     if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
+    check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     fun upload(): Pair<Int, String> {
       val boundary = "haven-${System.currentTimeMillis()}-${(1000..9999).random()}"
       val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
@@ -296,20 +310,24 @@ class HavenAuthClient(private val store: SecureAuthStore) {
       } finally { connection.disconnect() }
     }
     var response = upload()
-    if (response.first == 401 && restore()) response = upload()
+    if (response.first == 401 && restore()) {
+      check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
+      response = upload()
+    }
     if (response.first !in 200..299) throw HttpException(response.first, response.second)
     return response.second
   }
 
   @Synchronized
-  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String): String {
+  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
     return authenticatedMultipartUpload(
       path = path,
       fieldName = "image",
       filename = "photo",
       bytes = bytes,
       idempotencyKey = uploadId,
-      mimeType = "application/octet-stream"
+      mimeType = "application/octet-stream",
+      expectedPersonId = expectedPersonId
     )
   }
 

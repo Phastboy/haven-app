@@ -8,6 +8,9 @@ import com.example.auth.HavenAuthClient
 import com.example.data.HavenProfileRepository
 import com.example.data.ProfileOverview
 import com.example.data.ProfileRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +43,7 @@ class EditProfileViewModel(
   val state: StateFlow<EditProfileUiState> = _state.asStateFlow()
 
   fun initialize(profile: ProfileOverview? = null) {
+    if (_state.value.initialLoaded || _state.value.loading) return
     if (profile != null) {
       _state.update {
         it.copy(
@@ -136,7 +140,7 @@ class EditProfileViewModel(
   }
 
   fun save(onSuccess: (ProfileOverview) -> Unit) {
-    if (!validate()) return
+    if (busy() || !validate()) return
     val current = _state.value
     _state.update { it.copy(saving = true, generalError = null) }
 
@@ -190,7 +194,45 @@ class EditProfileViewModel(
     }
   }
 
+  private fun busy(): Boolean = _state.value.let { it.loading || it.saving || it.uploadingAvatar || it.removingAvatar }
+
+  fun selectAvatar(context: Context, uri: android.net.Uri) {
+    if (busy()) return
+    _state.update { it.copy(uploadingAvatar = true, generalError = null) }
+    viewModelScope.launch {
+      try {
+        val (bytes, mime) = withContext(Dispatchers.IO) {
+          val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+          require(mime in setOf("image/jpeg", "image/png", "image/webp")) { "Choose a JPEG, PNG or WebP image." }
+          val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
+            val output = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+              val count = input.read(buffer)
+              if (count < 0) break
+              require(output.size() + count <= 5 * 1024 * 1024) { "Avatar file is too large (maximum 5 MB)." }
+              output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+          } ?: error("Couldn’t read this image. Please choose it again.")
+          bytes to mime
+        }
+        _state.update { it.copy(uploadingAvatar = false) }
+        uploadAvatar(bytes, mime)
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (error: Exception) {
+        _state.update { it.copy(uploadingAvatar = false,
+          generalError = if (error is IllegalArgumentException) error.message else "Couldn’t read this image. Please choose it again.") }
+      }
+    }
+  }
+
   fun uploadAvatar(bytes: ByteArray, mimeType: String = "image/jpeg") {
+    if (busy()) return
+    if (bytes.isEmpty() || bytes.size > 5 * 1024 * 1024 || mimeType !in setOf("image/jpeg", "image/png", "image/webp")) {
+      _state.update { it.copy(generalError = "Choose a JPEG, PNG or WebP image up to 5 MB.") }
+      return
+    }
     _state.update { it.copy(uploadingAvatar = true, generalError = null) }
     viewModelScope.launch {
       val result = repository.uploadAvatar(bytes, mimeType)
@@ -216,6 +258,7 @@ class EditProfileViewModel(
   }
 
   fun removeAvatar() {
+    if (busy()) return
     _state.update { it.copy(removingAvatar = true, generalError = null) }
     viewModelScope.launch {
       val result = repository.removeAvatar()

@@ -11,6 +11,7 @@ import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.HavenDatabase
 import com.example.data.messaging.db.MessageEntity
 import com.example.data.messaging.transport.HavenProductionMessagingTransport
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -48,10 +49,16 @@ class ConversationThreadViewModel(
   private var observeConversationJob: Job? = null
   private var sseJob: Job? = null
   private var pollJob: Job? = null
+  private var refreshJob: Job? = null
+  private var olderJob: Job? = null
+  private var generation = 0L
   private var currentConversationId: String? = null
   private var ownerPersonId: String? = null
 
   fun clear() {
+    generation++
+    refreshJob?.cancel()
+    olderJob?.cancel()
     observeMessagesJob?.cancel()
     observeConversationJob?.cancel()
     sseJob?.cancel()
@@ -67,11 +74,12 @@ class ConversationThreadViewModel(
   }
 
   fun openConversation(conversationId: String, ownerPersonId: String? = null) {
-    this.ownerPersonId = ownerPersonId
-    if (currentConversationId == conversationId) {
+    if (currentConversationId == conversationId && this.ownerPersonId == ownerPersonId) {
       refreshThread()
       return
     }
+    clear()
+    this.ownerPersonId = ownerPersonId
     currentConversationId = conversationId
 
     observeMessagesJob?.cancel()
@@ -103,36 +111,51 @@ class ConversationThreadViewModel(
       }
     }
 
-    // Connect real SSE stream for live thread invalidations
+    refreshThread()
+  }
+
+  /** Called only while this thread screen is visible and resumed. */
+  fun startLiveUpdates() {
+    val conversationId = currentConversationId ?: return
+    if (pollJob?.isActive == true) return
     if (eventsListener != null) {
       sseJob = viewModelScope.launch {
-        eventsListener.listenToConversationEvents(conversationId) {
-          refreshThread()
-        }
+        eventsListener.listenToConversationEvents(conversationId) { refreshThread() }
       }
     }
-
-    // Foreground fallback polling interval (30 seconds)
     pollJob = viewModelScope.launch {
       while (isActive) {
         delay(30_000L)
         refreshThread()
       }
     }
-
     refreshThread()
+  }
+
+  fun stopLiveUpdates() {
+    sseJob?.cancel()
+    pollJob?.cancel()
+    refreshJob?.cancel()
+    olderJob?.cancel()
+    _uiState.update { it.copy(isSyncing = false, isLoadingOlder = false) }
   }
 
   /** Re-reads server state, for example when the app returns to the foreground. */
   fun refreshThread() {
     val convId = currentConversationId ?: return
+    if (refreshJob?.isActive == true) return
+    val request = generation
+    val owner = ownerPersonId
     _uiState.update { it.copy(isSyncing = true, syncError = null) }
-    viewModelScope.launch {
-      repository.markConversationRead(convId)
-      val syncResult = repository.syncThreadHistory(convId, ownerPersonId)
+    refreshJob = viewModelScope.launch {
+      val syncResult = repository.syncThreadHistory(convId, owner)
+      if (generation != request) return@launch
+      if (syncResult.isSuccess) repository.markConversationRead(convId)
+      val hasOlder = if (syncResult.isSuccess) repository.hasOlderMessages(convId) else _uiState.value.hasOlder
       _uiState.update {
         it.copy(
           isSyncing = false,
+          hasOlder = hasOlder,
           syncError = if (syncResult.isFailure) "Offline - viewing cached messages" else null
         )
       }
@@ -143,8 +166,10 @@ class ConversationThreadViewModel(
     val id = currentConversationId ?: return
     if (_uiState.value.isLoadingOlder || !_uiState.value.hasOlder) return
     _uiState.update { it.copy(isLoadingOlder = true, olderError = null) }
-    viewModelScope.launch {
+    val request = generation
+    olderJob = viewModelScope.launch {
       val result = repository.loadOlderMessages(id)
+      if (generation != request) return@launch
       _uiState.update { it.copy(
         isLoadingOlder = false,
         hasOlder = result.getOrNull() ?: it.hasOlder,
@@ -183,7 +208,7 @@ class ConversationThreadViewModel(
     val text = state.inputText.trim()
     val offerSlug = state.pendingAttachedOfferSlug
 
-    if (text.isEmpty() && offerSlug == null) return
+    if (text.isEmpty()) return
 
     viewModelScope.launch {
       // Clear input optimistically
@@ -196,6 +221,7 @@ class ConversationThreadViewModel(
         )
       }
 
+      try {
       repository.sendMessage(
         conversationId = convId,
         text = text,
@@ -203,6 +229,12 @@ class ConversationThreadViewModel(
         attachedOfferTitle = state.pendingAttachedOfferTitle,
         attachedOfferPrice = state.pendingAttachedOfferPrice
       )
+      } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) {
+        if (currentConversationId == convId) _uiState.update { it.copy(
+          inputText = if (it.inputText.isBlank()) text else it.inputText,
+          syncError = "Couldn’t queue your message. Please try again.") }
+      }
     }
   }
 

@@ -1,5 +1,9 @@
 package com.example.data.messaging
 
+import androidx.room.withTransaction
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import com.example.ui.model.SessionManager
 import com.example.data.messaging.db.ConversationDao
 import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.HavenDatabase
@@ -36,6 +40,7 @@ interface MessagingRepository {
   suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean>
   suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
   suspend fun loadOlderMessages(conversationId: String): Result<Boolean>
+  suspend fun hasOlderMessages(conversationId: String): Boolean = true
   suspend fun sendMessage(
     conversationId: String,
     text: String,
@@ -61,7 +66,8 @@ class HavenLocalFirstMessagingRepository(
   private val database: HavenDatabase,
   private val transport: MessagingTransport,
   private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-  private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+  private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+  private val enforceOwnership: Boolean = true
 ) : MessagingRepository {
 
   private val conversationDao: ConversationDao = database.conversationDao()
@@ -70,6 +76,8 @@ class HavenLocalFirstMessagingRepository(
   private val syncStateDao: SyncStateDao = database.syncStateDao()
 
   private val outboxMutex = Mutex()
+  private val threadMutex = Mutex()
+  private val boundOwnerPersonId = SessionManager.session.value.personId
 
   init {
     // Deliver messages that were never attempted (for example the app stopped
@@ -80,19 +88,31 @@ class HavenLocalFirstMessagingRepository(
   }
 
   override fun observeConversations(ownerPersonId: String): Flow<List<ConversationEntity>> {
-    return conversationDao.observeConversations(ownerPersonId).distinctUntilChanged()
+    return conversationDao.observeConversations(ownerPersonId).combine(SessionManager.session) { rows, session ->
+      if (!enforceOwnership || session.personId == ownerPersonId) rows else emptyList()
+    }.distinctUntilChanged()
   }
 
   override fun observeMessages(conversationId: String): Flow<List<MessageEntity>> {
-    return messageDao.observeMessages(conversationId).distinctUntilChanged()
+    return combine(messageDao.observeMessages(conversationId), conversationDao.observeConversation(conversationId), SessionManager.session) { rows, conversation, session ->
+      if (!enforceOwnership) rows
+      else if (session.personId == null || conversation?.ownerPersonId != session.personId) emptyList()
+      else rows.filter { it.status == MessageDeliveryStatus.SENT || it.senderPersonId == session.personId }
+        .map { it.copy(isFromMe = it.senderPersonId == session.personId) }
+    }.distinctUntilChanged()
   }
 
   override fun observeConversation(conversationId: String): Flow<ConversationEntity?> {
-    return conversationDao.observeConversation(conversationId).distinctUntilChanged()
+    return conversationDao.observeConversation(conversationId).combine(SessionManager.session) { row, session ->
+      if (!enforceOwnership || session.personId != null && row?.ownerPersonId == session.personId) row else null
+    }.distinctUntilChanged()
   }
 
   override suspend fun refreshConversations(ownerPersonId: String): Result<Unit> = withContext(ioDispatcher) {
+    val actor = SessionManager.session.value.personId
+    if (enforceOwnership && (actor == null || actor != ownerPersonId)) return@withContext Result.failure(IllegalStateException("Account changed"))
     val result = transport.getConversations(cursor = null)
+    if (enforceOwnership && SessionManager.session.value.personId != actor) return@withContext Result.failure(IllegalStateException("Account changed"))
     if (result.isSuccess) {
       val page = result.getOrThrow()
       val entities = page.items.map { dto -> dto.toEntity(ownerPersonId) }
@@ -115,7 +135,10 @@ class HavenLocalFirstMessagingRepository(
     val syncState = syncStateDao.getSyncState(syncKey)
     val cursor = syncState?.nextCursor ?: return@withContext Result.success(false)
 
+    val actor = SessionManager.session.value.personId
+    if (enforceOwnership && (actor == null || actor != ownerPersonId)) return@withContext Result.failure(IllegalStateException("Account changed"))
     val result = transport.getConversations(cursor)
+    if (enforceOwnership && SessionManager.session.value.personId != actor) return@withContext Result.failure(IllegalStateException("Account changed"))
     if (result.isSuccess) {
       val page = result.getOrThrow()
       val entities = page.items.map { dto -> dto.toEntity(ownerPersonId) }
@@ -136,8 +159,18 @@ class HavenLocalFirstMessagingRepository(
   override suspend fun syncThreadHistory(
     conversationId: String,
     ownerPersonId: String?
+  ): Result<Unit> = threadMutex.withLock { syncLatestPage(conversationId, ownerPersonId) }
+
+  private suspend fun syncLatestPage(
+    conversationId: String,
+    ownerPersonId: String?
   ): Result<Unit> = withContext(ioDispatcher) {
+    val actor = SessionManager.session.value.personId
+    val owner = ownerPersonId ?: conversationDao.getConversation(conversationId)?.ownerPersonId
+    if (enforceOwnership && (actor == null || actor != owner)) return@withContext Result.failure(IllegalStateException("Account changed"))
+    processOutbox()
     val result = transport.getThread(conversationId)
+    if (enforceOwnership && SessionManager.session.value.personId != actor) return@withContext Result.failure(IllegalStateException("Account changed"))
     if (result.isFailure) {
       return@withContext Result.failure(
         result.exceptionOrNull() ?: RuntimeException("Failed to sync thread")
@@ -145,30 +178,46 @@ class HavenLocalFirstMessagingRepository(
     }
 
     val page = result.getOrThrow()
-    syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
+    val previousCursor = syncStateDao.getSyncState("thread_$conversationId")
+    val knownServerIds = messageDao.getMessages(conversationId).mapNotNull { it.serverId }.toSet()
+    // Keep scroll progress when newest data overlaps known history. A disjoint
+    // page means a reconnect gap: page back from there instead of skipping it.
+    val overlaps = page.messages.any { it.serverId in knownServerIds }
+    if (previousCursor == null || knownServerIds.isEmpty() || !overlaps) {
+      syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
+    }
     mergeThreadPage(conversationId, page)
     val existing = messageDao.getMessages(conversationId)
-    upsertConversationFromThread(conversationId, ownerPersonId, page, existing)
+    upsertConversationFromThread(conversationId, owner, page, existing)
     Result.success(Unit)
   }
 
-  override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = withContext(ioDispatcher) {
+  override suspend fun hasOlderMessages(conversationId: String): Boolean = withContext(ioDispatcher) {
+    syncStateDao.getSyncState("thread_$conversationId")?.nextCursor != null
+  }
+
+  override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = threadMutex.withLock {
+    loadOlderPage(conversationId)
+  }
+
+  private suspend fun loadOlderPage(conversationId: String): Result<Boolean> = withContext(ioDispatcher) {
+    val actor = SessionManager.session.value.personId
+    if (enforceOwnership && (actor == null || conversationDao.getConversation(conversationId)?.ownerPersonId != actor))
+      return@withContext Result.failure(IllegalStateException("Account changed"))
     val cursor = syncStateDao.getSyncState("thread_$conversationId")?.nextCursor
       ?: return@withContext Result.success(false)
-    transport.getThread(conversationId, cursor).map { page ->
+    val result = transport.getThread(conversationId, cursor)
+    if (enforceOwnership && SessionManager.session.value.personId != actor)
+      return@withContext Result.failure(IllegalStateException("Account changed"))
+    result.map { page ->
       mergeThreadPage(conversationId, page)
       syncStateDao.upsertSyncState(SyncStateEntity("thread_$conversationId", page.nextCursor))
       page.nextCursor != null
     }
   }
 
-  private suspend fun mergeThreadPage(conversationId: String, page: ConversationThreadPageDto) {
+  private suspend fun mergeThreadPage(conversationId: String, page: ConversationThreadPageDto) = database.withTransaction {
     val existing = messageDao.getMessages(conversationId)
-    // Preserve any local messages currently in SENDING or FAILED state.
-    val localSendingOrFailed = existing.filter {
-      it.status == MessageDeliveryStatus.SENDING || it.status == MessageDeliveryStatus.FAILED
-    }.associateBy { it.clientMessageId }
-
     val entitiesToInsert = page.messages.map { remote ->
       // If this matches an existing local client ID, keep clientMessageId.
       val existingMatch = existing.firstOrNull {
@@ -192,14 +241,9 @@ class HavenLocalFirstMessagingRepository(
       )
     }
 
-    // Reconcile and save.
+    // Upserting server rows never deletes other local sends. Do not restore a
+    // stale SENDING snapshot over an acknowledgement committed in the meantime.
     messageDao.insertMessages(entitiesToInsert)
-
-    // Re-insert unacknowledged local messages so a server fetch never wipes them out.
-    if (localSendingOrFailed.isNotEmpty()) {
-      messageDao.insertMessages(localSendingOrFailed.values.toList())
-    }
-
   }
 
   /**
@@ -277,6 +321,9 @@ class HavenLocalFirstMessagingRepository(
     attachedOfferPrice: String?,
     attachedOfferImageResId: Int?
   ): String = withContext(ioDispatcher) {
+    val actor = SessionManager.session.value.personId
+    check(!enforceOwnership || actor != null && conversationDao.getConversation(conversationId)?.ownerPersonId == actor) { "Sign in to this conversation before sending" }
+    require(text.isNotBlank()) { "Write a message first" }
     val now = System.currentTimeMillis()
     val clientMessageId = "msg-${UUID.randomUUID()}"
 
@@ -285,7 +332,7 @@ class HavenLocalFirstMessagingRepository(
       clientMessageId = clientMessageId,
       conversationId = conversationId,
       serverId = null,
-      senderPersonId = senderPersonId,
+      senderPersonId = if (enforceOwnership) actor!! else senderPersonId,
       isFromMe = true,
       text = text,
       timestamp = now,
@@ -298,6 +345,7 @@ class HavenLocalFirstMessagingRepository(
       attachedOfferPrice = attachedOfferPrice,
       attachedOfferImageResId = attachedOfferImageResId
     )
+    database.withTransaction {
     messageDao.insertMessage(optimisticMessage)
 
     // 2. Optimistically update Conversation preview in Room
@@ -319,12 +367,15 @@ class HavenLocalFirstMessagingRepository(
       OutboxEntity(
         clientMessageId = clientMessageId,
         conversationId = conversationId,
+        ownerPersonId = actor,
         text = text,
         attachedOfferSlug = attachedOfferSlug,
         createdAt = now,
         status = "PENDING"
       )
     )
+
+    }
 
     // 4. Trigger Outbox processing in background
     coroutineScope.launch {
@@ -338,6 +389,9 @@ class HavenLocalFirstMessagingRepository(
     val message = messageDao.getMessageByClientId(clientMessageId)
       ?: return@withContext Result.failure(IllegalArgumentException("Message not found"))
 
+    val actor = SessionManager.session.value.personId
+    if (enforceOwnership && (actor == null || message.senderPersonId != actor))
+      return@withContext Result.failure(IllegalStateException("This message belongs to another account"))
     messageDao.updateMessageStatus(
       clientMessageId = clientMessageId,
       status = MessageDeliveryStatus.SENDING,
@@ -348,6 +402,7 @@ class HavenLocalFirstMessagingRepository(
       OutboxEntity(
         clientMessageId = clientMessageId,
         conversationId = message.conversationId,
+        ownerPersonId = actor,
         text = message.text,
         attachedOfferSlug = message.attachedOfferSlug,
         createdAt = System.currentTimeMillis(),
@@ -374,13 +429,17 @@ class HavenLocalFirstMessagingRepository(
     outboxMutex.withLock {
       val pending = outboxDao.getPendingOutbox()
       for (entry in pending) {
+        val actor = SessionManager.session.value.personId
+        if (enforceOwnership && (actor == null || actor != boundOwnerPersonId || entry.ownerPersonId != actor)) continue
         val result = transport.sendMessage(
           conversationId = entry.conversationId,
           clientMessageId = entry.clientMessageId,
           text = entry.text
         )
+        if (enforceOwnership && SessionManager.session.value.personId != actor) continue
         if (result.isSuccess) {
           val ack = result.getOrThrow()
+          database.withTransaction {
           messageDao.deleteDuplicateDelivery(ack.serverId, entry.clientMessageId)
           // Mark message SENT with serverId
           messageDao.updateMessageStatus(
@@ -390,19 +449,19 @@ class HavenLocalFirstMessagingRepository(
             errorMessage = null
           )
           outboxDao.delete(entry.clientMessageId)
+          }
         } else {
           // Delivery failed
-          val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "Failed to send message"
+          val error = result.exceptionOrNull()
+          val unconfirmed = error is java.io.IOException &&
+            (error !is com.example.auth.HavenAuthClient.HttpException || error.statusCode >= 500)
+          val errorMsg = if (unconfirmed) "Delivery unconfirmed; checking when connected" else error?.localizedMessage ?: "Failed to send message"
           messageDao.updateMessageStatus(
             clientMessageId = entry.clientMessageId,
-            status = MessageDeliveryStatus.FAILED,
-            errorMessage = errorMsg,
-            retryIncrement = 1
-          )
-          outboxDao.markAttempt(
-            clientMessageId = entry.clientMessageId,
-            status = "FAILED"
-          )
+            status = if (unconfirmed) MessageDeliveryStatus.SENDING else MessageDeliveryStatus.FAILED,
+            errorMessage = errorMsg, retryIncrement = 1)
+          outboxDao.markAttempt(clientMessageId = entry.clientMessageId,
+            status = if (unconfirmed) "UNCONFIRMED" else "FAILED")
         }
       }
     }

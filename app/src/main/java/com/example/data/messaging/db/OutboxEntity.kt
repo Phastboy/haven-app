@@ -18,6 +18,7 @@ data class OutboxEntity(
   @PrimaryKey
   val clientMessageId: String,
   val conversationId: String,
+  val ownerPersonId: String? = null,
   val text: String,
   val attachedOfferSlug: String? = null,
   val createdAt: Long = System.currentTimeMillis(),

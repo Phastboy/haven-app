@@ -2,74 +2,81 @@ package com.example.data.messaging
 
 import android.net.Uri
 import com.example.auth.HavenAuthClient
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
+import com.example.ui.model.SessionManager
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
-class ConversationEventsListener(
-  private val auth: HavenAuthClient
-) {
+class ConversationEventsListener(private val auth: HavenAuthClient) {
   suspend fun listenToConversationEvents(
     conversationId: String,
     onInvalidation: suspend () -> Unit
   ) = withContext(Dispatchers.IO) {
-    var backoffMs = 1000L
-    val maxBackoffMs = 15000L
-
-    while (isActive) {
-      val token = auth.getValidAccessToken() ?: break
-      val url = URL("https://${HavenAuthClient.HOST}/api/v1/conversations/${Uri.encode(conversationId)}/events")
-      var connection: HttpURLConnection? = null
+    val actor = SessionManager.session.value.personId ?: return@withContext
+    var failures = 0
+    var refreshed = false
+    while (isActive && failures < 5 && SessionManager.session.value.personId == actor) {
       try {
-        connection = (url.openConnection() as HttpURLConnection).apply {
-          requestMethod = "GET"
-          connectTimeout = 15_000
-          readTimeout = 40_000 // Keepalive comments sent every 20s
-          setRequestProperty("Accept", "text/event-stream")
-          setRequestProperty("Authorization", "Bearer $token")
-        }
-
-        val status = connection.responseCode
-        if (status != 200) {
-          if (status == 401) {
-            auth.restore()
+        val token = auth.getValidAccessToken() ?: break
+        val request = Request.Builder()
+          .url("https://${HavenAuthClient.HOST}/api/v1/conversations/${Uri.encode(conversationId)}/events")
+          .header("Accept", "text/event-stream")
+          .header("Authorization", "Bearer $token").build()
+        val status = coroutineScope {
+          val call = client.newCall(request)
+          // Socket cancellation interrupts blocking reads immediately on leaving/background.
+          val cancellation = launch(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+            try { awaitCancellation() } finally { call.cancel() }
           }
-          delay(backoffMs)
-          backoffMs = (backoffMs * 2).coerceAtMost(maxBackoffMs)
-          continue
-        }
-
-        backoffMs = 1000L // Reset backoff on successful connect
-        val reader = BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8))
-        var currentEvent: String? = null
-
-        while (isActive) {
-          val line = reader.readLine() ?: break // EOF
-          if (line.startsWith("event:")) {
-            currentEvent = line.substring(6).trim()
-          } else if (line.startsWith("data:")) {
-            if (currentEvent == "resync" || currentEvent == "changed") {
-              onInvalidation()
+          try {
+            call.execute().use { response ->
+              if (response.code == 200) {
+                failures = 0
+                val reader = response.body?.charStream()?.buffered()
+                var event: String? = null
+                while (isActive && SessionManager.session.value.personId == actor) {
+                  val line = reader?.readLine() ?: break
+                  when {
+                    line.startsWith("event:") -> event = line.substring(6).trim()
+                    line.isEmpty() -> {
+                      if (event == "resync" || event == "changed") onInvalidation()
+                      event = null
+                    }
+                  }
+                }
+              }
+              response.code
             }
-          } else if (line.isEmpty()) {
-            currentEvent = null
-          }
+          } finally { cancellation.cancel() }
         }
-      } catch (e: Exception) {
-        if (!isActive) break
-      } finally {
-        try { connection?.disconnect() } catch (_: Exception) {}
+        if (status == 403 || status == 404) break
+        if (status == 401) {
+          if (refreshed || !auth.restore()) break
+          refreshed = true
+        }
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (_: Exception) {
+        // Foreground polling remains available after bounded stream failures.
       }
-
-      if (isActive) {
-        delay(backoffMs)
-        backoffMs = (backoffMs * 2).coerceAtMost(maxBackoffMs)
-      }
+      failures++
+      delay((1000L shl (failures - 1)).coerceAtMost(15_000L))
     }
+  }
+
+  companion object {
+    private val client = OkHttpClient.Builder()
+      .connectTimeout(15, TimeUnit.SECONDS)
+      .readTimeout(40, TimeUnit.SECONDS)
+      .build()
   }
 }

@@ -47,6 +47,7 @@ class ConversationThreadViewModelTest {
       database = database,
       transport = transport,
       coroutineScope = kotlinx.coroutines.CoroutineScope(testDispatcher),
+      enforceOwnership = false,
       ioDispatcher = testDispatcher
     )
     viewModel = ConversationThreadViewModel(repository)
@@ -127,4 +128,18 @@ class ConversationThreadViewModelTest {
 
     viewModel.clear()
   }
+  @Test
+  fun stoppingScreenAndReopeningSameThreadPreservesDraft() = runTest(testDispatcher) {
+    viewModel.openConversation("draft-thread", "owner")
+    testScheduler.advanceUntilIdle()
+    viewModel.onInputTextChanged("Unsent draft survives recreation")
+    viewModel.attachOffer("offer", "Offer", "Free")
+    viewModel.stopLiveUpdates()
+    viewModel.openConversation("draft-thread", "owner")
+    testScheduler.advanceUntilIdle()
+    assertEquals("Unsent draft survives recreation", viewModel.uiState.value.inputText)
+    assertEquals("offer", viewModel.uiState.value.pendingAttachedOfferSlug)
+    viewModel.clear()
+  }
+
 }
