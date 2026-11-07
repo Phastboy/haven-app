@@ -6,8 +6,8 @@ keystore/production-secret assertions are explicitly annotated there.
 
 ## Source and pinned recipe
 
-Repository: Phastboy/haven-app. Release integration: PR #17. Candidate is
-versionName 0.0.0 / versionCode 10, increasing from distributed testing code 9.
+Repository: Phastboy/haven-app. UI patch: PR #18, following release integration
+PR #17. Candidate is versionName 0.0.1 / versionCode 11, increasing from 0.0.0 / 10.
 Application ID: com.aistudio.haven.xvykpt. Namespace: com.example.
 
 - Temurin JDK 17.0.21+9 in CI; Java source/target compatibility 11.

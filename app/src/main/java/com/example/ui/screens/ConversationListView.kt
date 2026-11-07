@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,8 +66,7 @@ fun ConversationListView(
         modifier = Modifier
           .size(52.dp)
           .clip(CircleShape)
-          .background(HavenColors.SurfaceContainer)
-          .border(1.dp, HavenColors.BorderSubtle, CircleShape),
+          .background(HavenColors.SurfaceContainer),
         contentAlignment = Alignment.Center
       ) {
         Icon(
@@ -124,7 +122,6 @@ fun ConversationListView(
             modifier = Modifier
               .clip(RoundedCornerShape(12.dp))
               .background(HavenColors.SurfaceContainer)
-              .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(12.dp))
               .padding(horizontal = 10.dp, vertical = 4.dp)
           ) {
             Text(
@@ -150,10 +147,6 @@ fun ConversationListView(
           ConversationRowItem(
             conversation = conversation,
             onClick = { onSelectConversation(conversation.id) }
-          )
-          HorizontalDivider(
-            color = HavenColors.BorderSubtle,
-            thickness = 1.dp
           )
         }
       }
@@ -193,8 +186,7 @@ private fun ConversationRowItem(
       modifier = Modifier
         .size(48.dp)
         .clip(CircleShape)
-        .background(HavenColors.SurfaceContainer)
-        .border(1.dp, HavenColors.BorderSubtle, CircleShape),
+        .background(HavenColors.SurfaceContainer),
       contentAlignment = Alignment.Center
     ) {
       if (!conversation.avatarUrl.isNullOrBlank()) {

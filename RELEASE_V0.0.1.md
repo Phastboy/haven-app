@@ -10,7 +10,8 @@ Type: patch / fix. Version name `0.0.1`, versionCode `11`, following source
 - Startup waits for refresh plus verified identity before showing authenticated
   Offers. No saved credentials or confirmed refresh rejection opens Welcome.
   Network/server failure with retained credentials shows retry; it never clears
-  credentials merely because the device is offline.
+  credentials merely because the device is offline. Back from the authenticated
+  feed root exits the activity rather than opening Welcome.
 - Offer cards use the owner-reviewed November 7 composition: square cover with
   12dp corners, save heart, no border/shadow, title/price/provider hierarchy.
   Exactly three single-line rows are enforced. Optional server distance shares

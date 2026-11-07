@@ -16,7 +16,7 @@
 | Parent project | https://github.com/phastboy/haven |
 | Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
 | Android namespace | `com.example` (current scaffold namespace) |
-| Version name / code | `0.0.0` / `10` (release candidate; confirm distributed code before publishing) |
+| Version name / code | `0.0.1` / `11` (release candidate; confirm distributed code before publishing) |
 | Minimum Android version | Android 7.0 / API 24 |
 
 ## Repository description

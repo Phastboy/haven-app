@@ -49,6 +49,7 @@ fun HavenPrimaryButton(
   testTag: String = "primary_button"
 ) {
   Button(
+    elevation = null,
     onClick = onClick,
     enabled = enabled && !isLoading,
     modifier = modifier

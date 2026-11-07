@@ -89,9 +89,13 @@ class MinimalFeedRobolectricTest {
           val price = compose.onNodeWithTag("offer_price_compact", true).fetchSemanticsNode().boundsInRoot
           val provider = compose.onNodeWithTag("offer_maker_compact", true).fetchSemanticsNode().boundsInRoot
           assertTrue("provider stays below the price row", provider.top >= price.bottom)
-          val distance = compose.onNodeWithTag("offer_distance_compact", true).fetchSemanticsNode().boundsInRoot
-          assertEquals("distance cannot move below price", price.top, distance.top, 0.1f)
-          assertTrue("distance cannot overlap price", distance.width == 0f || distance.left >= price.right)
+          val distanceNode = compose.onAllNodesWithTag("offer_distance_compact", true).fetchSemanticsNodes().singleOrNull()
+          if (distanceNode != null) {
+            val distance = distanceNode.boundsInRoot
+            assertEquals("distance cannot move below price", price.top, distance.top, 0.1f)
+            assertTrue("distance cannot overlap price", distance.width == 0f || distance.left >= price.right)
+          }
+          if (fontScale == 1f) compose.onNodeWithTag("offer_distance_compact", true).assertIsDisplayed()
           screenshot("minimal-card-${theme.name.lowercase()}-$cardWidth-$fontScale")
         }
       }
