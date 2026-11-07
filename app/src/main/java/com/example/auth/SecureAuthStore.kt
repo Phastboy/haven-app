@@ -45,15 +45,24 @@ class SecureAuthStore internal constructor(
 
   private fun get(name: String): String? {
     val raw = preferences.getString(name, null) ?: return null
-    // A transient Keystore failure must propagate without deleting valid ciphertext.
-    val encryptionKey = key()
+    val bytes = try { Base64.decode(raw, Base64.NO_WRAP) }
+    catch (_: IllegalArgumentException) {
+      preferences.edit { remove(name) }
+      return null
+    }
+    if (bytes.size < 28) {
+      preferences.edit { remove(name) }
+      return null
+    }
+    // Provider/key initialization errors are retryable; they do not prove corrupt ciphertext.
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
     return try {
-      val bytes = Base64.decode(raw, Base64.NO_WRAP)
-      if (bytes.size < 13) return null
-      val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-      cipher.init(Cipher.DECRYPT_MODE, encryptionKey, GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
       String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
-    } catch (_: Exception) {
+    } catch (_: javax.crypto.BadPaddingException) {
+      preferences.edit { remove(name) }
+      null
+    } catch (_: javax.crypto.IllegalBlockSizeException) {
       preferences.edit { remove(name) }
       null
     }
