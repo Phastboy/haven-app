@@ -32,15 +32,17 @@ object HavenCioClient {
 
   internal fun createApiClient(): HttpClient = create(redirects = false)
 
-  private fun create(redirects: Boolean): HttpClient = HttpClient(CIO) {
-    expectSuccess = false
+  private fun create(redirects: Boolean): HttpClient {
+    val engine = CIO.create { endpoint.connectAttempts = 1 }
+    return HttpClient(engine) {
+      expectSuccess = false
     followRedirects = redirects
     install(HttpTimeout) {
       connectTimeoutMillis = 10_000
       socketTimeoutMillis = 15_000
       requestTimeoutMillis = 60_000
     }
-    engine { endpoint { connectAttempts = 1 } }
+    }
   }
 }
 
