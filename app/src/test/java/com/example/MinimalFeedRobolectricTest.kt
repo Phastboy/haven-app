@@ -38,6 +38,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowSystemClock
+import java.time.Duration
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
@@ -56,14 +58,19 @@ class MinimalFeedRobolectricTest {
     assertEquals("$tag must occupy exactly one row", 1, layouts.single().lineCount)
   }
 
-  private fun screenshot(name: String) {
+  private fun screenshot(name: String): Bitmap {
     compose.waitForIdle()
     val view = compose.activity.window.decorView
     val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
     compose.runOnUiThread { view.draw(Canvas(bitmap)) }
+    // Robolectric's manually drawn view starts Coil's crossfade on this first draw.
+    ShadowSystemClock.advanceBy(Duration.ofMillis(500))
+    compose.mainClock.advanceTimeBy(32)
+    compose.runOnUiThread { view.draw(Canvas(bitmap)) }
     val file = File("build/reports/screenshots/$name.png")
     file.parentFile?.mkdirs()
     file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    return bitmap
   }
 
   @Test fun `card keeps three single-line rows at narrow widths and enlarged text in both themes`() {
@@ -124,7 +131,14 @@ class MinimalFeedRobolectricTest {
       compose.onNodeWithTag("offer_image_compact", true).assertIsDisplayed()
       // Successful decoding precedes the end of Coil's crossfade animation.
       compose.mainClock.advanceTimeBy(500)
-      screenshot("minimal-card-photo-${theme.name.lowercase()}")
+      val bitmap = screenshot("minimal-card-photo-${theme.name.lowercase()}")
+      val bounds = compose.onNodeWithTag("offer_image_compact", true).fetchSemanticsNode().boundsInWindow
+      val colors = listOf(0.25f, 0.5f, 0.75f).flatMap { x ->
+        listOf(0.25f, 0.5f, 0.75f).map { y ->
+          bitmap.getPixel((bounds.left + bounds.width * x).toInt(), (bounds.top + bounds.height * y).toInt())
+        }
+      }
+      assertTrue("Loaded photo must be visible, not a flat placeholder", colors.distinct().size > 1)
     }
   }
 
