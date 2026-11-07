@@ -154,8 +154,7 @@ fun NewOfferScreen(
     Column(modifier = Modifier.fillMaxSize()) {
       // Back-only Top Bar (48px)
       HavenTopBarContainer(
-        backgroundColor = HavenColors.Canvas,
-        showBottomBorder = false
+        backgroundColor = HavenColors.Canvas
       ) {
         Box(
           modifier = Modifier
@@ -757,8 +756,7 @@ fun OwnerOfferDetailScreen(
     Column(modifier = Modifier.fillMaxSize()) {
       // Back Top Bar (48px)
       HavenTopBarContainer(
-        backgroundColor = HavenColors.Canvas,
-        showBottomBorder = false
+        backgroundColor = HavenColors.Canvas
       ) {
         Box(
           modifier = Modifier

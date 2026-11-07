@@ -81,8 +81,6 @@ fun SignInScreen(
     // 56px Top Bar with Back Chevron & Status Bar / Notch Inset integration
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = true,
-      borderColor = HavenColors.BorderSubtle
     ) {
       Box(
         modifier = Modifier

@@ -1,4 +1,4 @@
-> Current release status: see `RELEASE_V0.0.0.md` and `NEXT_AGENT.md`.
+> Current release status: see `RELEASE_V0.0.1.md` and `NEXT_AGENT.md`.
 > Native threads and offer lifecycle are integrated; production/device acceptance
 > remains separate from implementation and automated verification.
 
@@ -39,7 +39,7 @@ it does not create a commitment, reservation, or agreement.
 create/edit/photo/location, profile/avatar editing, saves/follows, inquiries and
 native messaging are integrated with the live Haven backend. Release CI verifies
 builds and automated regressions; authenticated production and physical-device
-acceptance remain separate. See NEXT_AGENT.md and RELEASE_V0.0.0.md.
+acceptance remain separate. See NEXT_AGENT.md and RELEASE_V0.0.1.md.
 
 The product description is reusable copy, not a claim that every journey is live
 in this prototype. Use the current capability disclosure above when describing this build.

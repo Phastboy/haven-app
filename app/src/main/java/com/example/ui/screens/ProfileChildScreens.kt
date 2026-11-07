@@ -118,7 +118,6 @@ fun SavedOffersScreen(
     // Back-only Top Bar with status bar safe integration
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -439,7 +438,6 @@ fun FollowingScreen(
   ) {
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -713,7 +711,6 @@ fun MyOffersScreen(
   ) {
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier

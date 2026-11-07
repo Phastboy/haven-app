@@ -71,7 +71,7 @@ builds verify the expected release signer, package, code/name and absence of the
 application-debuggable flag. Forks perform debug-only verification with an
 ephemeral signer and cannot produce the distributable release artifact.
 
-Successful runs upload haven-android-release-apk containing haven-v0.0.0.apk,
+Successful runs upload haven-android-release-apk containing haven-v0.0.1.apk,
 SHA256SUMS, manifest.txt and apk-provenance.txt. Provenance records actual source
 commit, variant, workflow run and toolchain. PR builds may use a temporary merge
 commit; final distribution must reference the verified main/tag commit.

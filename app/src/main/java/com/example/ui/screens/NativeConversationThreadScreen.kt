@@ -127,7 +127,6 @@ fun NativeConversationThreadScreen(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
     ) {
       Spacer(modifier = Modifier.windowInsetsTopHeight(HavenInsets.statusBarsAndCutouts))
 
@@ -315,7 +314,6 @@ fun NativeConversationThreadScreen(
       modifier = Modifier
         .fillMaxWidth()
         .background(HavenColors.Canvas)
-        .border(width = 1.dp, color = HavenColors.BorderSubtle)
         .windowInsetsPadding(HavenInsets.bottomWithIme.only(WindowInsetsSides.Bottom))
         .padding(horizontal = 12.dp, vertical = 10.dp)
         .testTag("thread_composer_bar")

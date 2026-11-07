@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,91 +73,17 @@ fun Modifier.shimmerBackground(
     .background(brush)
 }
 
-/**
- * Reusable OfferCardSkeleton component mimicking the layout of the current OfferCard:
- * - 1:1 Aspect ratio square image container with 12dp rounded corners and subtle border
- * - Top-right circular 28x28dp favorite button placeholder
- * - 8dp spacer
- * - Creator row (14dp circle avatar + 68x10dp author name bar)
- * - 2dp spacer
- * - Offer title bar placeholder (85% width, 12dp height)
- * - 2dp spacer
- * - Price placeholder bar (56x13dp)
- *
- * Uses animated shimmer to clearly indicate loading states in both light and dark themes.
- */
+/** Loading preserves the square cover and exactly three text rows of FeedOfferCard. */
 @Composable
-fun OfferCardSkeleton(
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(12.dp))
-      .testTag("offer_card_skeleton")
-  ) {
-    // 1:1 Aspect Ratio Image Placeholder with corner radius 12dp & border
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(1f)
-        .clip(RoundedCornerShape(12.dp))
-        .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(12.dp))
-        .shimmerBackground(RoundedCornerShape(12.dp))
-    ) {
-      // Top-right circular favorite button skeleton (28x28dp)
-      Box(
-        modifier = Modifier
-          .align(Alignment.TopEnd)
-          .padding(8.dp)
-          .size(28.dp)
-          .clip(CircleShape)
-          .shimmerBackground(CircleShape)
-      )
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    // Creator Row: 14dp circle + author name bar
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(6.dp),
-      modifier = Modifier.fillMaxWidth()
-    ) {
-      Box(
-        modifier = Modifier
-          .size(14.dp)
-          .clip(CircleShape)
-          .shimmerBackground(CircleShape)
-      )
-      Box(
-        modifier = Modifier
-          .size(width = 68.dp, height = 10.dp)
-          .clip(RoundedCornerShape(4.dp))
-          .shimmerBackground(RoundedCornerShape(4.dp))
-      )
-    }
-
-    Spacer(modifier = Modifier.height(2.dp))
-
-    // Title line placeholder (mimics 13sp medium title)
-    Box(
-      modifier = Modifier
-        .fillMaxWidth(0.85f)
-        .height(12.dp)
-        .clip(RoundedCornerShape(4.dp))
-        .shimmerBackground(RoundedCornerShape(4.dp))
-    )
-
-    Spacer(modifier = Modifier.height(2.dp))
-
-    // Price line placeholder (mimics 13sp semibold price)
-    Box(
-      modifier = Modifier
-        .size(width = 56.dp, height = 13.dp)
-        .clip(RoundedCornerShape(4.dp))
-        .shimmerBackground(RoundedCornerShape(4.dp))
-    )
+fun OfferCardSkeleton(modifier: Modifier = Modifier) {
+  Column(modifier.fillMaxWidth().testTag("offer_card_skeleton")) {
+    Box(Modifier.fillMaxWidth().aspectRatio(1f).shimmerBackground(RoundedCornerShape(12.dp)))
+    Spacer(Modifier.height(10.dp))
+    Box(Modifier.fillMaxWidth(0.9f).height(18.dp).shimmerBackground())
+    Spacer(Modifier.height(4.dp))
+    Box(Modifier.fillMaxWidth(0.65f).height(16.dp).shimmerBackground())
+    Spacer(Modifier.height(4.dp))
+    Box(Modifier.fillMaxWidth(0.75f).height(16.dp).shimmerBackground())
   }
 }
 

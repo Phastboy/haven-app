@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,7 +93,7 @@ fun HavenPrimaryButton(
 }
 
 /**
- * Haven Secondary Button (52dp height, 8dp radius, white bg, 1dp subtle border)
+ * Haven Secondary Button (52dp height, 8dp radius, flat theme background, no decorative border)
  */
 @Composable
 fun HavenSecondaryButton(
@@ -112,7 +111,7 @@ fun HavenSecondaryButton(
       .height(52.dp)
       .testTag(testTag),
     shape = RoundedCornerShape(8.dp),
-    border = BorderStroke(1.dp, HavenColors.BorderDefault),
+    border = null,
     colors = ButtonDefaults.outlinedButtonColors(
       containerColor = HavenColors.Canvas,
       contentColor = HavenColors.Primary
@@ -139,7 +138,6 @@ fun HavenGoogleButton(
   enabled: Boolean = true,
   testTag: String = "google_sign_in_button"
 ) {
-  val borderColor = if (enabled) HavenColors.BorderDefault else HavenColors.BorderSubtle
   val containerColor = if (enabled) HavenColors.Canvas else HavenColors.SurfaceDisabled
   val contentColor = if (enabled) HavenColors.Primary else HavenColors.TextMuted
 
@@ -151,7 +149,7 @@ fun HavenGoogleButton(
       .height(52.dp)
       .testTag(testTag),
     shape = RoundedCornerShape(8.dp),
-    border = BorderStroke(1.dp, borderColor),
+    border = null,
     colors = ButtonDefaults.outlinedButtonColors(
       containerColor = containerColor,
       contentColor = contentColor,

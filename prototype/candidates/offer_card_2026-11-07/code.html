@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haven Offer Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            haven: {
+              surface: '#FFFFFF',
+              text: '#111111',
+              muted: '#6B6B6B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #FAFAFA;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex items-center justify-center p-6 bg-[#FAFAFA]">
+
+  <!-- Standalone Haven Offer Card (~170px wide, unbordered, no shadow/container styling) -->
+  <article class="w-[170px] flex flex-col group cursor-pointer select-none">
+    
+    <!-- Square Image Container with 12px corners -->
+    <div class="relative w-[170px] h-[170px] rounded-[12px] overflow-hidden bg-[#F0F0F0]">
+      <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBk3FGY-qoX1ndrYN4eC-aw4FnLobzZBAPNKmAO0eg89_TqJUn8CbtG7QdahHcXWYe2j4XlALv21jrjtLFQm7KIte6IPJNuz0iSM9JTrYotUYM-miF3_5iO1pWIFXet5i_VUoBl6fKMVgCMwCag1RXQi6_7tptF8aqlmbbxu7zmCDcdcumxyUM_QFjE9ORzNUG-mqx3XXzF9W425Y7aE68A0miyF2I9bTPM2kbCjA" alt="Ergonomic office chair" class="w-full h-full object-cover object-center block">
+      
+      <!-- Top-right Heart Save Action -->
+      <button type="button" aria-label="Save offer" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/25 active:scale-95 transition-transform flex items-center justify-center text-white backdrop-blur-[2px]">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Details Section organized purely by whitespace -->
+    <div class="mt-2.5 flex flex-col">
+      <!-- Offer Title: 1 line, trailing ellipsis -->
+      <h2 class="text-[14px] leading-[18px] font-semibold text-[#111111] truncate" title="Ergonomic office chair">
+        Ergonomic office chair
+      </h2>
+
+      <!-- Price -->
+      <div class="mt-1 text-[13px] leading-[16px] font-semibold text-[#111111] tracking-tight">
+        NGN 85,000
+      </div>
+
+      <!-- Provider Name: subordinate -->
+      <div class="mt-1 text-[13px] leading-[16px] font-medium text-[#6B6B6B] truncate">
+        Ade Office Supplies
+      </div>
+    </div>
+
+  </article>
+
+
+
+
+</body></html>

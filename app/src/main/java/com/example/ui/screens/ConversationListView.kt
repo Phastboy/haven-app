@@ -104,7 +104,6 @@ fun ConversationListView(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .border(width = 1.dp, color = HavenColors.BorderSubtle)
           .background(HavenColors.Canvas)
           .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

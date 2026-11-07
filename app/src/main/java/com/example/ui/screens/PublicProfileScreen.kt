@@ -167,7 +167,6 @@ fun PublicProfileScreen(
     // Back-Only Top Bar (48px)
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier

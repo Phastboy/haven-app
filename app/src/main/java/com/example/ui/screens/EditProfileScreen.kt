@@ -111,8 +111,7 @@ fun EditProfileScreen(
     Column(modifier = Modifier.fillMaxSize()) {
       // Top App Bar (Back-only)
       HavenTopBarContainer(
-        backgroundColor = HavenColors.Canvas,
-        showBottomBorder = false
+        backgroundColor = HavenColors.Canvas
       ) {
         Box(
           modifier = Modifier

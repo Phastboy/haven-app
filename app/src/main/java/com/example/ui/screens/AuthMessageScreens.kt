@@ -70,7 +70,6 @@ fun CheckEmailScreen(
     // Back-only Top Bar
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier
@@ -183,7 +182,6 @@ fun LinkExpiredScreen(
     // Back-only Top Bar
     HavenTopBarContainer(
       backgroundColor = HavenColors.Canvas,
-      showBottomBorder = false
     ) {
       Box(
         modifier = Modifier

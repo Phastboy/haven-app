@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -104,18 +103,12 @@ fun Modifier.havenKeyboardAwareBottomPadding(): Modifier = this.windowInsetsPadd
 fun HavenTopBarContainer(
   modifier: Modifier = Modifier,
   backgroundColor: Color = HavenColors.Canvas,
-  showBottomBorder: Boolean = true,
-  borderColor: Color = HavenColors.BorderSubtle,
   content: @Composable () -> Unit
 ) {
   Column(
     modifier = modifier
       .fillMaxWidth()
       .background(backgroundColor)
-      .then(
-        if (showBottomBorder) Modifier.border(width = 1.dp, color = borderColor)
-        else Modifier
-      )
   ) {
     // Dynamically matches the runtime status bar and camera punch-hole height
     Spacer(modifier = Modifier.windowInsetsTopHeight(HavenInsets.statusBarsAndCutouts))
@@ -132,8 +125,6 @@ fun HavenTopBarContainer(
 fun HavenBottomBarContainer(
   modifier: Modifier = Modifier,
   backgroundColor: Color = HavenColors.Canvas,
-  showTopBorder: Boolean = true,
-  borderColor: Color = HavenColors.BorderSubtle,
   liftWithKeyboard: Boolean = false,
   content: @Composable () -> Unit
 ) {
@@ -143,10 +134,6 @@ fun HavenBottomBarContainer(
     modifier = modifier
       .fillMaxWidth()
       .background(backgroundColor)
-      .then(
-        if (showTopBorder) Modifier.border(width = 1.dp, color = borderColor)
-        else Modifier
-      )
       .windowInsetsPadding(bottomInsets.only(WindowInsetsSides.Bottom))
   ) {
     content()

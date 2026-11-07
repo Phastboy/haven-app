@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -106,7 +105,6 @@ fun WelcomeScreen(
               .height(272.dp)
               .clip(RoundedCornerShape(16.dp))
               .background(HavenColors.SurfaceContainer)
-              .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(16.dp))
           ) {
             Image(
               painter = painterResource(id = R.drawable.fabric_craft),
@@ -130,7 +128,6 @@ fun WelcomeScreen(
                 .height(148.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(HavenColors.SurfaceContainer)
-                .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(16.dp))
             ) {
               Image(
                 painter = painterResource(id = R.drawable.lamp_craft),
@@ -147,7 +144,6 @@ fun WelcomeScreen(
                 .weight(1f)
                 .clip(RoundedCornerShape(16.dp))
                 .background(HavenColors.SurfaceContainer)
-                .border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(16.dp))
             ) {
               Image(
                 painter = painterResource(id = R.drawable.pottery_craft),

@@ -19,10 +19,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.ui.model.StartupViewModel
+import com.example.ui.screens.StartupGate
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.auth.HavenAuthClient
@@ -48,6 +52,15 @@ enum class Screen {
 class MainActivity : ComponentActivity() {
   private val signInViewModel: SignInViewModel by viewModels()
   private lateinit var auth: HavenAuthClient
+  private val startupViewModel: StartupViewModel by viewModels {
+    object : ViewModelProvider.Factory {
+      @Suppress("UNCHECKED_CAST")
+      override fun <T : ViewModel> create(modelClass: Class<T>): T = StartupViewModel(
+        restore = { withContext(Dispatchers.IO) { auth.restore() } },
+        hasSavedSession = { withContext(Dispatchers.IO) { auth.hasSavedSession() } }
+      ) as T
+    }
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -59,13 +72,14 @@ class MainActivity : ComponentActivity() {
     auth = HavenAuthClient.shared(this)
     setContent {
       HavenTheme {
-        HavenApp(signInViewModel = signInViewModel,
-          onStartGoogleSignIn = ::startSignIn,
-          onSignOut = ::signOut)
+        val startup by startupViewModel.state.collectAsState()
+        StartupGate(startup, startupViewModel::retry) { authenticated ->
+          HavenApp(signInViewModel = signInViewModel,
+            initialScreen = if (authenticated) Screen.OFFERS else Screen.WELCOME,
+            onStartGoogleSignIn = ::startSignIn,
+            onSignOut = ::signOut)
+        }
       }
-    }
-    lifecycleScope.launch(Dispatchers.IO) {
-      try { auth.restore() } catch (_: Exception) { /* Network failure keeps the device signed out. */ }
     }
   }
 
@@ -156,10 +170,11 @@ class MainActivity : ComponentActivity() {
 fun HavenApp(
   signInViewModel: SignInViewModel = viewModel(),
   offersViewModel: OffersViewModel = viewModel(factory = OffersViewModel.factory(androidx.compose.ui.platform.LocalContext.current)),
+  initialScreen: Screen = Screen.WELCOME,
   onStartGoogleSignIn: () -> Unit = {},
   onSignOut: () -> Unit = {}
 ) {
-  var currentScreen by remember { mutableStateOf(Screen.WELCOME) }
+  var currentScreen by rememberSaveable { mutableStateOf(initialScreen) }
   val session by SessionManager.session.collectAsState()
   LaunchedEffect(session.isAuthenticated) {
     if (session.isAuthenticated) currentScreen = Screen.OFFERS
