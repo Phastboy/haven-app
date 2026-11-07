@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,7 +103,7 @@ fun AttachedOfferCard(
     }
 
     Icon(
-      imageVector = Icons.Outlined.OpenInNew,
+      imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
       contentDescription = "View offer details",
       tint = if (isFromMe) HavenColors.TextOnDark.copy(alpha = 0.8f) else HavenColors.TextSecondary,
       modifier = Modifier.size(16.dp)

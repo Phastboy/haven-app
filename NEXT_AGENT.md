@@ -3,6 +3,10 @@
 Owner requested review/corrective PR(s) for issues #21 and #19 after AI Studio's
 main commit `2621d00`. Work branch: `fix/review-swipe-and-lint`. Do not merge,
 tag or publish without the owner's instruction. Keep Android 0.0.1 / code 11.
+Owner now requires full lint resolution, including dependency/toolchain/SDK
+updates. Use Ktor CIO throughout networking and Kotlin-only application sources;
+no Retrofit/OkHttp/Java HTTP engines. Page swipes are interior gestures and must
+not consume Android edge-back. Earlier deferred-upgrade guidance is superseded.
 
 Read [ANDROID_SWIPE_LINT_REVIEW.md](ANDROID_SWIPE_LINT_REVIEW.md) for findings,
 corrections and warning accounting. Verify exact PR CI before claiming a pass.

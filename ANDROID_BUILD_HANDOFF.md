@@ -1,39 +1,34 @@
-# Haven Android build and release handoff — 2026-11-07
+# Haven Android build and release handoff — current review
 
-This is the authoritative build recipe. The AI Studio report is preserved as
-historical evidence in AI_STUDIO_BUILD_EVIDENCE.md; its disputed source/client-ID/
-keystore/production-secret assertions are explicitly annotated there.
+Current corrective PR: #24, based on main `2621d00`. Android version remains
+0.0.1 / versionCode 11. Published 0.0.1 assets were attached by CI/CD; this PR does
+not authorize another tag/publication. Preserve both signing configurations and
+existing certificate checks. AI Studio reports are historical; inspect exact CI.
 
 ## Source and pinned recipe
 
-Repository: Phastboy/haven-app. UI patch: PR #18, following release integration
-PR #17. Candidate is versionName 0.0.1 / versionCode 11, increasing from 0.0.0 / 10.
-Application ID: com.aistudio.haven.xvykpt. Namespace: com.example.
+- Temurin 21.0.13+9 in CI; Kotlin-only application sources, JVM target 17.
+- Gradle 9.9.0 with official distribution SHA-256 in wrapper properties.
+- AGP 9.5.1, Kotlin/Compose compiler 2.4.21, KSP 2.3.13, Room 2.8.5.
+- Compile/target API 37, SDK build-tools 36.0.0, min SDK 24 retained.
+- Compose BOM 2026.09.00, Robolectric 4.17, Ktor 3.6.1 **CIO** and Coil 3.6.3
+  Ktor image networking. Active dependencies are pinned in the version catalog.
+- CI uses current stable checkout/setup-java/setup-gradle/upload actions, builds
+  both variants, runs regressions on API 35/37 and rejects lint warnings.
+- CI checks the resolved runtime for unwanted Retrofit/OkHttp/Java HTTP engines.
+  Its runtime-dependencies.txt is included in verification reports.
 
-- Temurin JDK 17.0.21+9 in CI; Java source/target compatibility 11.
-- Gradle wrapper 9.3.1 with distribution checksum in gradle-wrapper.properties.
-- AGP 9.1.1; Kotlin Compose plugin 2.2.10; KSP 2.3.5; Room 2.7.0.
-- Compile platform android-36.1; build-tools 36.0.0; min SDK 24; target SDK 36.
-- Direct dependencies/BOMs are pinned in gradle/libs.versions.toml. Transitive
-  dependency locking is not configured; byte-identical rebuilding is not claimed.
-- AI Studio reports JDK 21.0.13+9; our independent CI uses the measured/pinned JDK
-  above. Its emulator staging wrapper is not needed outside AI Studio.
-
-Use CI for builds/tests/lint to preserve the owner's local data budget:
+Use CI to preserve the owner's local data budget:
 
 ```sh
 ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ./gradlew --no-daemon :app:assembleRelease :app:lintRelease
 ```
 
-The second command requires the release signing environment described below.
-Release is non-debuggable; minification is disabled. No product flavors exist.
-Backend is https://haven.apps.mistral.run, API v0.8.65. Native auth uses Credential
-Manager and HavenAuthClient.GOOGLE_WEB_CLIENT_ID (1064336033731 project prefix).
-Browser/email/PKCE/App Link fallback is retired. No Gemini or backend/Cloudinary
-secret is required or permitted in the APK. Secrets-plugin example defaults
-support building without a private .env; Google-services missing-file handling
-is configured in source. Never add dummy production credentials to make CI pass.
+The second command requires the unchanged release-signing environment below.
+Google sign-in remains Credential Manager plus the Haven API; no Firebase,
+Google-services JSON, Gemini key or backend/Cloudinary secret is required. The
+runtime auth API remains server-confirmed, rotating and account-guarded.
 
 ## Owned signing identity and continuity
 

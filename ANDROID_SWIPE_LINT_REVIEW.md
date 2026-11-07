@@ -28,30 +28,55 @@ unused-colour/label removal and KTX conversions account for 25 resolved warnings
   deleting saved ciphertext, allowing startup retry. Existing Keystore alias,
   cipher format and signing identity are retained; no database migration/reset.
 
-## Warning accounting and accepted boundaries
+## Owner clarification and full lint modernization
 
-No baselines, disabled checks or blanket suppressions are added. The intended
-remaining set is 35 informational compatibility/version advisories, subject to
-confirmation in both exact-revision CI reports:
+The owner explicitly superseded the earlier plan to retain compatibility notices:
+fix all lint issues, including dependencies/toolchain/SDK where necessary. Tab
+swipes start within page content, not at an Android screen edge. Android's system
+edge-back behavior stays intact; no system gesture exclusions or raw edge handler
+are installed. Regression swipes explicitly start/end inside the page.
 
-| Lint ID | Count in AI Studio CI | Review disposition |
-|---|---:|---|
-| GradleDependency | 23 | Pinned Android/library updates require official compatibility checks and dedicated regression verification. |
-| NewerVersionAvailable | 9 | Version suggestions are not vulnerability findings; isolate compatible updates rather than bulk upgrade. |
-| AndroidGradlePluginVersion | 2 | Gradle/AGP are part of the pinned build/signing recipe; migration is separate from warning/source cleanup. |
-| OldTargetApi | 1 | Current target 36/compile 36.1 are pinned. A target-SDK migration needs behavior/device acceptance, not a silent version bump. |
+Networking is **Ktor 3.6.1 with CIO**, including API reads/writes, uploads, SSE and
+Coil 3 image fetching. No Retrofit, OkHttp or Java HTTP engine remains. Application
+source is Kotlin-only. Android/JVM platform and cryptographic APIs are still used;
+no replacement cryptography or signing identities are invented.
 
-All 35 original locations/messages are retained in AI_STUDIO_WARNINGS_HANDOFF.md.
-This review must report the actual remaining counts, not claim warning-free CI.
-Dependency/toolchain/target migrations should stay visible as follow-up work.
-No release or version bump is performed by this corrective PR.
+Gradle 9.9.0 (verified distribution checksum), AGP 9.5.1, Kotlin/Compose compiler
+2.4.21, KSP 2.3.13, Compose BOM 2026.09.00, Room 2.8.5 and Robolectric 4.17 are
+pinned. Compile/target API 37; CI installs the matching platform and uses Temurin
+21.0.13+9. Active AndroidX/coroutines/Credential Manager dependencies are updated
+from official Maven metadata. Unused Firebase/Retrofit/Moshi/camera/navigation
+scaffold declarations/plugins are removed instead of retained or upgraded as dead
+weight. Existing native Google OAuth and signing configuration are preserved.
+
+Coil 3.6.3 uses its Ktor 3 network fetcher and explicit CIO clients. Public CDN
+redirects use a separate image client and never inherit an API bearer. JSON/API
+redirects remain disabled. CIO cancels stream reads on coroutine cancellation;
+refresh credential rotation completes/persists before releasing its coroutine
+mutex, preventing old-refresh replay if its caller is cancelled. HTTP failures
+retain typed status/body and multipart keeps its stable upload identity.
+
+The earlier source review measured AI Studio's 65 → 40 warning improvement.
+This PR targets **zero warnings** in both lint variants: no baseline, suppression
+or disabled version checks. Lint warnings are errors, and CI verifies the resolved
+runtime uses CIO and contains no Retrofit/OkHttp/Java HTTP engines or Java app
+source. Exact final counts/results must be recorded from the final CI revision.
+
+Compatibility sources:
+- [AGP 9.5 requirements](https://developer.android.com/build/releases/agp-9-5-0-release-notes)
+- [Android 17 SDK setup](https://developer.android.com/about/versions/17/setup-sdk)
+- [Ktor engine support](https://ktor.io/docs/client-engines.html)
+- [Coil 3 migration](https://coil-kt.github.io/coil/upgrading_to_coil3/)
+- [Robolectric supported platforms](https://robolectric.org/compatibility_table/)
 
 ## Verification
 
 New regressions cover swipe/tap selection, no wraparound, cancelled drags,
 guest gating, rapid requests, private inbox read isolation, child/modal/category
 isolation, scroll retention, account reset/restoration, credential failure and
-legacy launcher resource resolution. Exact build/test/lint results belong in the
+legacy launcher resource resolution, Ktor status/body and multipart fields,
+stream cancellation, refresh rotation/cancellation and sign-out races. The root
+pager regressions run on both API 35 and 37. Exact build/test/lint results belong in the
 closing PR description; source implementation alone is not proof they passed.
 Physical Samsung swipes, system edge-back, TalkBack and launcher rendering still
 need device acceptance and must not be inferred from CI.

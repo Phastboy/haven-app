@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import coil3.request.crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,8 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.example.data.FeedOffer
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
@@ -59,7 +60,7 @@ fun FeedOfferCard(
     ) {
       val context = androidx.compose.ui.platform.LocalContext.current
       val imageRequest = androidx.compose.runtime.remember(offer.coverUrl) {
-        coil.request.ImageRequest.Builder(context)
+        coil3.request.ImageRequest.Builder(context)
           .data(offer.coverUrl)
           .crossfade(true)
           .memoryCacheKey(offer.coverUrl)

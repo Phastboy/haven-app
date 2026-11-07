@@ -9,8 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -31,7 +31,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w390dp-h844dp")
+@Config(sdk = [35, 37], qualifiers = "w390dp-h844dp")
 class RootTabsRobolectricTest {
   @get:Rule val compose = createComposeRule()
   private lateinit var tabs: RootTabsState
@@ -87,15 +87,15 @@ class RootTabsRobolectricTest {
 
   @Test fun `swipe and tap use the same selected state without wraparound`() {
     show()
-    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipeLeft() }
+    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_MESSAGES").assertIsSelected()
     assertEquals(RootTab.MESSAGES, selected.last())
     select(RootTab.PROFILE)
-    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipeLeft() }
+    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_PROFILE").assertIsSelected()
-    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipeRight() }
+    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipe(Offset(width * 0.25f, height * 0.5f), Offset(width * 0.75f, height * 0.5f)) }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_MESSAGES").assertIsSelected()
   }
@@ -138,7 +138,7 @@ class RootTabsRobolectricTest {
     compose.runOnIdle { release.complete(Unit) }
     compose.waitForIdle()
     assertEquals(0, signIns)
-    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipeLeft() }
+    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) }
     compose.waitForIdle()
     assertEquals(1, signIns)
     compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
@@ -164,7 +164,7 @@ class RootTabsRobolectricTest {
     select(RootTab.MESSAGES)
     assertEquals(index, inboxScroll.firstVisibleItemIndex)
     compose.runOnIdle { rootVisible.value = false }
-    compose.onNodeWithTag("child_route").performTouchInput { swipeLeft() }
+    compose.onNodeWithTag("child_route").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) }
     compose.runOnIdle { rootVisible.value = true }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_MESSAGES").assertIsSelected()
@@ -174,12 +174,12 @@ class RootTabsRobolectricTest {
   @Test fun `blocked modal and category strip cannot switch root tabs`() {
     show()
     compose.runOnIdle { blocked.value = true }
-    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipeLeft() }
+    compose.onNodeWithTag("root_tab_pager").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
     compose.runOnIdle { blocked.value = false }
     compose.onNodeWithText("Category 19").performScrollTo()
-    repeat(2) { compose.onNodeWithTag("categories").performTouchInput { swipeLeft() } }
+    repeat(2) { compose.onNodeWithTag("categories").performTouchInput { swipe(Offset(width * 0.75f, height * 0.5f), Offset(width * 0.25f, height * 0.5f)) } }
     compose.waitForIdle()
     compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
     compose.onNodeWithTag("offers_list").performTouchInput { swipeUp() }
