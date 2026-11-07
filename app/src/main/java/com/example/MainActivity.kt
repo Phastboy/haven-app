@@ -19,7 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
@@ -53,11 +53,12 @@ class MainActivity : ComponentActivity() {
   private val signInViewModel: SignInViewModel by viewModels()
   private lateinit var auth: HavenAuthClient
   private val startupViewModel: StartupViewModel by viewModels {
+    val client = auth
     object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
       override fun <T : ViewModel> create(modelClass: Class<T>): T = StartupViewModel(
-        restore = { withContext(Dispatchers.IO) { auth.restore() } },
-        hasSavedSession = { withContext(Dispatchers.IO) { auth.hasSavedSession() } }
+        restore = { withContext(Dispatchers.IO) { client.restore() } },
+        hasSavedSession = { withContext(Dispatchers.IO) { client.hasSavedSession() } }
       ) as T
     }
   }
@@ -77,7 +78,8 @@ class MainActivity : ComponentActivity() {
           HavenApp(signInViewModel = signInViewModel,
             initialScreen = if (authenticated) Screen.OFFERS else Screen.WELCOME,
             onStartGoogleSignIn = ::startSignIn,
-            onSignOut = ::signOut)
+            onSignOut = ::signOut,
+            onExit = ::finish)
         }
       }
     }
@@ -172,9 +174,10 @@ fun HavenApp(
   offersViewModel: OffersViewModel = viewModel(factory = OffersViewModel.factory(androidx.compose.ui.platform.LocalContext.current)),
   initialScreen: Screen = Screen.WELCOME,
   onStartGoogleSignIn: () -> Unit = {},
-  onSignOut: () -> Unit = {}
+  onSignOut: () -> Unit = {},
+  onExit: () -> Unit = {}
 ) {
-  var currentScreen by rememberSaveable { mutableStateOf(initialScreen) }
+  var currentScreen by remember { mutableStateOf(initialScreen) }
   val session by SessionManager.session.collectAsState()
   LaunchedEffect(session.isAuthenticated) {
     if (session.isAuthenticated) currentScreen = Screen.OFFERS
@@ -216,7 +219,9 @@ fun HavenApp(
       Screen.OFFERS -> {
         OffersScreen(
           viewModel = offersViewModel,
-          onNavigateBack = { currentScreen = Screen.WELCOME },
+          onNavigateBack = {
+            if (session.isAuthenticated) onExit() else currentScreen = Screen.WELCOME
+          },
           onNavigateToSignIn = { currentScreen = Screen.SIGN_IN },
           onSignOut = onSignOut
         )
