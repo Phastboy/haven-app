@@ -1,32 +1,28 @@
-# Current work — Android UI patch 0.0.1, 2026-11-07
+# Start here — Android v0.0.1 released; warning cleanup next
 
-Branch: `fix/android-ui-0.0.1`. Baseline main: `dfb6f2b` (PR #17 merged).
-Check current branch/PR CI before continuing; implementation is not device proof.
+Android PR #18 was squash-merged at `02262bc77b3b2252d0c8e958ce5c92bf47e09ae5`.
+Release `v0.0.1` is published, versionCode `11`. CI/CD has attached the signed
+APK, SHA256SUMS, manifest.txt and apk-provenance.txt. Do not manually rebuild or
+upload release assets. Backend releases and versions remain independent.
 
-## Owner-authorized scope
+## Current task for AI Studio / the next agent
 
-- Remove unintended screen-edge and welcome/sign-in button outlines.
-- Resolve saved authentication before routing: authenticated opens Offers;
-  transient failure retains credentials and offers retry rather than welcome.
-- Implement the November 7 single-card reference with exactly three text rows:
-  title; price and optional distance; provider. Never wrap or shrink. Price takes
-  priority and distance truncates first. Distance requires explicit proximity.
-- Share Filters' custom control strategy for filter/proximity/create: identical
-  40dp circles, 18dp icons, clipping and separate 48dp touch targets.
-- Android patch `0.0.1`, versionCode `11`. CI builds candidates on PR/main;
-  merge is not public publication. No backend changes or publication requested.
-- Run Android build/tests/lint in CI, preserving local data budget. Inspect
-  rendered light/dark/narrow/large-text screenshots; Samsung confirmation remains
-  separate, including checking that physical screen-edge lines are gone.
+Read [AI_STUDIO_WARNINGS_HANDOFF.md](AI_STUDIO_WARNINGS_HANDOFF.md). It contains
+the complete instructions, warning counts and all 65 baseline locations/messages;
+fetching GitHub issue #19 is not required. Check current main/CI before changes.
 
-## Next task — do not forget
+Baseline [CI 42379480988](https://github.com/Phastboy/haven-app/actions/runs/42379480988)
+passed all 115 tests, debug/release builds and both lints. Each lint variant has
+65 warnings and zero errors. Do not double-count them as 130 distinct defects.
+The owner's next authorized work is a separate warning-cleanup PR, with no
+blanket suppression or unverified bulk toolchain upgrades. Run Android checks in
+CI to preserve the local data budget. No further merge/publication is authorized
+by this handoff alone. Samsung/device and production acceptance remain separate.
 
-The owner explicitly requested addressing the **65 reported warnings after this
-PR**. Keep that cleanup separate. Retrieve the latest CI lint/compiler reports,
-identify which tool produced the count, inventory the actual warnings and verify
-current totals before changing code. Do not claim all 65 are Android lint warnings
-or suppress them to make the count disappear. Security/data-loss/core-journey
-issues found during that review retain immediate triage.
+The UI patch preserves exactly three offer-card text rows, price priority,
+explicit-only distance and matching filter/proximity/create controls. Decorative
+outlines/shadows must not return. Preserve authentication, cache/outbox isolation,
+signing identity and existing product scope. No new backend or product features.
 
 ## Prior release context (historical; superseded where stated above)
 
