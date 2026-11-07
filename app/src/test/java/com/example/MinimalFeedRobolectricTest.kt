@@ -5,6 +5,10 @@ import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.platform.testTag
+import com.example.ui.components.FeedHeaderLayout
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -142,6 +146,45 @@ class MinimalFeedRobolectricTest {
     }
   }
 
+  @Test fun `price keeps its full width before distance is truncated`() {
+    val active = mutableStateOf(false)
+    compose.setContent { HavenTheme {
+      Column(Modifier.width(158.dp)) {
+        FeedOfferCard(offer.copy(priceDisplay = "NGN 1,250,000,000"), showDistance = active.value, onOpen = {})
+      }
+    } }
+    val price = compose.onNodeWithTag("offer_price_compact", true)
+    val before = price.fetchSemanticsNode().boundsInRoot.width
+    compose.runOnIdle { active.value = true }
+    val layouts = mutableListOf<TextLayoutResult>()
+    price.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+    assertFalse("distance must not truncate a price that fits alone", layouts.single().isLineEllipsized(0))
+    assertEquals(before, price.fetchSemanticsNode().boundsInRoot.width, 0.1f)
+  }
+
+  @Test fun `narrow header preserves full search width without shrinking action targets`() {
+    val width = mutableStateOf(320)
+    compose.setContent { HavenTheme {
+      Column(Modifier.width(width.value.dp)) {
+        FeedHeaderLayout(search = { modifier -> Box(modifier.height(40.dp).testTag("header_search")) }, actions = {
+          FeedActionButton(Icons.Outlined.Tune, "Filters", "filter", onClick = {})
+          FeedActionButton(Icons.Outlined.LocationOn, "Proximity", "near", onClick = {})
+          FeedActionButton(Icons.Outlined.Add, "Create", "create", onClick = {})
+        })
+      }
+    } }
+    compose.onNodeWithTag("header_search").assertWidthIsEqualTo(288.dp)
+    val search = compose.onNodeWithTag("header_search").fetchSemanticsNode().boundsInRoot
+    val filter = compose.onNodeWithTag("filter").fetchSemanticsNode().boundsInRoot
+    assertTrue(search.bottom <= filter.top)
+    for (tag in listOf("filter", "near", "create")) compose.onNodeWithTag(tag).assertWidthIsEqualTo(48.dp)
+    compose.runOnIdle { width.value = 360 }
+    val wideSearch = compose.onNodeWithTag("header_search").fetchSemanticsNode().boundsInRoot
+    val wideFilter = compose.onNodeWithTag("filter").fetchSemanticsNode().boundsInRoot
+    assertTrue(wideSearch.right <= wideFilter.left)
+    assertTrue(wideFilter.top < wideSearch.bottom)
+  }
+
   @Test fun `general discovery hides server distance and saved heart keeps working`() {
     var saves = 0
     compose.setContent { HavenTheme {
@@ -185,6 +228,9 @@ class MinimalFeedRobolectricTest {
     compose.onNodeWithTag("startup_retry").performClick()
     assertEquals(1, retries)
     assertNull(destination)
+    compose.runOnIdle { state.value = StartupState.SIGNED_OUT }
+    compose.waitForIdle()
+    assertEquals(false, destination)
     compose.runOnIdle { state.value = StartupState.AUTHENTICATED }
     compose.waitForIdle()
     assertEquals(true, destination)

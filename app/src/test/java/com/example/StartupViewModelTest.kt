@@ -55,6 +55,12 @@ class StartupViewModelTest {
     assertEquals(StartupState.RETRY, model.state.value)
   }
 
+  @Test fun `credential storage failure remains retryable instead of crashing or signing out`() = runTest(dispatcher) {
+    val model = StartupViewModel({ throw IOException("storage unavailable") }, { throw IOException("storage unavailable") })
+    advanceUntilIdle()
+    assertEquals(StartupState.RETRY, model.state.value)
+  }
+
   @Test fun `repeated retry cannot rotate refresh credentials concurrently`() = runTest(dispatcher) {
     var calls = 0
     val pending = CompletableDeferred<Boolean>()

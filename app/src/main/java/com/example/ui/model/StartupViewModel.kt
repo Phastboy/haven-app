@@ -34,6 +34,11 @@ class StartupViewModel(
           hasSavedSession() -> StartupState.RETRY
           else -> StartupState.SIGNED_OUT
         }
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (_: Exception) {
+        // Storage being unavailable is not evidence that the person signed out.
+        _state.value = StartupState.RETRY
       } finally {
         restoring = false
       }

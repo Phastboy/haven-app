@@ -99,6 +99,7 @@ import com.example.ui.model.ProfileViewModel
 import com.example.ui.model.MessagesInboxViewModel
 import com.example.ui.model.ConversationThreadViewModel
 import com.example.ui.model.InquiryComposeViewModel
+import com.example.ui.components.FeedHeaderLayout
 import com.example.ui.components.FeedActionButton
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.OfferCardSkeleton
@@ -708,16 +709,9 @@ fun OffersScreen(
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas) {
       val isFeedDisabled = (browserError ?: state.error) != null && state.items.isEmpty()
       Column(modifier = if (isFeedDisabled) Modifier.alpha(0.45f) else Modifier) {
-        Row(
-          Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
+        FeedHeaderLayout(search = { searchModifier ->
           Row(
-            Modifier
-              .weight(1f)
+            searchModifier
               .height(40.dp)
               .clip(RoundedCornerShape(20.dp))
               .background(HavenColors.SurfaceContainer)
@@ -734,7 +728,8 @@ fun OffersScreen(
                   lineHeight = 18.sp,
                   fontFamily = InterFontFamily,
                   color = HavenColors.TextSecondary,
-                  maxLines = 1
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
               BasicTextField(
@@ -757,6 +752,7 @@ fun OffersScreen(
               }
             }
           }
+        }, actions = {
           FeedActionButton(
             icon = Icons.Outlined.Tune, description = "Filters", tag = "open_filters_button",
             enabled = !isFeedDisabled && state.currencies.isNotEmpty(),
@@ -774,7 +770,7 @@ fun OffersScreen(
               if (session.isAuthenticated) navStack = navStack + OffersDestination.OfferEditor() else onNavigateToSignIn()
             }
           )
-        }
+        })
         if (!isFeedDisabled) {
           if (state.activeReference != null) {
             Row(

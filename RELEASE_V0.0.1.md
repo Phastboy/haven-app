@@ -22,6 +22,7 @@ Type: patch / fix. Version name `0.0.1`, versionCode `11`, following source
   images retain square geometry; skeletons match the three-row layout.
 - Filter, proximity and create use one custom component with 40dp visible circles,
   18dp icons and independent 48dp touch targets, preserving their actual actions.
+  Below 360dp, search uses its own row so controls do not squeeze the field.
 
 ## Acceptance
 
