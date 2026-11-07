@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pre-26 launchers use Haven's existing padded round artwork. Adaptive icons stay unchanged. -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@mipmap/ic_launcher_round"
+    android:filter="true" />

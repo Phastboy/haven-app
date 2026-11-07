@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.R
 import com.example.ui.components.HavenBackButton
 import com.example.ui.components.HavenInsets
@@ -100,8 +100,8 @@ private const val SAMPLE_PHOTO_3_URL =
 @Composable
 fun NewOfferScreen(
   onBack: () -> Unit,
-  onOfferCreated: () -> Unit = onBack,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onOfferCreated: () -> Unit = onBack
 ) {
   BackHandler { onBack() }
   val focusManager = LocalFocusManager.current
@@ -678,14 +678,14 @@ data class OfferInquiryItem(
 @Composable
 fun OwnerOfferDetailScreen(
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onEditOffer: () -> Unit = {},
   onDeleteOffer: () -> Unit = onBack,
   onViewPublicPage: () -> Unit = {},
   offerTitle: String = "Hand-woven Aso Oke fabric, 6 yards",
   priceDisplay: String = "45,000 NGN",
   isPublicInitial: Boolean = true,
-  descriptionText: String = "Narrow-loom Aso Oke in indigo with gold thread, six yards, enough for a full wedding outfit. Made to order in about two weeks.",
-  modifier: Modifier = Modifier
+  descriptionText: String = "Narrow-loom Aso Oke in indigo with gold thread, six yards, enough for a full wedding outfit. Made to order in about two weeks."
 ) {
   BackHandler { onBack() }
 

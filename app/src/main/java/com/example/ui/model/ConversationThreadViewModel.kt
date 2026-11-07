@@ -69,7 +69,6 @@ class ConversationThreadViewModel(
   }
 
   override fun onCleared() {
-    super.onCleared()
     clear()
   }
 

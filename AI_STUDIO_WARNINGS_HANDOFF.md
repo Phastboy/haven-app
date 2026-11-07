@@ -1,3 +1,16 @@
+# Current owner direction — supersedes the earlier deferral policy
+
+The owner now requires fixing every lint issue, including dependency/toolchain/SDK
+updates as necessary. The earlier separate-upgrade/defer notices below are
+historical, not a reason to leave warnings unresolved. Networking must use Ktor
+with **CIO**, not OkHttp/Retrofit/Java HTTP clients; application sources are Kotlin.
+Tab swipes start within page content and must not replace Android edge-back.
+
+Codex review is in PR #24, based on AI Studio main `2621d00`. Read
+ANDROID_SWIPE_LINT_REVIEW.md and check exact PR CI. No merge or release is
+authorized by this handoff alone. Preserve data, identity, signing and current
+Haven behavior; no blanket lint suppression. Historical 65-warning inventory:
+
 After Android v0.0.1 (versionCode 11), the owner authorizes a separate warning-cleanup task. AI Studio may implement this Android-only work; use current main and the repository instructions. Do not expand product scope.
 
 Baseline: PR #18 head `7002d5b`, [CI 42379480988](https://github.com/Phastboy/haven-app/actions/runs/42379480988). Both debug and release lint reports contain **65 warnings, zero errors**. These are per-variant results, not 130 distinct defects. All 115 tests and debug/release builds passed. Compiler deprecation warnings are separate; inventory them rather than conflating counts.

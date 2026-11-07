@@ -60,6 +60,33 @@ class HavenMessagingRepositoryTest {
   }
 
   @Test
+  fun unreadOnlyLoadingNeverObservesOrRefreshesTheLocalInbox() = runTest(testDispatcher) {
+    var observes = 0
+    var refreshes = 0
+    val local = object : com.example.data.messaging.MessagingRepository by repository {
+      override fun observeConversations(ownerPersonId: String): kotlinx.coroutines.flow.Flow<List<ConversationEntity>> {
+        observes++
+        return kotlinx.coroutines.flow.emptyFlow()
+      }
+      override suspend fun refreshConversations(ownerPersonId: String): Result<Unit> {
+        refreshes++
+        return Result.success(Unit)
+      }
+    }
+    val remote = object : com.example.data.MessagesInboxRepository {
+      override suspend fun load(after: String?): com.example.data.ConversationInboxPage = error("Unexpected inbox read")
+      override suspend fun getGlobalUnread(): Boolean = true
+    }
+    val model = com.example.ui.model.MessagesInboxViewModel(remote, local)
+    model.loadUnread("owner")
+    testScheduler.advanceUntilIdle()
+    assertTrue(model.state.value.globalUnread)
+    assertEquals(0, observes)
+    assertEquals(0, refreshes)
+    model.clear()
+  }
+
+  @Test
   fun simulatorMigrationPreservesPendingAndRealMessages() = runTest(testDispatcher) {
     fun message(id: String, server: String?, status: String) = com.example.data.messaging.db.MessageEntity(
       clientMessageId = id, serverId = server, conversationId = "migration", senderPersonId = "me",

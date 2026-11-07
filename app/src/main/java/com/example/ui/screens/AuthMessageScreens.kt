@@ -55,8 +55,8 @@ import com.example.ui.theme.InterFontFamily
 @Composable
 fun CheckEmailScreen(
   onBack: () -> Unit,
-  onBackToSignIn: () -> Unit = onBack,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onBackToSignIn: () -> Unit = onBack
 ) {
   BackHandler { onBack() }
 
@@ -167,8 +167,8 @@ fun CheckEmailScreen(
 @Composable
 fun LinkExpiredScreen(
   onBack: () -> Unit,
-  onRequestNewLink: () -> Unit = onBack,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onRequestNewLink: () -> Unit = onBack
 ) {
   BackHandler { onBack() }
 
@@ -278,13 +278,13 @@ fun LinkExpiredScreen(
  */
 @Composable
 fun ErrorStateScreen(
-  errorCode: Int = 500,
   onBrowseOffers: () -> Unit,
+  modifier: Modifier = Modifier,
+  errorCode: Int = 500,
   onNavigateOffers: () -> Unit = onBrowseOffers,
   onNavigateMessages: () -> Unit = {},
   onNavigateProfile: () -> Unit = {},
-  hasUnreadMessages: Boolean = true,
-  modifier: Modifier = Modifier
+  hasUnreadMessages: Boolean = true
 ) {
   val is500 = errorCode == 500
   val statusCodeText = if (is500) "500" else "404"

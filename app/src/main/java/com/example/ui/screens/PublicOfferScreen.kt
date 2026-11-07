@@ -66,7 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.ui.components.HavenBackButton
 import com.example.ui.components.HavenBackButtonVariant
 import com.example.ui.components.HavenInsets
@@ -103,13 +103,13 @@ private const val MAKER_AVATAR_URL =
 fun PublicOfferScreen(
   offer: Offer,
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onOpenMakerProfile: (String) -> Unit = {},
   onManageOffer: () -> Unit = {},
   onSendMessage: (String) -> Unit = {},
   onSignInToMessage: () -> Unit = {},
   isOwnerInitial: Boolean = false,
-  isAuthenticated: Boolean = true,
-  modifier: Modifier = Modifier
+  isAuthenticated: Boolean = true
 ) {
   BackHandler { onBack() }
 

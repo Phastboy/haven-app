@@ -267,10 +267,10 @@ class HavenLocalFirstMessagingRepository(
     val keepLocal = current != null &&
       current.lastMessageTimestamp > lastRemote.timestampMillis &&
       current.lastMessageTimestamp >= pendingNewest
-    val summaryBody = if (keepLocal) current?.lastMessageBody ?: lastRemote.text else lastRemote.text
-    val summaryAt = if (keepLocal) current?.lastMessageAt ?: lastRemote.timestampIso else lastRemote.timestampIso
+    val summaryBody = if (keepLocal) current.lastMessageBody else lastRemote.text
+    val summaryAt = if (keepLocal) current.lastMessageAt else lastRemote.timestampIso
     val summaryTimestamp =
-      if (keepLocal) current?.lastMessageTimestamp ?: lastRemote.timestampMillis else lastRemote.timestampMillis
+      if (keepLocal) current.lastMessageTimestamp else lastRemote.timestampMillis
 
     conversationDao.upsertConversation(
       ConversationEntity(

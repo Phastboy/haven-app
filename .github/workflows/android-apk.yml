@@ -15,18 +15,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
-          java-version: '17.0.21+9'
-      - uses: android-actions/setup-android@v4
+          java-version: '21.0.13+9'
+      - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK platform
-        run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
+        run: android --no-metrics sdk install platforms/android-37.2 build-tools/37.0.0
       - name: Install persistent testing signer
         env:
           HAVEN_TEST_KEYSTORE_BASE64: ${{ secrets.HAVEN_TEST_KEYSTORE_BASE64 }}
@@ -55,11 +57,26 @@ jobs:
             test -n "$RELEASE_PASSWORD"
             printf '%s' "$RELEASE_KEYSTORE" | base64 --decode > "$RUNNER_TEMP/haven-release.p12"
           fi
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.1
+        with:
+          cache-read-only: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
+          cache-disabled: ${{ github.event_name == 'release' }}
       - name: Ensure Gradle wrapper is executable
         run: chmod +x ./gradlew
       - name: Build, test, and lint
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: ./gradlew --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - name: Verify Kotlin CIO runtime dependencies
+        run: |
+          ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > runtime-dependencies.txt
+          grep -q 'io.ktor:ktor-client-cio' runtime-dependencies.txt
+          if grep -E 'com.squareup.okhttp3|com.squareup.retrofit2|io.ktor:ktor-client-(okhttp|java|android)' runtime-dependencies.txt; then
+            echo 'Unexpected Java/OkHttp/Retrofit HTTP engine in runtime dependencies' >&2
+            exit 1
+          fi
+          if rg --files app/src | rg '[.]java$'; then
+            echo 'Application source must remain Kotlin-only' >&2
+            exit 1
+          fi
       - name: Build release APK and lint
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
@@ -69,10 +86,11 @@ jobs:
         run: ./gradlew --no-daemon :app:assembleRelease :app:lintRelease
       - name: Upload verification reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: haven-android-verification-reports
           path: |
+            runtime-dependencies.txt
             app/build/reports/lint-results-debug.*
             app/build/reports/lint-results-release.*
             app/build/reports/screenshots/
@@ -84,7 +102,7 @@ jobs:
           IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: |
           apk=app/build/outputs/apk/debug/app-debug.apk
-          tools="$ANDROID_HOME/build-tools/36.0.0"
+          tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > apk-provenance.txt
           if [[ "$IS_FORK" != "true" ]]; then
             grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' apk-provenance.txt
@@ -94,7 +112,7 @@ jobs:
           ./gradlew --version >> apk-provenance.txt
           "$tools/aapt" dump badging "$apk" >> apk-provenance.txt
           sha256sum "$apk" > apk-sha256.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: haven-android-debug-apk
           path: |
@@ -106,13 +124,13 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           mkdir -p release-assets
-          apk=release-assets/haven-v0.0.1.apk
+          apk=release-assets/haven-v0.0.2.apk
           cp app/build/outputs/apk/release/app-release.apk "$apk"
-          tools="$ANDROID_HOME/build-tools/36.0.0"
+          tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
-          grep -q "package: name='com.aistudio.haven.xvykpt' versionCode='11' versionName='0.0.1'" release-assets/manifest.txt
+          grep -q "package: name='com.aistudio.haven.xvykpt' versionCode='12' versionName='0.0.2'" release-assets/manifest.txt
           if grep -q 'application-debuggable' release-assets/manifest.txt; then
             echo 'Release APK must not be debuggable' >&2
             exit 1
@@ -120,10 +138,10 @@ jobs:
           printf '\nSource commit: %s\nVariant: release\nWorkflow: %s/%s/actions/runs/%s\n' "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-assets/apk-provenance.txt
           ./gradlew --version >> release-assets/apk-provenance.txt
           cd release-assets
-          sha256sum haven-v0.0.1.apk > SHA256SUMS
+          sha256sum haven-v0.0.2.apk > SHA256SUMS
       - name: Upload release candidate
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: haven-android-release-apk
           path: release-assets/
@@ -133,5 +151,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test "$GITHUB_REF_NAME" = v0.0.1
-          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.1.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber
+          test "$GITHUB_REF_NAME" = v0.0.2
+          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.2.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber

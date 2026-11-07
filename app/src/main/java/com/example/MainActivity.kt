@@ -1,6 +1,5 @@
 package com.example
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.ui.model.StartupViewModel
@@ -65,9 +63,6 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    window.statusBarColor = Color.TRANSPARENT
-    window.navigationBarColor = Color.TRANSPARENT
     enableEdgeToEdge()
     com.example.ui.theme.ThemeManager.init(this)
     auth = HavenAuthClient.shared(this)
@@ -101,8 +96,8 @@ class MainActivity : ComponentActivity() {
       message = "Starting native Google Sign-in flow with Android Credential Manager."
     )
     lifecycleScope.launch {
-      val nonce = auth.beginNativeGoogle()
       val errorMsg: String? = try {
+        val nonce = withContext(Dispatchers.IO) { auth.beginNativeGoogle() }
         HavenAuthClient.logDiagnostic(
           flow = "NATIVE_GOOGLE",
           step = "INVOKING_NATIVE_GOOGLE_SIGN_IN",

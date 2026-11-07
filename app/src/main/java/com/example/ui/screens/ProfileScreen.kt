@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.model.ProfileUiState
@@ -71,12 +73,21 @@ fun ProfileScreen(
   onOpenFollowing: (() -> Unit)? = null,
   onOpenOffer: ((String) -> Unit)? = null,
   onOpenPublicProfile: ((String) -> Unit)? = null,
-  onOpenEditProfile: (() -> Unit)? = null
+  onOpenEditProfile: (() -> Unit)? = null,
+  scrollState: ScrollState = rememberScrollState(),
+  onModalVisibilityChanged: (Boolean) -> Unit = {}
 ) {
   val context = LocalContext.current
   var appearance by remember { mutableStateOf(false) }
   var confirmSignOut by remember { mutableStateOf(false) }
+  DisposableEffect(appearance, confirmSignOut) {
+    onModalVisibilityChanged(appearance || confirmSignOut)
+    onDispose { onModalVisibilityChanged(false) }
+  }
   val profile = state.profile
+  // Loading/error content must not measure against and clamp the retained profile offset.
+  val loadingScrollState = rememberScrollState()
+  val contentScrollState = if (profile == null) loadingScrollState else scrollState
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("profile_screen")) {
     HavenTopBarContainer {
       Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
@@ -89,7 +100,7 @@ fun ProfileScreen(
         }
       }
     }
-    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(contentScrollState).padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally) {
       if (state.loading) CircularProgressIndicator(Modifier.padding(24.dp).testTag("profile_loading"), color = HavenColors.Primary)
       state.error?.let { error ->

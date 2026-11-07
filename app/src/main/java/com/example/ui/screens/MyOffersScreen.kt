@@ -52,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.data.FeedOffer
 import com.example.data.PaginatedOffers
 import com.example.ui.components.HavenTopBarContainer
@@ -64,12 +64,12 @@ import com.example.ui.theme.InterFontFamily
 
 @Composable
 fun MyOffersScreen(
-  viewModel: MyOffersViewModel = viewModel(factory = MyOffersViewModel.factory(LocalContext.current)),
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+  viewModel: MyOffersViewModel = viewModel(factory = MyOffersViewModel.factory(LocalContext.current)),
   onOpenOffer: (String) -> Unit = {},
   onCreateOffer: () -> Unit = {},
-  onEditOffer: (String) -> Unit = {},
-  modifier: Modifier = Modifier
+  onEditOffer: (String) -> Unit = {}
 ) {
   val state by viewModel.state.collectAsState()
   MyOffersScreen(
@@ -99,11 +99,11 @@ fun MyOffersScreen(
   onOpenOffer: (String) -> Unit,
   onCreateOffer: () -> Unit,
   onEditOffer: (String) -> Unit,
+  modifier: Modifier = Modifier,
   onDeleteOffer: (String) -> Unit = {},
   onLoadMore: () -> Unit = {},
   pagingError: String? = null,
-  loadingMore: Boolean = false,
-  modifier: Modifier = Modifier
+  loadingMore: Boolean = false
 ) {
   BackHandler(onBack = onBack)
   var offerPendingDelete by remember { mutableStateOf<FeedOffer?>(null) }

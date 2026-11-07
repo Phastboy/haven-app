@@ -56,12 +56,12 @@ import com.example.ui.model.SavedOffersViewModel
 
 @Composable
 fun SavedOffersScreen(
-  viewModel: SavedOffersViewModel = viewModel(factory = SavedOffersViewModel.factory(LocalContext.current)),
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+  viewModel: SavedOffersViewModel = viewModel(factory = SavedOffersViewModel.factory(LocalContext.current)),
   onOpenOffer: (String) -> Unit = {},
   onBrowseOffers: () -> Unit = {},
-  onOpenProvider: ((String) -> Unit)? = null,
-  modifier: Modifier = Modifier
+  onOpenProvider: ((String) -> Unit)? = null
 ) {
   val state by viewModel.state.collectAsState()
   SavedOffersScreen(
@@ -93,11 +93,11 @@ fun SavedOffersScreen(
   onOpenOffer: (String) -> Unit,
   onUnsaveOffer: (String) -> Unit,
   onBrowseOffers: () -> Unit,
+  modifier: Modifier = Modifier,
   onOpenProvider: ((String) -> Unit)? = null,
   onLoadMore: () -> Unit = {},
   pagingError: String? = null,
-  loadingMore: Boolean = false,
-  modifier: Modifier = Modifier
+  loadingMore: Boolean = false
 ) {
   BackHandler(onBack = onBack)
 

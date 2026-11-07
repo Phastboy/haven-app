@@ -61,7 +61,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.MessageDeliveryStatus
 import com.example.data.messaging.db.MessageEntity
@@ -82,9 +82,9 @@ fun NativeConversationThreadScreen(
   onInputChanged: (String) -> Unit,
   onSendMessage: () -> Unit,
   onRetryMessage: (String) -> Unit,
+  modifier: Modifier = Modifier,
   onLoadOlder: () -> Unit = {},
-  onOpenProfile: ((String) -> Unit)? = null,
-  modifier: Modifier = Modifier
+  onOpenProfile: ((String) -> Unit)? = null
 ) {
   val listState = rememberLazyListState()
   val isDragged by listState.interactionSource.collectIsDraggedAsState()

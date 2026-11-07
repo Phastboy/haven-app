@@ -170,7 +170,7 @@ class OfferEditorViewModel(
       state.description.trim().codePointCount(0, state.description.trim().length) !in 10..2000 -> "Use a description between 10 and 2,000 characters."
       state.options?.categories?.none { it.first == state.category } != false -> "Choose a category."
       state.price.trim().toIntOrNull()?.let { it >= 0 } != true -> "Enter a whole price in minor units, zero for free."
-      state.currency !in (state.options?.currencies ?: emptyList()) -> "Choose a currency."
+      state.currency !in state.options.currencies -> "Choose a currency."
       state.images.size > 5 || (state.images.isEmpty() && !state.allowPrivateSave) -> "Add between one and five photos to publish."
       else -> null
     }

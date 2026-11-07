@@ -59,7 +59,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.data.ProfileOverview
 import com.example.ui.components.HavenBackButton
 import com.example.ui.components.HavenInsets
@@ -72,10 +72,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun EditProfileScreen(
   onBack: () -> Unit,
+  modifier: Modifier = Modifier,
   onSaveSuccess: () -> Unit = {},
   initialProfile: ProfileOverview? = null,
-  viewModel: EditProfileViewModel = viewModel(factory = EditProfileViewModel.factory(LocalContext.current)),
-  modifier: Modifier = Modifier
+  viewModel: EditProfileViewModel = viewModel(factory = EditProfileViewModel.factory(LocalContext.current))
 ) {
   LaunchedEffect(initialProfile) {
     viewModel.initialize(initialProfile)

@@ -44,6 +44,22 @@ class MessagesInboxViewModelTest {
     override suspend fun getGlobalUnread(): Boolean = globalUnread
   }
 
+  @Test fun `unread badge refresh does not load the private inbox off-tab`() = runTest(dispatcher) {
+    var inboxReads = 0
+    val model = MessagesInboxViewModel(fakeInboxRepo(globalUnread = true) {
+      inboxReads++
+      ConversationInboxPage(emptyList(), null)
+    })
+    model.loadUnread("owner")
+    advanceUntilIdle()
+    assertEquals(0, inboxReads)
+    assertTrue(model.state.value.globalUnread)
+    assertTrue(model.state.value.unreadConfirmed)
+    model.load("owner")
+    advanceUntilIdle()
+    assertEquals(1, inboxReads)
+  }
+
   @Test fun `inbox only displays repository data and clears it when account leaves`() = runTest(dispatcher) {
     val model = MessagesInboxViewModel(fakeInboxRepo { ConversationInboxPage(listOf(inbox("one")), null) })
     assertTrue(model.state.value.items.isEmpty())

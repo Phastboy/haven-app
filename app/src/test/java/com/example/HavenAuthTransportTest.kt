@@ -1,0 +1,179 @@
+package com.example
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.example.auth.HavenAuthClient
+import com.example.auth.SecureAuthStore
+import com.example.data.network.HavenNetwork
+import com.example.ui.model.SessionManager
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.http.*
+import javax.crypto.KeyGenerator
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class HavenAuthTransportTest {
+  private lateinit var store: SecureAuthStore
+  @Before fun setup() {
+    SessionManager.signOut()
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    context.getSharedPreferences("haven_auth", Context.MODE_PRIVATE).edit().clear().commit()
+    val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    store = SecureAuthStore(context) { key }
+    store.refreshToken = "refresh-0"
+  }
+  @After fun cleanup() { SessionManager.signOut() }
+  private fun client(engine: MockEngine) = HttpClient(engine) { expectSuccess = false; install(HttpTimeout) }
+  private val person = """{"id":"owner","display_name":"Real person","handle":"real-person"}"""
+
+  @Test fun `refresh rotation persists before verification and concurrent 401s do not replay old tokens`() = runTest {
+    var rotations = 0
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> {
+          assertTrue(request.body.toByteArray().decodeToString().contains("refresh-$rotations"))
+          rotations++
+          respond("""{"access_token":"access-$rotations","refresh_token":"refresh-$rotations"}""", HttpStatusCode.OK)
+        }
+        "/api/v1/me" -> {
+          assertEquals("refresh-$rotations", store.refreshToken)
+          respond(person, HttpStatusCode.OK)
+        }
+        else -> if (request.headers[HttpHeaders.Authorization] == "Bearer access-1") respond("expired", HttpStatusCode.Unauthorized)
+          else respond("confirmed", HttpStatusCode.OK)
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val first = async { auth.authenticatedGet("/private/first", "owner") }
+      val second = async { auth.authenticatedGet("/private/second", "owner") }
+      assertEquals("confirmed", first.await())
+      assertEquals("confirmed", second.await())
+      assertEquals(2, rotations)
+      assertEquals("refresh-2", store.refreshToken)
+    } finally { client.close() }
+  }
+
+  @Test fun `cancelling refresh still persists its already-dispatched rotation`() = runTest {
+    val dispatched = CompletableDeferred<Unit>()
+    val reply = CompletableDeferred<Unit>()
+    val client = client(MockEngine { request ->
+      if (request.url.encodedPath.endsWith("/refresh")) {
+        dispatched.complete(Unit)
+        reply.await()
+        respond("""{"access_token":"rotated-access","refresh_token":"rotated-refresh"}""", HttpStatusCode.OK)
+      } else respond(person, HttpStatusCode.OK)
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      val restore = launch { auth.restore() }
+      dispatched.await()
+      restore.cancel()
+      reply.complete(Unit)
+      restore.join()
+      assertEquals("rotated-refresh", store.refreshToken)
+      assertTrue(SessionManager.session.value.isAuthenticated)
+    } finally { client.close() }
+  }
+
+  @Test fun `network failure keeps credentials while a confirmed refresh rejection clears them`() = runTest {
+    var status = HttpStatusCode.ServiceUnavailable
+    val client = client(MockEngine { respond("not accepted", status) })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertFalse(auth.restore())
+      assertEquals("refresh-0", store.refreshToken)
+      status = HttpStatusCode.Unauthorized
+      assertFalse(auth.restore())
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
+    } finally { client.close() }
+  }
+
+  @Test fun `sign out waiting on rotation revokes the rotated token and cannot resurrect the person`() = runTest {
+    val dispatched = CompletableDeferred<Unit>()
+    val reply = CompletableDeferred<Unit>()
+    var revoked: String? = null
+    val client = client(MockEngine { request ->
+      when {
+        request.url.encodedPath.endsWith("/refresh") -> {
+          dispatched.complete(Unit); reply.await()
+          respond("""{"access_token":"new-access","refresh_token":"new-refresh"}""", HttpStatusCode.OK)
+        }
+        request.url.encodedPath.endsWith("/revoke") -> {
+          revoked = request.body.toByteArray().decodeToString()
+          respond("{}", HttpStatusCode.OK)
+        }
+        else -> respond(person, HttpStatusCode.OK)
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      val restoring = launch { auth.restore() }
+      dispatched.await()
+      val signOut = launch(start = CoroutineStart.UNDISPATCHED) { auth.signOut() }
+      // The request has entered signOut and is waiting behind the rotating refresh.
+      signOut.cancel()
+      reply.complete(Unit)
+      restoring.join(); signOut.join()
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
+      assertTrue(revoked.orEmpty().contains("new-refresh"))
+    } finally { client.close() }
+  }
+
+  @Test fun `unavailable keystore cannot retain a signed in session during sign out`() = runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val unreadable = SecureAuthStore(context) { throw java.io.IOException("Keystore unavailable") }
+    SessionManager.signInPerson("owner", "Real person", "real-person")
+    var requests = 0
+    val client = client(MockEngine { requests++; respond("{}", HttpStatusCode.OK) })
+    try {
+      HavenAuthClient(unreadable, HavenNetwork(client, "https://haven.test")).signOut()
+      assertFalse(SessionManager.session.value.isAuthenticated)
+      assertNull(store.refreshToken)
+      assertEquals(0, requests)
+    } finally { client.close() }
+  }
+
+  @Test fun `cancellation during revocation still completes server sign out`() = runTest {
+    val dispatched = CompletableDeferred<Unit>()
+    val reply = CompletableDeferred<Unit>()
+    var revoked = false
+    val client = client(MockEngine {
+      dispatched.complete(Unit)
+      reply.await()
+      revoked = true
+      respond("{}", HttpStatusCode.OK)
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      val signOut = launch(start = CoroutineStart.UNDISPATCHED) { auth.signOut() }
+      dispatched.await()
+      signOut.cancel()
+      reply.complete(Unit)
+      signOut.join()
+      assertTrue(revoked)
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
+    } finally { client.close() }
+  }
+}
