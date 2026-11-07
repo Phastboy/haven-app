@@ -128,4 +128,18 @@ class ConversationThreadViewModelTest {
 
     viewModel.clear()
   }
+  @Test
+  fun stoppingScreenAndReopeningSameThreadPreservesDraft() = runTest(testDispatcher) {
+    viewModel.openConversation("draft-thread", "owner")
+    testScheduler.advanceUntilIdle()
+    viewModel.onInputTextChanged("Unsent draft survives recreation")
+    viewModel.attachOffer("offer", "Offer", "Free")
+    viewModel.stopLiveUpdates()
+    viewModel.openConversation("draft-thread", "owner")
+    testScheduler.advanceUntilIdle()
+    assertEquals("Unsent draft survives recreation", viewModel.uiState.value.inputText)
+    assertEquals("offer", viewModel.uiState.value.pendingAttachedOfferSlug)
+    viewModel.clear()
+  }
+
 }

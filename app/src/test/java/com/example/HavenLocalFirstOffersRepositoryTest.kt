@@ -319,4 +319,17 @@ class HavenLocalFirstOffersRepositoryTest {
       HavenLocalFirstOffersRepository.computeQueryKey(separate))
   }
 
+  @Test fun profileEditDoesNotDiscardSameAccountCacheResponse() = runTest(testDispatcher) {
+    val session = com.example.ui.model.SessionManager
+    session.signInPerson("actor", "Before", "before")
+    try {
+      val repo = HavenLocalFirstOffersRepository(database, OffersRepository {
+        session.updateProfileIfCurrent("actor", "After", "after")
+        OffersPage(listOf(sampleOffer("same-actor")), emptyList(), emptyList(), null)
+      }, testDispatcher)
+      assertTrue(repo.fetchAndCache(OffersQuery()).isSuccess)
+      assertEquals("same-actor", repo.getCachedPage(OffersQuery())!!.items.single().id)
+    } finally { session.signOut() }
+  }
+
 }

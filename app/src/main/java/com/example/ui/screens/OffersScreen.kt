@@ -648,7 +648,7 @@ fun OffersScreen(
           }
           lifecycle.addObserver(observer)
           if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) threadModel.startLiveUpdates()
-          onDispose { lifecycle.removeObserver(observer); threadModel.clear() }
+          onDispose { lifecycle.removeObserver(observer); threadModel.stopLiveUpdates() }
         }
         val threadState by threadModel.uiState.collectAsState()
         NativeConversationThreadScreen(

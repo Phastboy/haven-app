@@ -53,14 +53,14 @@ class HavenLocalFirstOffersRepository(
     val key = computeQueryKey(query, actor.personId)
     val cache = queryCacheDao.getCache(key) ?: return@withContext null
     val page = buildOffersPageFromCache(cache)
-    if (SessionManager.session.value != actor) null else page
+    if (!SessionManager.session.value.sameAccount(actor)) null else page
   }
 
   override fun observeCachedPage(query: OffersQuery): Flow<OffersPage?> {
     val actor = SessionManager.session.value
     val key = computeQueryKey(query, actor.personId)
     return queryCacheDao.observeCache(key).combine(SessionManager.session) { cache, session ->
-      if (cache == null || session != actor) null else buildOffersPageFromCache(cache)
+      if (cache == null || !session.sameAccount(actor)) null else buildOffersPageFromCache(cache)
     }.distinctUntilChanged()
   }
 
@@ -69,7 +69,7 @@ class HavenLocalFirstOffersRepository(
       val actor = SessionManager.session.value
       val key = computeQueryKey(query, actor.personId)
       val freshPage = remoteRepository.fetch(query.copy(after = null))
-      if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+      if (!SessionManager.session.value.sameAccount(actor)) throw CancellationException("Account changed")
 
       // 1. Upsert offer records into Room
       val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it.copy(isSaved = null, distanceMeters = null)) }
@@ -89,7 +89,7 @@ class HavenLocalFirstOffersRepository(
         lastFetchedAt = System.currentTimeMillis()
       )
       database.withTransaction {
-        if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+        if (!SessionManager.session.value.sameAccount(actor)) throw CancellationException("Account changed")
         offerDao.upsertOffers(entities)
         queryCacheDao.upsertCache(cacheEntry)
       }
@@ -110,7 +110,7 @@ class HavenLocalFirstOffersRepository(
       val actor = SessionManager.session.value
       val key = computeQueryKey(query, actor.personId)
       val freshPage = remoteRepository.fetch(query)
-      if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+      if (!SessionManager.session.value.sameAccount(actor)) throw CancellationException("Account changed")
 
       // 1. Upsert newly fetched offers
       val entities = freshPage.items.map { FeedOfferEntity.fromFeedOffer(it.copy(isSaved = null, distanceMeters = null)) }
@@ -131,7 +131,7 @@ class HavenLocalFirstOffersRepository(
         lastFetchedAt = System.currentTimeMillis()
       )
       database.withTransaction {
-        if (SessionManager.session.value != actor) throw CancellationException("Account changed")
+        if (!SessionManager.session.value.sameAccount(actor)) throw CancellationException("Account changed")
         offerDao.upsertOffers(entities)
         queryCacheDao.upsertCache(cacheEntry)
       }

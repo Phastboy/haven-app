@@ -111,7 +111,7 @@ class OffersViewModel(
       error = null
     ) }
     loadJob = viewModelScope.launch {
-      fun isCurrent() = generation == request && SessionManager.session.value == actor
+      fun isCurrent() = generation == request && SessionManager.session.value.sameAccount(actor)
       try {
         if (reset && localOffersRepository != null) {
           val cached = localOffersRepository.getCachedPage(query)

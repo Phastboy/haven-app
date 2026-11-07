@@ -106,4 +106,18 @@ class OffersViewModelTest {
     assertNull(page.items.single().coverUrl)
     assertNull(page.nextCursor)
   }
+  @Test fun profileEditDuringRequestDoesNotLeaveFeedLoading() = runTest(dispatcher) {
+    com.example.ui.model.SessionManager.signInPerson("actor", "Before", "before")
+    try {
+      val model = OffersViewModel(OffersRepository {
+        com.example.ui.model.SessionManager.updateProfileIfCurrent("actor", "After", "after")
+        page(listOf(offer("confirmed")))
+      })
+      advanceUntilIdle()
+      assertEquals("confirmed", model.uiState.value.items.single().id)
+      assertFalse(model.uiState.value.isLoading)
+      assertFalse(model.uiState.value.isRefreshing)
+    } finally { com.example.ui.model.SessionManager.signOut() }
+  }
+
 }

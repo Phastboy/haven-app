@@ -13,6 +13,9 @@ data class UserSession(
   val displayName: String = "Guest Member",
   val email: String? = null
 ) {
+  fun sameAccount(other: UserSession): Boolean =
+    personId == other.personId && isAuthenticated == other.isAuthenticated
+
   val initial: String get() = displayName.firstOrNull()?.uppercase() ?: "H"
 }
 
