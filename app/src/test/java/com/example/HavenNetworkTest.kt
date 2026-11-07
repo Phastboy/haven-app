@@ -71,7 +71,7 @@ class HavenNetworkTest {
       gotLine.await()
       stream.cancelAndJoin()
       assertTrue(stream.isCancelled)
-    } finally { channel.cancel(); client.close() }
+    } finally { channel.cancel(null); client.close() }
   }
 
   @Test fun `absolute and protocol-relative request paths cannot redirect bearer credentials`() = runTest {
