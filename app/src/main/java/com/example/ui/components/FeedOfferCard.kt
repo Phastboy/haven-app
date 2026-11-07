@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.example.data.FeedOffer
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
@@ -70,6 +71,7 @@ fun FeedOfferCard(
         modifier = Modifier.fillMaxSize(),
         contentScale = ContentScale.Crop,
         loading = { Box(Modifier.fillMaxSize().shimmerBackground(RoundedCornerShape(12.dp))) },
+        success = { SubcomposeAsyncImageContent(Modifier.testTag("offer_image_${offer.id}")) },
         error = {
           Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.Image, "Image unavailable", tint = HavenColors.TextMuted)

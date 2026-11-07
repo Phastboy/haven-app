@@ -100,6 +100,28 @@ class MinimalFeedRobolectricTest {
     assertOneLine("offer_price_compact")
   }
 
+  @Test fun `loaded photograph renders in both themes with the same card geometry`() {
+    val mode = mutableStateOf(ThemeMode.LIGHT)
+    val saved = mutableStateOf(false)
+    val photoOffer = offer.copy(
+      title = "Handcrafted reading lamp", makerName = "Ade Home Supplies", priceDisplay = "NGN 85,000",
+      coverUrl = "android.resource://${compose.activity.packageName}/${R.drawable.lamp_craft}"
+    )
+    compose.setContent { HavenTheme(mode.value) {
+      Column(Modifier.width(205.dp).background(HavenColors.Canvas).padding(16.dp)) {
+        FeedOfferCard(photoOffer, showDistance = true, saved = saved.value, onOpen = {})
+      }
+    } }
+    compose.waitUntil(10_000) {
+      compose.onAllNodesWithTag("offer_image_compact", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    }
+    for (theme in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
+      compose.runOnIdle { mode.value = theme; saved.value = theme == ThemeMode.DARK }
+      compose.onNodeWithTag("offer_image_compact", true).assertIsDisplayed()
+      screenshot("minimal-card-photo-${theme.name.lowercase()}")
+    }
+  }
+
   @Test fun `general discovery hides server distance and saved heart keeps working`() {
     var saves = 0
     compose.setContent { HavenTheme {
