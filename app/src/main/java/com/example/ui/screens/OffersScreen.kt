@@ -218,14 +218,14 @@ fun OffersScreen(
   var detailRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var savedStates by remember(session.personId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
   var savingSlugs by remember(session.personId) { mutableStateOf<Set<String>>(emptySet()) }
-  var saveError by remember { mutableStateOf<String?>(null) }
+  var saveError by remember(session.personId) { mutableStateOf<String?>(null) }
 
   // Provider profile state
   val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
   val currentProviderHandle by rememberUpdatedState(activeProviderHandle)
   var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
-  var providerLoading by remember { mutableStateOf(false) }
-  var providerError by remember { mutableStateOf<String?>(null) }
+  var providerLoading by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
+  var providerError by remember(session.personId, activeProviderHandle) { mutableStateOf<String?>(null) }
   var providerRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
 
@@ -344,7 +344,7 @@ fun OffersScreen(
     finally { detailLoading = false }
   }
 
-  LaunchedEffect(activeProviderHandle, session.isAuthenticated, providerRetry) {
+  LaunchedEffect(activeProviderHandle, session.personId, providerRetry) {
     providerProfile = null
     providerError = null
     val handle = activeProviderHandle ?: return@LaunchedEffect
@@ -397,7 +397,8 @@ fun OffersScreen(
     val actor = session.personId
     savingSlugs = savingSlugs + slug
 
-    val previousState = savedStates[slug] ?: false
+    val previousState = savedStates[slug] ?: providerProfile?.offers?.firstOrNull { it.slug == slug }?.isSaved
+      ?: state.items.firstOrNull { it.slug == slug }?.isSaved ?: detail?.takeIf { it.slug == slug }?.isSaved ?: false
     val optimisticTarget = requestedSavedState(previousState)
     // Instant optimistic update
     savedStates = savedStates + (slug to optimisticTarget)
@@ -420,7 +421,8 @@ fun OffersScreen(
           savedStates = savedStates + (slug to previousState)
           if (detail?.slug == slug) detail = detail?.copy(isSaved = previousState)
         }
-        saveError = "Couldn’t update saved offer. Please try again."
+        if (SessionManager.session.value.personId == actor)
+          saveError = "Couldn’t update saved offer. Please try again."
       }
       finally { if (SessionManager.session.value.personId == actor) savingSlugs = savingSlugs - slug }
     }
@@ -511,24 +513,44 @@ fun OffersScreen(
                   catch (_: Exception) {
                     if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
                       providerError = "Couldn’t update following. Please try again."
-                  } finally { followPending = false }
+                  } finally {
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) followPending = false
+                  }
                 }
               }
             }
           },
           onLoadMore = {
-            providerProfile?.nextCursor?.let { cursor ->
+            val cursor = providerProfile?.nextCursor
+            if (cursor != null && !providerLoading) {
+              val actor = session.personId
+              val handle = currentDestination.handle
+              providerLoading = true
+              providerError = null
               scope.launch {
                 try {
-                  val more = nativePagesRepo.getProviderProfile(currentDestination.handle, after = cursor, authenticated = session.isAuthenticated)
-                  providerProfile = providerProfile?.copy(
-                    offers = (providerProfile?.offers ?: emptyList()) + more.offers,
-                    nextCursor = more.nextCursor
-                  )
-                } catch (_: Exception) {}
+                  val more = nativePagesRepo.getProviderProfile(handle, after = cursor, authenticated = actor != null)
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
+                    providerProfile = providerProfile?.copy(
+                      offers = (providerProfile?.offers.orEmpty() + more.offers).distinctBy { it.id },
+                      nextCursor = more.nextCursor
+                    )
+                  }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) {
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
+                    providerError = "Couldn’t load more offers. Please try again."
+                } finally {
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
+                    providerLoading = false
+                }
               }
             }
           },
+          followPending = followPending,
+          savedStates = savedStates,
+          savingSlugs = savingSlugs,
+          onSaveOffer = ::saveOffer,
           isOwnProfile = (session.personId != null && providerProfile?.person?.id == session.personId),
           isFollowing = providerProfile?.person?.isFollowing ?: false,
           modifier = modifier
