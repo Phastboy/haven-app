@@ -47,8 +47,8 @@ fun FeedOfferCard(
   showDistance: Boolean = false,
   onSave: (() -> Unit)? = null,
   onOpenProvider: ((String) -> Unit)? = null,
-  onOpen: () -> Unit,
-  showSave: Boolean = true
+  showSave: Boolean = true,
+  onOpen: () -> Unit
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("offer_card_${offer.id}")) {
     Box(
