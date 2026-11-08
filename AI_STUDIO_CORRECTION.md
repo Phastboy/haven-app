@@ -9,7 +9,8 @@ abort-on-error behavior, AGP 9.5.1 pin, shared 8dp flat buttons with loading tex
 and account-keyed pager state with settled-page activation. These implementations
 are restored from 88e015d, rather than introducing another design or navigation
 rewrite. The previous custom spinner is restored with the button implementation
-to keep this correction limited to the established behavior.
+to keep this correction limited to the established behavior. Its default color
+uses HavenColors.TextPrimary; current callers retain their explicit colors.
 
 Retains removal of obsolete sample components/tests and corrected callback,
 semantics-tree and named-argument test calls. Adds regressions requiring sign-out
@@ -28,3 +29,10 @@ light/dark button and physical-device checks have a 2026-11-09 review target.
 Retain exact SHA, command, environment and results before closing those checks.
 
 Issues #22, #23 and #25 are separate work and are not closed by this correction.
+
+CI run 42482255141 passed debug/release builds, tests, lint, dependency and
+signer/provenance checks at 1853bce. A subsequent theme-default correction
+requires fresh CI. Review suggestion to add a Google button outline is rejected:
+the current owner explicitly requires reversal of unsolicited UI changes and
+NEXT_AGENT.md prohibits returning decorative outlines; no new boundary is added.
+Qodo review is unavailable because its subscription is inactive, not passed.

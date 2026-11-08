@@ -186,7 +186,7 @@ fun HavenGoogleButton(
 @Composable
 fun HavenSpinner(
   modifier: Modifier = Modifier,
-  color: Color = Color.White
+  color: Color = HavenColors.TextPrimary
 ) {
   val transition = rememberInfiniteTransition(label = "spinner_transition")
   val rotation by transition.animateFloat(
