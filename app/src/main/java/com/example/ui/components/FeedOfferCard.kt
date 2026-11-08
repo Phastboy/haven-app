@@ -47,6 +47,7 @@ fun FeedOfferCard(
   showDistance: Boolean = false,
   onSave: (() -> Unit)? = null,
   onOpenProvider: ((String) -> Unit)? = null,
+  showSave: Boolean = true,
   onOpen: () -> Unit
 ) {
   Column(modifier = modifier.fillMaxWidth().testTag("offer_card_${offer.id}")) {
@@ -80,7 +81,7 @@ fun FeedOfferCard(
           }
         }
       )
-      Box(
+      if (showSave) Box(
         modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
           .clickable(enabled = !saving, role = Role.Button, onClick = { (onSave ?: onOpen).invoke() }),
         contentAlignment = Alignment.Center

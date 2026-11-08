@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CancellationException
 import com.example.data.HavenOfferDetailRepository
 import com.example.data.HavenNativePagesRepository
@@ -218,16 +219,17 @@ fun OffersScreen(
   var detailRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var savedStates by remember(session.personId) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
   var savingSlugs by remember(session.personId) { mutableStateOf<Set<String>>(emptySet()) }
-  var saveError by remember { mutableStateOf<String?>(null) }
+  var saveError by remember(session.personId) { mutableStateOf<String?>(null) }
 
   // Provider profile state
   val activeProviderHandle = (currentDestination as? OffersDestination.ProviderProfile)?.handle
   val currentProviderHandle by rememberUpdatedState(activeProviderHandle)
   var providerProfile by remember(session.personId) { mutableStateOf<ProviderProfile?>(null) }
-  var providerLoading by remember { mutableStateOf(false) }
-  var providerError by remember { mutableStateOf<String?>(null) }
+  var providerLoading by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
+  var providerError by remember(session.personId, activeProviderHandle) { mutableStateOf<String?>(null) }
   var providerRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
+  val providerScope = rememberProviderVisitScope(activeProviderHandle, session.personId, providerRetry)
 
   // My offers state
   val isMyOffersActive = currentDestination is OffersDestination.MyOffers
@@ -344,13 +346,15 @@ fun OffersScreen(
     finally { detailLoading = false }
   }
 
-  LaunchedEffect(activeProviderHandle, session.isAuthenticated, providerRetry) {
+  LaunchedEffect(activeProviderHandle, session.personId, providerRetry) {
     providerProfile = null
     providerError = null
     val handle = activeProviderHandle ?: return@LaunchedEffect
     providerLoading = true
     try {
-      providerProfile = nativePagesRepo.getProviderProfile(handle, authenticated = session.isAuthenticated)
+      val refreshed = nativePagesRepo.getProviderProfile(handle, authenticated = session.isAuthenticated)
+      savedStates = reconcileProviderSavedStates(savedStates, savingSlugs, refreshed.offers)
+      providerProfile = refreshed
     } catch (cancelled: CancellationException) { throw cancelled }
     catch (_: Exception) { providerError = "Couldn’t load provider profile. Please try again." }
     finally { providerLoading = false }
@@ -391,13 +395,20 @@ fun OffersScreen(
     finally { followingLoading = false }
   }
 
+  fun currentSavedState(slug: String): Boolean = resolvedSavedState(
+    savedStates[slug],
+    providerProfile?.offers?.firstOrNull { it.slug == slug }?.isSaved,
+    state.items.firstOrNull { it.slug == slug }?.isSaved,
+    detail?.takeIf { it.slug == slug }?.isSaved
+  )
+
   fun saveOffer(slug: String) {
     if (!session.isAuthenticated) { onNavigateToSignIn(); return }
     if (slug in savingSlugs) return
     val actor = session.personId
     savingSlugs = savingSlugs + slug
 
-    val previousState = savedStates[slug] ?: false
+    val previousState = currentSavedState(slug)
     val optimisticTarget = requestedSavedState(previousState)
     // Instant optimistic update
     savedStates = savedStates + (slug to optimisticTarget)
@@ -420,7 +431,8 @@ fun OffersScreen(
           savedStates = savedStates + (slug to previousState)
           if (detail?.slug == slug) detail = detail?.copy(isSaved = previousState)
         }
-        saveError = "Couldn’t update saved offer. Please try again."
+        if (SessionManager.session.value.personId == actor)
+          saveError = "Couldn’t update saved offer. Please try again."
       }
       finally { if (SessionManager.session.value.personId == actor) savingSlugs = savingSlugs - slug }
     }
@@ -511,24 +523,46 @@ fun OffersScreen(
                   catch (_: Exception) {
                     if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
                       providerError = "Couldn’t update following. Please try again."
-                  } finally { followPending = false }
+                  } finally {
+                    if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) followPending = false
+                  }
                 }
               }
             }
           },
           onLoadMore = {
-            providerProfile?.nextCursor?.let { cursor ->
-              scope.launch {
+            val cursor = providerProfile?.nextCursor
+            if (cursor != null && !providerLoading) {
+              val actor = session.personId
+              val handle = currentDestination.handle
+              providerLoading = true
+              providerError = null
+              providerScope.launch {
                 try {
-                  val more = nativePagesRepo.getProviderProfile(currentDestination.handle, after = cursor, authenticated = session.isAuthenticated)
-                  providerProfile = providerProfile?.copy(
-                    offers = (providerProfile?.offers ?: emptyList()) + more.offers,
-                    nextCursor = more.nextCursor
-                  )
-                } catch (_: Exception) {}
+                  val more = nativePagesRepo.getProviderProfile(handle, after = cursor, authenticated = actor != null)
+                  kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
+                    savedStates = reconcileProviderSavedStates(savedStates, savingSlugs, more.offers)
+                    providerProfile = providerProfile?.copy(
+                      offers = (providerProfile?.offers.orEmpty() + more.offers).distinctBy { it.id },
+                      nextCursor = more.nextCursor
+                    )
+                  }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) {
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
+                    providerError = "Couldn’t load more offers. Please try again."
+                } finally {
+                  if (SessionManager.session.value.personId == actor && currentProviderHandle == handle)
+                    providerLoading = false
+                }
               }
             }
           },
+          followPending = followPending,
+          savedStates = providerProfile?.offers.orEmpty().associate { it.slug to currentSavedState(it.slug) },
+          savingSlugs = savingSlugs,
+          onSaveOffer = ::saveOffer,
           isOwnProfile = (session.personId != null && providerProfile?.person?.id == session.personId),
           isFollowing = providerProfile?.person?.isFollowing ?: false,
           modifier = modifier
@@ -910,7 +944,7 @@ fun OffersScreen(
         FeedOfferCard(
           offer = offer,
           showDistance = state.activeReference != null,
-          saved = savedStates[offer.slug] ?: (offer.isSaved == true),
+          saved = currentSavedState(offer.slug),
           saving = offer.slug in savingSlugs,
           onSave = { saveOffer(offer.slug) },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
@@ -1278,3 +1312,21 @@ private fun RowScope.FeedNavItem(
     }
   }
 }
+
+/** Rendering and mutation share authoritative local state and the same optional-response fallbacks. */
+internal fun resolvedSavedState(local: Boolean?, provider: Boolean?, feed: Boolean?, detail: Boolean?): Boolean =
+  local ?: provider ?: feed ?: detail ?: false
+
+/** A profile visit owns paging work; leaving or reloading cancels its previous requests. */
+@Composable
+internal fun rememberProviderVisitScope(handle: String?, actor: String?, retry: Int): kotlinx.coroutines.CoroutineScope =
+  key(handle, actor, retry) { rememberCoroutineScope() }
+
+/** Fresh known server values supersede settled overrides, while pending optimistic saves remain intact. */
+internal fun reconcileProviderSavedStates(
+  overrides: Map<String, Boolean>,
+  pending: Set<String>,
+  offers: List<com.example.data.FeedOffer>
+): Map<String, Boolean> = overrides + offers.mapNotNull { offer ->
+  offer.isSaved?.takeIf { offer.slug !in pending }?.let { offer.slug to it }
+}.toMap()

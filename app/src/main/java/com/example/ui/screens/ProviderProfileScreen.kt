@@ -8,18 +8,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -29,7 +25,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,9 +47,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import com.example.data.FeedOffer
-import com.example.data.Person
 import com.example.data.ProviderProfile
+import com.example.ui.components.FeedOfferCard
+import com.example.ui.components.OffersGridSkeleton
 import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.components.havenBottomSafePadding
 import com.example.ui.components.shimmerBackground
@@ -64,9 +59,9 @@ import com.example.ui.theme.InterFontFamily
 /**
  * Provider profile screen aligned with prototype haven_provider_profile:
  * - Centered identity section with 72dp avatar, name, joined, and bio
- * - Equal-width Follow (tonal) and Message provider (solid black) actions
+ * - Equal-width Follow-first and Message provider actions
  * - Category filter rail when provider offers span 2+ categories
- * - 2-column grid of 1:1 square thumbnail offer cards
+ * - Shared offer cards and skeletons in a 2-column square-cover catalogue
  * - Unified HavenTopBarContainer and havenBottomSafePadding safe area handling
  */
 @Composable
@@ -82,11 +77,15 @@ fun ProviderProfileScreen(
   modifier: Modifier = Modifier,
   onLoadMore: () -> Unit = {},
   isOwnProfile: Boolean = false,
-  isFollowing: Boolean = false
+  isFollowing: Boolean = false,
+  followPending: Boolean = false,
+  savedStates: Map<String, Boolean> = emptyMap(),
+  savingSlugs: Set<String> = emptySet(),
+  onSaveOffer: (String) -> Unit = {}
 ) {
   BackHandler(onBack = onBack)
 
-  var selectedCategory by remember { mutableStateOf<String?>(null) }
+  var selectedCategory by remember(profile?.person?.id) { mutableStateOf<String?>(null) }
 
   Column(
     modifier = modifier
@@ -181,15 +180,15 @@ fun ProviderProfileScreen(
         .testTag("provider_profile_content"),
       verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-      // Identity Section (Left-aligned matching prototype .profile-intro and .name-bio)
+      // Centred identity matching the final prototype CSS.
       Column(
         modifier = Modifier
           .fillMaxWidth()
           .testTag("provider_identity_section"),
-        horizontalAlignment = Alignment.Start,
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        // Left-aligned Avatar
+        // Centred avatar
         Box(
           modifier = Modifier
             .size(72.dp)
@@ -229,7 +228,7 @@ fun ProviderProfileScreen(
           fontWeight = FontWeight.SemiBold,
           fontSize = 24.sp,
           lineHeight = 30.sp,
-          textAlign = TextAlign.Start,
+          textAlign = TextAlign.Center,
           color = HavenColors.TextPrimary,
           modifier = Modifier.testTag("provider_name")
         )
@@ -239,7 +238,7 @@ fun ProviderProfileScreen(
           text = "Joined ${person.joined}",
           fontFamily = InterFontFamily,
           fontSize = 13.sp,
-          textAlign = TextAlign.Start,
+          textAlign = TextAlign.Center,
           color = HavenColors.TextSecondary,
           modifier = Modifier.testTag("provider_joined")
         )
@@ -251,7 +250,7 @@ fun ProviderProfileScreen(
             fontFamily = InterFontFamily,
             fontSize = 15.sp,
             lineHeight = 23.sp,
-            textAlign = TextAlign.Start,
+            textAlign = TextAlign.Center,
             color = HavenColors.TextPrimary,
             modifier = Modifier
               .padding(top = 2.dp, bottom = 4.dp)
@@ -267,6 +266,37 @@ fun ProviderProfileScreen(
               .padding(top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
           ) {
+            // Follow button (Tonal matching prototype .btn-follow)
+            Row(
+              modifier = Modifier
+                .weight(1f)
+                .height(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isFollowing) HavenColors.Canvas else HavenColors.SurfaceContainer)
+                .then(
+                  if (isFollowing) Modifier.border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(8.dp))
+                  else Modifier
+                )
+                .clickable(enabled = !followPending) { onFollowProvider(person.handle) }
+                .testTag("provider_follow_button"),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Icon(
+                if (isFollowing) Icons.Outlined.Check else Icons.Outlined.Add,
+                contentDescription = null,
+                tint = HavenColors.TextPrimary,
+                modifier = Modifier.size(18.dp)
+              )
+              Spacer(Modifier.width(6.dp))
+              Text(
+                text = if (isFollowing) "Following" else "Follow",
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = HavenColors.TextPrimary
+              )
+            }
             // Message button (Solid dark matching prototype .btn-message)
             Row(
               modifier = Modifier
@@ -292,38 +322,6 @@ fun ProviderProfileScreen(
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
                 color = HavenColors.Canvas
-              )
-            }
-
-            // Follow button (Tonal matching prototype .btn-follow)
-            Row(
-              modifier = Modifier
-                .weight(1f)
-                .height(44.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (isFollowing) HavenColors.Canvas else HavenColors.SurfaceContainer)
-                .then(
-                  if (isFollowing) Modifier.border(1.dp, HavenColors.BorderSubtle, RoundedCornerShape(8.dp))
-                  else Modifier
-                )
-                .clickable { onFollowProvider(person.handle) }
-                .testTag("provider_follow_button"),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.Center
-            ) {
-              Icon(
-                if (isFollowing) Icons.Outlined.Check else Icons.Outlined.Add,
-                contentDescription = null,
-                tint = HavenColors.TextPrimary,
-                modifier = Modifier.size(18.dp)
-              )
-              Spacer(Modifier.width(6.dp))
-              Text(
-                text = if (isFollowing) "Following" else "Follow",
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                color = HavenColors.TextPrimary
               )
             }
           }
@@ -394,12 +392,25 @@ fun ProviderProfileScreen(
         }
       }
 
-      // Full-width cards matching prototype .offers-list, .offer-card, .offer-thumb (16:9)
-      visibleOffers.forEach { offer ->
-        ProviderOfferCard(
-          offer = offer,
-          onClick = { onOpenOffer(offer.slug) }
-        )
+      visibleOffers.chunked(2).forEach { row ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          row.forEach { offer ->
+            FeedOfferCard(
+              offer = offer,
+              modifier = Modifier.weight(1f),
+              saved = savedStates[offer.slug] ?: (offer.isSaved == true),
+              saving = offer.slug in savingSlugs,
+              onSave = { onSaveOffer(offer.slug) },
+              onOpen = { onOpenOffer(offer.slug) },
+              showSave = !isOwnProfile
+            )
+          }
+          if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+      }
+
+      if (error != null) {
+        Text(error, color = HavenColors.TextPrimary, modifier = Modifier.testTag("provider_action_error"))
       }
 
       // Pagination indicator
@@ -453,93 +464,6 @@ private fun CategoryFilterChip(
   }
 }
 
-/**
- * Full-width offer card matching prototype .offer-card:
- * - 16:9 thumbnail with rounded top corners
- * - Category, title, and price in .offer-details
- */
-@Composable
-private fun ProviderOfferCard(
-  offer: FeedOffer,
-  onClick: () -> Unit,
-  modifier: Modifier = Modifier
-) {
-  Column(
-    modifier = modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(12.dp))
-      .background(HavenColors.SurfaceContainer)
-      .clickable(onClick = onClick)
-      .testTag("provider_offer_${offer.id}")
-  ) {
-    // 16:9 aspect-ratio thumbnail matching prototype .offer-thumb
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(16f / 9f)
-        .background(HavenColors.SurfaceContainer)
-    ) {
-      if (!offer.coverUrl.isNullOrBlank()) {
-        SubcomposeAsyncImage(
-          model = offer.coverUrl,
-          contentDescription = offer.title,
-          contentScale = ContentScale.Crop,
-          modifier = Modifier.fillMaxSize(),
-          loading = {
-            Box(Modifier.fillMaxSize().shimmerBackground())
-          },
-          error = {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-              Icon(Icons.Outlined.Image, null, tint = HavenColors.TextMuted)
-            }
-          }
-        )
-      } else {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Icon(Icons.Outlined.Image, null, tint = HavenColors.TextMuted)
-        }
-      }
-    }
-
-    // Card details matching prototype .offer-details
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 14.dp),
-      verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-      if (offer.category.isNotBlank()) {
-        Text(
-          text = offer.category.replaceFirstChar { it.uppercase() },
-          fontFamily = InterFontFamily,
-          fontSize = 12.sp,
-          fontWeight = FontWeight.Medium,
-          color = HavenColors.TextSecondary,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-      }
-      Text(
-        text = offer.title,
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
-        color = HavenColors.TextPrimary,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-      )
-      Text(
-        text = offer.priceDisplay,
-        fontFamily = InterFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        color = HavenColors.TextPrimary
-      )
-    }
-  }
-}
-
 @Composable
 private fun ProviderProfileLoadingSkeleton() {
   Column(
@@ -587,24 +511,6 @@ private fun ProviderProfileLoadingSkeleton() {
       )
     }
     Spacer(Modifier.height(8.dp))
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .aspectRatio(1f)
-          .clip(RoundedCornerShape(10.dp))
-          .shimmerBackground()
-      )
-      Box(
-        modifier = Modifier
-          .weight(1f)
-          .aspectRatio(1f)
-          .clip(RoundedCornerShape(10.dp))
-          .shimmerBackground()
-      )
-    }
+    OffersGridSkeleton(itemCount = 4)
   }
 }
