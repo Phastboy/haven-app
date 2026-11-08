@@ -5,72 +5,54 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.example.ui.theme.HavenColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
-enum class RootTab {
-  OFFERS,
-  MESSAGES,
-  PROFILE
-}
+enum class RootTab { OFFERS, MESSAGES, PROFILE }
 
-class RootTabsState(
-  val pager: PagerState,
-  private val coroutineScope: CoroutineScope
-) {
-  var requestedTab by mutableStateOf<RootTab?>(null)
-    private set
-
-  val currentTab: RootTab
-    get() = requestedTab ?: RootTab.entries.getOrElse(pager.currentPage) { RootTab.OFFERS }
-
-  private var scrollJob: Job? = null
+/** Pager and tab presses share one state; the last press cancels previous navigation. */
+@Stable
+class RootTabsState internal constructor(val pager: PagerState, private val scope: CoroutineScope) {
+  private var navigation: Job? = null
+  val currentTab: RootTab get() = RootTab.entries[pager.currentPage]
+  val settledTab: RootTab get() = RootTab.entries[pager.settledPage]
 
   fun select(tab: RootTab) {
-    requestedTab = tab
-    scrollJob?.cancel()
-    scrollJob = coroutineScope.launch {
-      try {
-        if (pager.currentPage != tab.ordinal) {
-          pager.animateScrollToPage(tab.ordinal)
-        }
-      } finally {
-        if (requestedTab == tab) {
-          requestedTab = null
-        }
-      }
-    }
+    navigation?.cancel()
+    navigation = scope.launch { pager.animateScrollToPage(tab.ordinal) }
+  }
+
+  suspend fun reset() {
+    navigation?.cancel()
+    pager.scrollToPage(RootTab.OFFERS.ordinal)
   }
 }
 
+/** A different person starts at Offers, with no inherited private tab selection. */
 @Composable
-fun rememberRootTabsState(personId: String? = null): RootTabsState {
-  val coroutineScope = rememberCoroutineScope()
+fun rememberRootTabsState(personId: String?): RootTabsState = key(personId) {
   val pager = rememberPagerState(initialPage = 0, pageCount = { RootTab.entries.size })
-  val state = remember(pager, coroutineScope) { RootTabsState(pager, coroutineScope) }
-  var lastPersonId by rememberSaveable { mutableStateOf(personId) }
-
-  LaunchedEffect(personId) {
-    if (lastPersonId != null && personId != null && lastPersonId != personId) {
-      pager.scrollToPage(RootTab.OFFERS.ordinal)
-    }
-    lastPersonId = personId
-  }
-
-  return state
+  val scope = rememberCoroutineScope()
+  remember(pager, scope) { RootTabsState(pager, scope) }
 }
 
+/** Side effects follow completed navigation, never an intermediate/cancelled drag. */
 @Composable
 fun ObserveRootTabSelection(
   state: RootTabsState,
@@ -78,21 +60,19 @@ fun ObserveRootTabSelection(
   rootVisible: Boolean,
   onSignIn: () -> Unit,
   onSelected: (RootTab) -> Unit,
-  activationKey: Any? = null
+  activationKey: Int = 0
 ) {
-  val currentTab = state.currentTab
-  val isScrolling = state.pager.isScrollInProgress
-
-  LaunchedEffect(currentTab, isScrolling, authenticated, rootVisible, activationKey) {
-    if (!rootVisible || isScrolling) return@LaunchedEffect
-
-    if (!authenticated && currentTab != RootTab.OFFERS) {
-      onSignIn()
-      state.pager.scrollToPage(RootTab.OFFERS.ordinal)
-      return@LaunchedEffect
-    }
-
-    onSelected(currentTab)
+  val signIn = rememberUpdatedState(onSignIn)
+  val selected = rememberUpdatedState(onSelected)
+  LaunchedEffect(state, authenticated, rootVisible, activationKey) {
+    if (!rootVisible) return@LaunchedEffect
+    snapshotFlow { if (state.pager.isScrollInProgress) null else state.settledTab }
+      .filterNotNull().distinctUntilChanged().collect { tab ->
+        if (!authenticated && tab != RootTab.OFFERS) {
+          state.reset()
+          signIn.value()
+        } else selected.value(tab)
+      }
   }
 }
 
@@ -100,21 +80,20 @@ fun ObserveRootTabSelection(
 fun HavenRootPager(
   state: RootTabsState,
   authenticated: Boolean,
+  swipeEnabled: Boolean,
   modifier: Modifier = Modifier,
-  swipeEnabled: Boolean = true,
   content: @Composable (RootTab) -> Unit
 ) {
   HorizontalPager(
     state = state.pager,
+    key = { RootTab.entries[it].name },
     modifier = modifier.testTag("root_tab_pager"),
-    userScrollEnabled = swipeEnabled,
-    beyondViewportPageCount = 0
+    userScrollEnabled = swipeEnabled
   ) { page ->
-    val tab = RootTab.entries.getOrElse(page) { RootTab.OFFERS }
-    if (authenticated || tab == RootTab.OFFERS) {
-      content(tab)
-    } else {
-      Box(Modifier.fillMaxSize())
+    val tab = RootTab.entries[page]
+    if (tab == RootTab.OFFERS || authenticated) content(tab)
+    else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      Text("Sign in to open ${tab.name.lowercase()}", color = HavenColors.TextSecondary)
     }
   }
 }

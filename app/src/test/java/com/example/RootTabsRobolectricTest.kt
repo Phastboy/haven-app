@@ -218,6 +218,28 @@ class RootTabsRobolectricTest {
     compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
   }
 
+  @Test fun `sign out resets the selected tab without prompting sign in`() {
+    show()
+    select(RootTab.PROFILE)
+    compose.runOnIdle { actor.value = null }
+    compose.waitForIdle()
+    compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
+    compose.onNodeWithTag("profile_page").assertDoesNotExist()
+    assertEquals(0, signIns)
+  }
+
+  @Test fun `sign in after a guest session starts at Offers`() {
+    show()
+    select(RootTab.MESSAGES)
+    compose.runOnIdle { actor.value = null }
+    compose.waitForIdle()
+    compose.runOnIdle { actor.value = "another-owner" }
+    compose.waitForIdle()
+    compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
+    assertEquals(RootTab.OFFERS, selected.last())
+    assertEquals(0, signIns)
+  }
+
   @Test fun `restoration keeps selected tab while a different account starts at Offers`() {
     val restoration = StateRestorationTester(compose)
     restoration.setContent { Harness() }
