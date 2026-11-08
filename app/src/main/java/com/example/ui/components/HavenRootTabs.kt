@@ -33,11 +33,13 @@ class RootTabsState internal constructor(val pager: PagerState, private val scop
   val currentTab: RootTab get() = RootTab.entries[pager.currentPage]
   val settledTab: RootTab get() = RootTab.entries[pager.settledPage]
 
+  /** Replaces any pending animation with navigation to [tab]. */
   fun select(tab: RootTab) {
     navigation?.cancel()
     navigation = scope.launch { pager.animateScrollToPage(tab.ordinal) }
   }
 
+  /** Cancels pending navigation and returns a guest to Offers before sign-in. */
   suspend fun reset() {
     navigation?.cancel()
     pager.scrollToPage(RootTab.OFFERS.ordinal)
@@ -76,6 +78,7 @@ fun ObserveRootTabSelection(
   }
 }
 
+/** Renders root destinations while withholding private content from guests. */
 @Composable
 fun HavenRootPager(
   state: RootTabsState,

@@ -218,6 +218,22 @@ class RootTabsRobolectricTest {
     compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
   }
 
+  /** Cancelling a running multi-page animation must not activate its intermediate page. */
+  @Test fun `return to Offers during navigation does not activate Messages`() {
+    show()
+    compose.mainClock.autoAdvance = false
+    compose.runOnIdle { tabs.select(RootTab.PROFILE) }
+    compose.mainClock.advanceTimeUntil(timeoutMillis = 2000) {
+      tabs.pager.currentPage == RootTab.MESSAGES.ordinal
+    }
+    compose.runOnIdle { tabs.select(RootTab.OFFERS) }
+    compose.mainClock.autoAdvance = true
+    compose.waitForIdle()
+    compose.onNodeWithTag("tab_OFFERS").assertIsSelected()
+    assertEquals(listOf(RootTab.OFFERS), selected.distinct())
+  }
+
+  /** Signing out discards private tab state without opening authentication. */
   @Test fun `sign out resets the selected tab without prompting sign in`() {
     show()
     select(RootTab.PROFILE)
@@ -228,6 +244,7 @@ class RootTabsRobolectricTest {
     assertEquals(0, signIns)
   }
 
+  /** A guest transition cannot carry the previous actor's selected tab forward. */
   @Test fun `sign in after a guest session starts at Offers`() {
     show()
     select(RootTab.MESSAGES)

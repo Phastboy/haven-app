@@ -36,3 +36,9 @@ requires fresh CI. Review suggestion to add a Google button outline is rejected:
 the current owner explicitly requires reversal of unsolicited UI changes and
 NEXT_AGENT.md prohibits returning decorative outlines; no new boundary is added.
 Qodo review is unavailable because its subscription is inactive, not passed.
+
+Review follow-up: release lint now runs in the unconditional verification step,
+including fork PRs, without releasing signing credentials to forks. Release APK
+assembly remains restricted. Added KDoc for restored navigation entry points and
+a regression that cancels a running Offers-to-Profile animation while crossing
+Messages, requiring no intermediate Messages activation. Fresh CI is required.
