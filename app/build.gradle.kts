@@ -80,9 +80,7 @@ android {
       }
     }
   }
-  lint {
-    abortOnError = false
-  }
+  lint { warningsAsErrors = true }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true

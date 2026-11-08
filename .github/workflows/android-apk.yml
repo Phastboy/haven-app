@@ -68,7 +68,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/prepare-gradle.sh
       - name: Build, test, and lint
-        run: '"$GRADLE_COMMAND" --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug'
+        run: '"$GRADLE_COMMAND" --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:lintRelease'
       - name: Verify Kotlin CIO runtime dependencies
         run: |
           "$GRADLE_COMMAND" --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > runtime-dependencies.txt
@@ -87,7 +87,7 @@ jobs:
           KEYSTORE_PATH: ${{ runner.temp }}/haven-release.p12
           STORE_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
-        run: '"$GRADLE_COMMAND" --no-daemon :app:assembleRelease :app:lintRelease'
+        run: '"$GRADLE_COMMAND" --no-daemon :app:assembleRelease'
       - name: Upload verification reports
         if: always()
         uses: actions/upload-artifact@v7.0.2
