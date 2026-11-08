@@ -15,6 +15,9 @@ Samsung touch/edge-back/launcher acceptance remains separate.
 
 # Historical — Android v0.0.1 release and warning handoff (superseded)
 
+The following v0.0.1/v0.0.0 instructions are historical, including their sign-in
+publication holds. Follow the v0.0.2 authorization above and RELEASE_V0.0.2.md.
+
 Android PR #18 was squash-merged at `02262bc77b3b2252d0c8e958ce5c92bf47e09ae5`.
 Release `v0.0.1` is published, versionCode `11`. CI/CD has attached the signed
 APK, SHA256SUMS, manifest.txt and apk-provenance.txt. Do not manually rebuild or

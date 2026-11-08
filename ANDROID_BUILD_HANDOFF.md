@@ -51,9 +51,11 @@ SHA-1: 86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59
 SHA-256: B4:D1:A5:EC:00:68:C6:3D:55:49:E6:22:3D:86:D9:0D:C0:37:7D:C5:6B:C7:2D:34:FA:63:F9:38:BD:2D:B6:1E
 
 Register the Android OAuth client in the same project as the configured Web
-client. The owner is configuring this SHA-1; successful sign-in is the final
-publication gate. AI Studio builds use a different signer and require a fresh
-installation; preserve pending work before uninstalling them.
+client using this SHA-1. CI signer checks do not establish Google sign-in success.
+For v0.0.2 the owner authorized publication after reviews/CI, with device findings
+tracked separately; the earlier sign-in publication hold is superseded.
+AI Studio builds use a different signer and require a fresh installation;
+preserve pending work before uninstalling them.
 
 CI secrets: HAVEN_TEST_KEYSTORE_BASE64 for debug;
 HAVEN_RELEASE_KEYSTORE_BASE64 and HAVEN_RELEASE_KEYSTORE_PASSWORD for release.

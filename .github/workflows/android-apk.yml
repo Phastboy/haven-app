@@ -134,7 +134,7 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
-          grep -q "package: name='com.aistudio.haven.xvykpt' versionCode='12' versionName='0.0.2'" release-assets/manifest.txt
+          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='12' versionName='0.0.2'" release-assets/manifest.txt
           if grep -q 'application-debuggable' release-assets/manifest.txt; then
             echo 'Release APK must not be debuggable' >&2
             exit 1
