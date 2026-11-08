@@ -391,14 +391,20 @@ fun OffersScreen(
     finally { followingLoading = false }
   }
 
+  fun currentSavedState(slug: String): Boolean = resolvedSavedState(
+    savedStates[slug],
+    providerProfile?.offers?.firstOrNull { it.slug == slug }?.isSaved,
+    state.items.firstOrNull { it.slug == slug }?.isSaved,
+    detail?.takeIf { it.slug == slug }?.isSaved
+  )
+
   fun saveOffer(slug: String) {
     if (!session.isAuthenticated) { onNavigateToSignIn(); return }
     if (slug in savingSlugs) return
     val actor = session.personId
     savingSlugs = savingSlugs + slug
 
-    val previousState = savedStates[slug] ?: providerProfile?.offers?.firstOrNull { it.slug == slug }?.isSaved
-      ?: state.items.firstOrNull { it.slug == slug }?.isSaved ?: detail?.takeIf { it.slug == slug }?.isSaved ?: false
+    val previousState = currentSavedState(slug)
     val optimisticTarget = requestedSavedState(previousState)
     // Instant optimistic update
     savedStates = savedStates + (slug to optimisticTarget)
@@ -548,7 +554,7 @@ fun OffersScreen(
             }
           },
           followPending = followPending,
-          savedStates = savedStates,
+          savedStates = providerProfile?.offers.orEmpty().associate { it.slug to currentSavedState(it.slug) },
           savingSlugs = savingSlugs,
           onSaveOffer = ::saveOffer,
           isOwnProfile = (session.personId != null && providerProfile?.person?.id == session.personId),
@@ -932,7 +938,7 @@ fun OffersScreen(
         FeedOfferCard(
           offer = offer,
           showDistance = state.activeReference != null,
-          saved = savedStates[offer.slug] ?: (offer.isSaved == true),
+          saved = currentSavedState(offer.slug),
           saving = offer.slug in savingSlugs,
           onSave = { saveOffer(offer.slug) },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
@@ -1300,3 +1306,7 @@ private fun RowScope.FeedNavItem(
     }
   }
 }
+
+/** Rendering and mutation share authoritative local state and the same optional-response fallbacks. */
+internal fun resolvedSavedState(local: Boolean?, provider: Boolean?, feed: Boolean?, detail: Boolean?): Boolean =
+  local ?: provider ?: feed ?: detail ?: false

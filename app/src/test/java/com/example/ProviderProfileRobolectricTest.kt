@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import com.example.data.FeedOffer
 import com.example.data.Person
 import com.example.data.ProviderProfile
+import com.example.ui.screens.resolvedSavedState
+import com.example.ui.screens.requestedSavedState
 import com.example.ui.screens.ProviderProfileScreen
 import com.example.ui.theme.HavenTheme
 import com.example.ui.theme.ThemeMode
@@ -71,6 +73,24 @@ class ProviderProfileRobolectricTest {
     compose.onNodeWithTag("offer_card_3").performScrollTo()
     val third = compose.onNodeWithTag("offer_card_3").fetchSemanticsNode().boundsInRoot
     assertEquals(first.width, third.width, 1f)
+  }
+
+  /** Missing provider metadata must not label an unsave mutation as a save action. */
+  @Test fun `saved feed fallback matches the displayed action and mutation target`() {
+    val saved = resolvedSavedState(null, null, true, null)
+    var requested: Boolean? = null
+    compose.setContent {
+      HavenTheme {
+        ProviderProfileScreen(ProviderProfile(person, offers.take(1), null), false, null,
+          {}, {}, {}, {}, {}, savedStates = mapOf("offer-1" to saved),
+          onSaveOffer = { requested = requestedSavedState(saved) })
+      }
+    }
+    compose.onNodeWithContentDescription("Unsave offer").performClick()
+    assertEquals(false, requested)
+    assertFalse(resolvedSavedState(false, null, true, true))
+    assertFalse(resolvedSavedState(null, false, true, true))
+    assertFalse(resolvedSavedState(null, null, null, null))
   }
 
   /** Owner actions cannot accidentally save an owned offer; loaded failures stay visible. */

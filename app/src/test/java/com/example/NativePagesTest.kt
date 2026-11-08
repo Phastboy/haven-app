@@ -90,7 +90,7 @@ class NativePagesTest {
     rule.onNodeWithTag("provider_message_button").performClick()
     rule.runOnIdle { assertEquals("olumide", messagedHandle) }
 
-    rule.onNodeWithTag("provider_offer_${testOffer.id}").performClick()
+    rule.onNodeWithTag("offer_title_${testOffer.id}", useUnmergedTree = true).performScrollTo().performClick()
     rule.runOnIdle { assertEquals("handcrafted-vase", openedOfferSlug) }
   }
 
@@ -312,15 +312,13 @@ class NativePagesTest {
     rule.onNodeWithTag("provider_category_chip_Home & Living").assertExists()
 
     // Both offers initially exist in the list
-    rule.onNodeWithTag("provider_offer_${offer1.id}").performScrollTo().assertExists()
-    rule.onNodeWithTag("provider_offer_${offer2.id}").performScrollTo().assertExists()
+    rule.onNodeWithTag("offer_card_${offer1.id}").performScrollTo().assertExists()
+    rule.onNodeWithTag("offer_card_${offer2.id}").performScrollTo().assertExists()
 
     // Filter by Craft & Making
-    rule.onNodeWithTag("provider_category_chip_Craft & Making").performClick()
-    rule.runOnIdle {
-      rule.onNodeWithTag("provider_offer_${offer1.id}").performScrollTo().assertExists()
-      rule.onNodeWithTag("provider_offer_${offer2.id}").assertDoesNotExist()
-    }
+    rule.onNodeWithTag("provider_category_chip_Craft & Making").performScrollTo().performClick()
+    rule.onNodeWithTag("offer_card_${offer1.id}").performScrollTo().assertExists()
+    rule.onNodeWithTag("offer_card_${offer2.id}").assertDoesNotExist()
   }
 
   @Test
