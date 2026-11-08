@@ -38,6 +38,7 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.*
 import java.io.File
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -51,7 +52,15 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ProfileAndThemeRobolectricTest {
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-  @After fun resetTheme() { ThemeManager.setMode(ThemeMode.SYSTEM, ApplicationProvider.getApplicationContext()) }
+  // Robolectric creates a new Application per test; this repository retains its Context.
+  @Before fun resetThemeRepository() {
+    org.robolectric.util.ReflectionHelpers.setStaticField(
+      com.example.data.theme.HavenThemePreferencesRepository::class.java, "instance", null)
+  }
+  @After fun resetTheme() {
+    resetThemeRepository()
+    ThemeManager.setMode(ThemeMode.SYSTEM, ApplicationProvider.getApplicationContext())
+  }
   private val offer = FeedOffer("test", "real-test", "Visible offer title", "Real person", "100 NGN", null, 1250.0)
 
   private fun captureRootBitmap(): Bitmap {
@@ -127,8 +136,11 @@ class ProfileAndThemeRobolectricTest {
     assertEquals("250 m", offerDistanceLabel(250.0))
   }
   @Test fun `restored profile offset survives loading before content returns`() {
-    val profile = ProfileOverview("person", "real-person", "Real person",
-      null, "Joined November 2026", "A provider biography for scroll restoration.\n".repeat(40), 0, 2, 1, emptyList())
+    val profile = ProfileOverview(
+      id = "person", handle = "real-person", displayName = "Real person",
+      bio = "A provider biography for scroll restoration.\n".repeat(40),
+      joined = "Joined November 2026", avatarUrl = null,
+      offerCount = 0, savedCount = 2, followingCount = 1, offers = emptyList())
     val current = mutableStateOf<ProfileOverview?>(profile)
     lateinit var scroll: ScrollState
     val restoration = StateRestorationTester(compose)
