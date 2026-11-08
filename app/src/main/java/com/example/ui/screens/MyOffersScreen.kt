@@ -166,7 +166,6 @@ fun MyOffersScreen(
           onClick = onBack,
           modifier = Modifier
             .size(44.dp)
-            .testTag("my_offers_back")
             .testTag("my_offers_back_button")
         ) {
           Icon(

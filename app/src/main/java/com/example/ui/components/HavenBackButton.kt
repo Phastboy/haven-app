@@ -37,7 +37,7 @@ enum class HavenBackButtonVariant {
 /**
  * Reusable Back Navigation Button for Haven:
  * - STANDARD: Clean 48x48dp touch target for top app bars across all child screens
- * - FLOATING: 40x40dp flat circular pill with spring press feedback (matching HavenSaveButton)
+ * - FLOATING: 40x40dp flat circular pill with spring press feedback
  * - Monastic greyscale styling ensuring visual harmony across all child and detail screens
  */
 @Composable

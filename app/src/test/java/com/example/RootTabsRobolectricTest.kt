@@ -52,8 +52,10 @@ class RootTabsRobolectricTest {
       ObserveRootTabSelection(tabs, actor.value != null, rootVisible.value, { signIns++ }, { selected += it }, activation.intValue)
       Column(Modifier.fillMaxSize()) {
         if (rootVisible.value) HavenRootPager(
-          tabs, actor.value != null, !blocked.value,
-          Modifier.weight(1f).fillMaxWidth()
+          state = tabs,
+          authenticated = actor.value != null,
+          modifier = Modifier.weight(1f).fillMaxWidth(),
+          swipeEnabled = !blocked.value
         ) { tab ->
           when (tab) {
             RootTab.OFFERS -> Column(Modifier.fillMaxSize().testTag("offers_page")) {

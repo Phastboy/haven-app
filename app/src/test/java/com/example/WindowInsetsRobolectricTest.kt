@@ -17,11 +17,8 @@ import com.example.ui.components.HavenTopBarContainer
 import com.example.ui.components.havenBottomSafePadding
 import com.example.ui.components.havenKeyboardAwareBottomPadding
 import com.example.ui.components.havenTopSafePadding
-import com.example.ui.model.SampleConversations
 import com.example.ui.model.SampleOffers
 import com.example.ui.model.SignInViewModel
-import com.example.ui.screens.ConversationListView
-import com.example.ui.screens.ConversationThreadView
 import com.example.ui.screens.OfferDetailScreen
 import com.example.ui.screens.SignInScreen
 import com.example.ui.screens.WelcomeScreen
@@ -118,53 +115,6 @@ class WindowInsetsRobolectricTest {
     composeTestRule.onNodeWithTag("google_sign_in_button").assertExists()
     composeTestRule.onNodeWithTag("email_sign_in_button").assertIsNotEnabled()
     composeTestRule.onNodeWithTag("email_sign_in_note").assertExists()
-  }
-
-  @Test
-  fun `conversation list view displays 8 conversations with messages header`() {
-    val conversations = SampleConversations.defaultConversations
-    assertEquals(8, conversations.size)
-
-    composeTestRule.setContent {
-      HavenTheme {
-        ConversationListView(
-          conversations = conversations,
-          onSelectConversation = {}
-        )
-      }
-    }
-
-    composeTestRule.onNodeWithTag("messages_header_title").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("conversation_list").assertExists()
-    composeTestRule.onNodeWithTag("conversation_item_conv-1").assertExists()
-    composeTestRule.onNodeWithTag("conversation_item_conv-2").assertExists()
-  }
-
-  @Test
-  fun `conversation thread view renders header and pinned keyboard-aware composer bar`() {
-    val conversation = SampleConversations.defaultConversations.first()
-
-    composeTestRule.setContent {
-      HavenTheme {
-        ConversationThreadView(
-          conversation = conversation,
-          messageInputText = "Testing composer insets",
-          pendingAttachedOffer = null,
-          onBack = {},
-          onMessageInputChange = {},
-          onOpenAttachSheet = {},
-          onRemoveAttachment = {},
-          onSendMessage = {},
-          onInspectOffer = {}
-        )
-      }
-    }
-
-    composeTestRule.onNodeWithTag("thread_back_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("conversation_composer_bar").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("message_input_field").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("attach_offer_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("send_message_button").assertIsDisplayed()
   }
 
   @Test

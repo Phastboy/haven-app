@@ -121,7 +121,6 @@ fun FollowingScreen(
           onClick = onBack,
           modifier = Modifier
             .size(44.dp)
-            .testTag("following_back")
             .testTag("following_back_button")
         ) {
           Icon(

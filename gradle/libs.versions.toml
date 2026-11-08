@@ -1,6 +1,6 @@
 [versions]
 browser = "1.10.0"
-agp = "9.5.1"
+agp = "9.1.1"
 coreKtx = "1.19.1"
 junit = "4.13.2"
 # Espresso 3.7 reflects InputManager.getInstance(), removed on API 37.

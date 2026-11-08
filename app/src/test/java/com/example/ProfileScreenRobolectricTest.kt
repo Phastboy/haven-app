@@ -91,7 +91,7 @@ class ProfileScreenRobolectricTest {
       HavenTheme {
         com.example.ui.screens.FollowingScreen(
           onBack = {},
-          onBrowseOffers = {}
+          onDiscoverOffers = {}
         )
       }
     }
@@ -115,6 +115,6 @@ class ProfileScreenRobolectricTest {
     composeTestRule.onNodeWithTag("my_offers_screen").assertExists()
     composeTestRule.onNodeWithTag("my_offers_back_button").assertExists()
     composeTestRule.onNodeWithTag("my_offers_title").assertExists()
-    composeTestRule.onNodeWithTag("create_offer_action_button").assertExists()
+    composeTestRule.onNodeWithTag("create_offer_action_button", useUnmergedTree = true).assertExists()
   }
 }
