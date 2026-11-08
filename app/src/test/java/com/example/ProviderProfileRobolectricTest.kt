@@ -12,6 +12,11 @@ import androidx.compose.ui.unit.dp
 import com.example.data.FeedOffer
 import com.example.data.Person
 import com.example.data.ProviderProfile
+import com.example.ui.screens.reconcileProviderSavedStates
+import com.example.ui.screens.rememberProviderVisitScope
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import com.example.ui.screens.resolvedSavedState
 import com.example.ui.screens.requestedSavedState
 import com.example.ui.screens.ProviderProfileScreen
@@ -98,14 +103,44 @@ class ProviderProfileRobolectricTest {
     var retries = 0
     compose.setContent {
       HavenTheme {
-        ProviderProfileScreen(ProviderProfile(person, offers.take(1), "next"), false, "Could not load more",
-          {}, {}, {}, {}, {}, onLoadMore = { retries++ }, isOwnProfile = true)
+        ProviderProfileScreen(ProviderProfile(person, offers.take(2), "next"), false, "Could not load more",
+          {}, {}, {}, {}, {}, onLoadMore = { retries++ }, isOwnProfile = true, savedStates = mapOf("offer-2" to true))
       }
     }
     compose.onAllNodesWithContentDescription("Save offer").assertCountEquals(0)
+    compose.onAllNodesWithContentDescription("Unsave offer").assertCountEquals(0)
     compose.onNodeWithTag("provider_action_error").performScrollTo().assertIsDisplayed()
     compose.onNodeWithText("Load more offers").performScrollTo().performClick()
     assertEquals(1, retries)
+  }
+
+  /** Fresh data replaces rollback values without clobbering a write still in flight. */
+  @Test fun `profile refresh reconciles settled saves and preserves pending saves`() {
+    val refreshed = offers.take(2).map { it.copy(isSaved = true) }
+    val actual = reconcileProviderSavedStates(mapOf("offer-1" to false, "offer-2" to false), setOf("offer-2"), refreshed)
+    assertEquals(true, actual["offer-1"])
+    assertEquals(false, actual["offer-2"])
+    val absent = reconcileProviderSavedStates(actual, emptySet(), offers.take(1))
+    assertEquals(true, absent["offer-1"])
+  }
+
+  /** Returning to the same handle cannot revive paging work from the previous visit. */
+  @Test fun `leaving and reopening provider cancels old paging response`() {
+    val handle = mutableStateOf<String?>("maker")
+    lateinit var visitScope: CoroutineScope
+    val response = CompletableDeferred<Unit>()
+    var appended = false
+    compose.setContent { visitScope = rememberProviderVisitScope(handle.value, "actor", 0) }
+    lateinit var request: kotlinx.coroutines.Job
+    compose.runOnIdle { request = visitScope.launch { response.await(); appended = true } }
+    compose.runOnIdle { handle.value = null }
+    compose.waitForIdle()
+    compose.runOnIdle { handle.value = "maker" }
+    compose.waitForIdle()
+    compose.runOnIdle { response.complete(Unit) }
+    compose.waitForIdle()
+    assertTrue(request.isCancelled)
+    assertFalse(appended)
   }
 
   /** Loading renders the shared card skeleton rather than a separate provider-card approximation. */

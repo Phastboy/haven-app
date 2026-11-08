@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CancellationException
 import com.example.data.HavenOfferDetailRepository
 import com.example.data.HavenNativePagesRepository
@@ -228,6 +229,7 @@ fun OffersScreen(
   var providerError by remember(session.personId, activeProviderHandle) { mutableStateOf<String?>(null) }
   var providerRetry by remember { androidx.compose.runtime.mutableIntStateOf(0) }
   var followPending by remember(session.personId, activeProviderHandle) { mutableStateOf(false) }
+  val providerScope = rememberProviderVisitScope(activeProviderHandle, session.personId, providerRetry)
 
   // My offers state
   val isMyOffersActive = currentDestination is OffersDestination.MyOffers
@@ -350,7 +352,9 @@ fun OffersScreen(
     val handle = activeProviderHandle ?: return@LaunchedEffect
     providerLoading = true
     try {
-      providerProfile = nativePagesRepo.getProviderProfile(handle, authenticated = session.isAuthenticated)
+      val refreshed = nativePagesRepo.getProviderProfile(handle, authenticated = session.isAuthenticated)
+      savedStates = reconcileProviderSavedStates(savedStates, savingSlugs, refreshed.offers)
+      providerProfile = refreshed
     } catch (cancelled: CancellationException) { throw cancelled }
     catch (_: Exception) { providerError = "Couldn’t load provider profile. Please try again." }
     finally { providerLoading = false }
@@ -533,10 +537,12 @@ fun OffersScreen(
               val handle = currentDestination.handle
               providerLoading = true
               providerError = null
-              scope.launch {
+              providerScope.launch {
                 try {
                   val more = nativePagesRepo.getProviderProfile(handle, after = cursor, authenticated = actor != null)
+                  kotlinx.coroutines.currentCoroutineContext().ensureActive()
                   if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
+                    savedStates = reconcileProviderSavedStates(savedStates, savingSlugs, more.offers)
                     providerProfile = providerProfile?.copy(
                       offers = (providerProfile?.offers.orEmpty() + more.offers).distinctBy { it.id },
                       nextCursor = more.nextCursor
@@ -1310,3 +1316,17 @@ private fun RowScope.FeedNavItem(
 /** Rendering and mutation share authoritative local state and the same optional-response fallbacks. */
 internal fun resolvedSavedState(local: Boolean?, provider: Boolean?, feed: Boolean?, detail: Boolean?): Boolean =
   local ?: provider ?: feed ?: detail ?: false
+
+/** A profile visit owns paging work; leaving or reloading cancels its previous requests. */
+@Composable
+internal fun rememberProviderVisitScope(handle: String?, actor: String?, retry: Int): kotlinx.coroutines.CoroutineScope =
+  key(handle, actor, retry) { rememberCoroutineScope() }
+
+/** Fresh known server values supersede settled overrides, while pending optimistic saves remain intact. */
+internal fun reconcileProviderSavedStates(
+  overrides: Map<String, Boolean>,
+  pending: Set<String>,
+  offers: List<com.example.data.FeedOffer>
+): Map<String, Boolean> = overrides + offers.mapNotNull { offer ->
+  offer.isSaved?.takeIf { offer.slug !in pending }?.let { offer.slug to it }
+}.toMap()
