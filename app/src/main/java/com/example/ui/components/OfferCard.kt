@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.ui.model.Offer
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
@@ -48,9 +48,9 @@ import com.example.ui.theme.InterFontFamily
 @Composable
 fun OfferCard(
   offer: Offer?,
+  modifier: Modifier = Modifier,
   onClick: () -> Unit = {},
   onToggleFavorite: () -> Unit = {},
-  modifier: Modifier = Modifier,
   isLoading: Boolean = false
 ) {
   if (isLoading || offer == null) {

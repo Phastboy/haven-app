@@ -50,6 +50,15 @@ class MessagesInboxViewModel(
     _state.value = MessagesInboxUiState()
   }
 
+  /** Global badge loading must not fetch/precompose the private inbox off-tab. */
+  fun loadUnread(personId: String) {
+    if (actor != personId) {
+      clear()
+      actor = personId
+    }
+    refreshUnread()
+  }
+
   fun refreshUnread() {
     val requestedActor = actor ?: return
     if (unreadJob?.isActive == true) return

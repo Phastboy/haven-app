@@ -23,7 +23,8 @@ class HavenAuthDiagnosticTest {
   fun setUp() {
     HavenAuthClient.clearDiagnosticLogs()
     val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    auth = HavenAuthClient(SecureAuthStore(context))
+    val testKey = javax.crypto.KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    auth = HavenAuthClient(SecureAuthStore(context) { testKey })
   }
 
   @Test

@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.data.FeedOffer
 import com.example.data.Person
 import com.example.data.ProviderProfile
@@ -79,10 +79,10 @@ fun ProviderProfileScreen(
   onOpenOffer: (String) -> Unit,
   onMessageProvider: (String) -> Unit,
   onFollowProvider: (String) -> Unit,
+  modifier: Modifier = Modifier,
   onLoadMore: () -> Unit = {},
   isOwnProfile: Boolean = false,
-  isFollowing: Boolean = false,
-  modifier: Modifier = Modifier
+  isFollowing: Boolean = false
 ) {
   BackHandler(onBack = onBack)
 

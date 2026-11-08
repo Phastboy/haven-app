@@ -1,11 +1,11 @@
 package com.example.data
 
 import android.net.Uri
-import androidx.core.net.toUri
 import com.example.auth.HavenAuthClient
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
+import com.example.data.network.HavenNetwork
+import io.ktor.http.Parameters
+import io.ktor.http.formUrlEncode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -85,38 +85,30 @@ class HavenOffersRepository(
   private val auth: HavenAuthClient? = null
 ) : OffersRepository {
   override suspend fun fetch(query: OffersQuery): OffersPage = withContext(Dispatchers.IO) {
-    val uri = "https://${HavenAuthClient.HOST}/api/v1/offers".toUri().buildUpon()
-    if (query.search.isNotBlank()) uri.appendQueryParameter("q", query.search.trim())
-    if (query.category.isNotBlank()) uri.appendQueryParameter("category", query.category)
-    if (query.currency.isNotBlank()) uri.appendQueryParameter("currency", query.currency)
-    query.minPrice?.let { uri.appendQueryParameter("min_price", it.toString()) }
-    query.maxPrice?.let { uri.appendQueryParameter("max_price", it.toString()) }
-    query.after?.let { uri.appendQueryParameter("after", it) }
-    if (query.scope != "public" && query.scope.isNotBlank()) {
-      uri.appendQueryParameter("scope", query.scope)
-    }
-    if (!query.near.isNullOrBlank()) {
-      uri.appendQueryParameter("near", query.near)
-    }
-
-    val token = auth?.getValidAccessToken()
-    val connection = (URL(uri.build().toString()).openConnection() as HttpURLConnection).apply {
-      connectTimeout = 10_000
-      readTimeout = 15_000
-      setRequestProperty("Accept", "application/json")
-      if (token != null) {
-        setRequestProperty("Authorization", "Bearer $token")
-      }
-    }
+    val parameters = Parameters.build {
+      if (query.search.isNotBlank()) append("q", query.search.trim())
+      if (query.category.isNotBlank()) append("category", query.category)
+      if (query.currency.isNotBlank()) append("currency", query.currency)
+      query.minPrice?.let { append("min_price", it.toString()) }
+      query.maxPrice?.let { append("max_price", it.toString()) }
+      query.after?.let { append("after", it) }
+      if (query.scope != "public" && query.scope.isNotBlank()) append("scope", query.scope)
+      if (!query.near.isNullOrBlank()) append("near", query.near)
+    }.formUrlEncode()
+    val path = "/api/v1/offers" + if (parameters.isBlank()) "" else "?$parameters"
     try {
-      when (connection.responseCode) {
-        200 -> connection.inputStream.bufferedReader().use { parsePage(it.readText()) }
-        400 -> throw IOException("Check your search and price filters, then try again.")
-        401 -> throw IOException("Please sign in to view this collection.")
-        else -> throw IOException("Couldn’t load offers. Please try again.")
+      val raw = if (auth != null) auth.optionalGet(path) else {
+        val response = HavenNetwork.shared.request("GET", path)
+        if (response.first != 200) throw HavenAuthClient.HttpException(response.first, response.second)
+        response.second
       }
-    } finally {
-      connection.disconnect()
+      parsePage(raw)
+    } catch (error: HavenAuthClient.HttpException) {
+      throw IOException(when (error.statusCode) {
+        400 -> "Check your search and price filters, then try again."
+        401 -> "Please sign in to view this collection."
+        else -> "Couldn’t load offers. Please try again."
+      }, error)
     }
   }
 

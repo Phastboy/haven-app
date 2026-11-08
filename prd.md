@@ -6,7 +6,7 @@
 
 **Haven** is an identity-centered, text-forward mobile platform for reciprocal local exchange of goods, skills, and community offerings. Rooted in structural minimalism, editorial discipline, and authentic craft, Haven rejects algorithmic noise, visual stimulation, and intrusive monetization in favor of dependable, quiet local utility.
 
-The production client is developed as a native **Android application built in Kotlin**, targeting modern mobile form factors (standardized around a 390 × 844 baseline viewport and adaptive edge-to-edge layouts), strictly honoring monochrome aesthetics, 48dp minimum touch targets, hairline borders over elevation drops, and explicit system inset handling.
+The production client is developed as a native **Android application built in Kotlin**, targeting modern mobile form factors (standardized around a 390 × 844 baseline viewport and adaptive edge-to-edge layouts), strictly honoring monochrome aesthetics, 48dp minimum touch targets, whitespace over decorative borders/shadows, and explicit system inset handling.
 
 ---
 
@@ -14,7 +14,7 @@ The production client is developed as a native **Android application built in Ko
 
 Haven operates under the **Haven Monastic Market** visual architecture:
 - **Palette**: Strict monochrome & grayscale (`#FFFFFF`, `#FAFAFA`, `#F3F4F6`, `#E5E7EB`, `#6B7280`, `#111827`, `#000000`). No chromatic brand accents; genuine community photography serves as the sole organic source of color and warmth.
-- **Elevation**: Completely shadowless. Visual hierarchy is achieved via surface tonal shifts (`#FFFFFF` to `#FAFAFA`) and 1dp hairline borders (`#E5E5E5`). Default Material elevation shadows are explicitly suppressed (`tonalElevation = 0.dp`, `shadowElevation = 0.dp`).
+- **Elevation**: Completely shadowless. Visual hierarchy is achieved via surface tonal shifts (`#FFFFFF` to `#FAFAFA`) without decorative borders. Input/selection boundaries remain purposeful. Default Material elevation shadows are explicitly suppressed (`tonalElevation = 0.dp`, `shadowElevation = 0.dp`).
 - **Depth & Frosted Overlays**: Frosted translucent scrims (`Color.White.copy(alpha = 0.8f)` with platform blur / `RenderEffect`) for contextual floating controls (Back, Save/Heart, Gallery chevrons) and modal bottom sheets.
 - **Typography**: Inter (Google Fonts / downloadable font), high editorial contrast, tight letter-spacing (`-0.025em` to `-0.01em`), single-line truncations on feed card titles, and crisp proportional metadata scaling.
 - **Ergonomics & Edge-to-Edge**: Full Android edge-to-edge support with `WindowInsets.safeDrawing`, `WindowInsets.statusBars`, `WindowInsets.navigationBars`, and `WindowInsets.ime` padding to guarantee uncompromised access across device varieties and virtual keyboard engagement.
@@ -36,7 +36,7 @@ Haven is engineered natively for Android. The Haven backend and its documented p
   - Room may be the source of truth for cached product data after the corresponding API contract exists. Authentication credentials use secure storage; pending actions and errors remain explicit UI state.
 - **Async**: Kotlin Coroutines + `StateFlow`
 - **Dependency Injection**: Hilt
-- **Networking**: Ktor Client (OkHttp engine) + kotlinx.serialization, talking to the
+- **Networking**: Ktor Client (CIO engine) + kotlinx.serialization, talking to the
   Haven backend over HTTPS (JSON). Use a server-push transport only when the Haven API defines one. Wrap calls in per-feature API classes; no Ktor types leave the data layer.
 - **Authentication**: Sign-in is native Google only. The app obtains a Google ID token with Credential Manager and exchanges it at `POST /api/v1/auth/google`. It stores the rotating refresh token using an Android Keystore-backed key and confirms the person with `GET /api/v1/me` before showing an authenticated session. Access tokens stay in memory. Never store credentials in plain DataStore. The app opens no browser and has no PKCE, App Link or email fallback; email sign-in is shown as unavailable. Do not add Firebase Auth or a separate second sign-in path.
 - **Images**: Coil loading Cloudinary URLs, with a capped disk cache. Offer title is

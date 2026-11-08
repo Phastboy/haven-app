@@ -10,13 +10,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -35,6 +38,7 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.*
 import java.io.File
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +52,15 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ProfileAndThemeRobolectricTest {
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-  @After fun resetTheme() { ThemeManager.setMode(ThemeMode.SYSTEM, ApplicationProvider.getApplicationContext()) }
+  // Robolectric creates a new Application per test; this repository retains its Context.
+  @Before fun resetThemeRepository() {
+    org.robolectric.util.ReflectionHelpers.setStaticField(
+      com.example.data.theme.HavenThemePreferencesRepository::class.java, "instance", null)
+  }
+  @After fun resetTheme() {
+    resetThemeRepository()
+    ThemeManager.setMode(ThemeMode.SYSTEM, ApplicationProvider.getApplicationContext())
+  }
   private val offer = FeedOffer("test", "real-test", "Visible offer title", "Real person", "100 NGN", null, 1250.0)
 
   private fun captureRootBitmap(): Bitmap {
@@ -122,6 +134,36 @@ class ProfileAndThemeRobolectricTest {
     assertNull(offerDistanceLabel(Double.NaN))
     assertNull(offerDistanceLabel(-1.0))
     assertEquals("250 m", offerDistanceLabel(250.0))
+  }
+  @Test fun `restored profile offset survives loading before content returns`() {
+    val profile = ProfileOverview(
+      id = "person", handle = "real-person", displayName = "Real person",
+      bio = "A provider biography for scroll restoration.\n".repeat(40),
+      joined = "Joined November 2026", avatarUrl = null,
+      offerCount = 0, savedCount = 2, followingCount = 1, offers = emptyList())
+    val current = mutableStateOf<ProfileOverview?>(profile)
+    lateinit var scroll: ScrollState
+    val restoration = StateRestorationTester(compose)
+    restoration.setContent {
+      scroll = rememberScrollState()
+      HavenTheme {
+        ProfileScreen(ProfileUiState(profile = current.value, loading = current.value == null),
+          {}, {}, {}, scrollState = scroll)
+      }
+    }
+    compose.onNodeWithTag("profile_link_appearance").performScrollTo()
+    compose.waitForIdle()
+    val offset = scroll.value
+    assertTrue(offset > 0)
+    compose.runOnIdle { current.value = null }
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
+    restoration.emulateSavedInstanceStateRestore()
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
+    compose.runOnIdle { current.value = profile }
+    compose.waitForIdle()
+    assertEquals(offset, scroll.value)
   }
   @Test fun `profile has real identity and persisted appearance without spec controls`() {
     ThemeManager.setMode(ThemeMode.LIGHT, ApplicationProvider.getApplicationContext())

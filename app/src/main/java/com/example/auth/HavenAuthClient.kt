@@ -5,14 +5,23 @@ import java.io.IOException
 import android.util.Base64
 import android.util.Log
 import com.example.ui.model.SessionManager
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.SecureRandom
 import java.util.concurrent.CopyOnWriteArrayList
 import org.json.JSONObject
+import com.example.data.network.HavenNetwork
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** The native half of Haven's Google sign-in flow. */
-class HavenAuthClient(private val store: SecureAuthStore) {
+class HavenAuthClient(
+  private val store: SecureAuthStore,
+  private val network: HavenNetwork = HavenNetwork.shared
+) {
+  private val sessionMutex = Mutex()
 
   data class DiagnosticEvent(
     val timestampMs: Long = System.currentTimeMillis(),
@@ -25,7 +34,6 @@ class HavenAuthClient(private val store: SecureAuthStore) {
 
   companion object {
     const val HOST = "haven.apps.mistral.run"
-    private const val BASE = "https://$HOST"
     const val TAG = "HavenAuthDiag"
 
     /** Web OAuth client ID; also the audience of Google ID tokens. */
@@ -122,8 +130,12 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   }
 
   /** Returns null on success, or an explicit failure message identifying the failing step. */
-  @Synchronized
-  fun completeNativeGoogle(idToken: String, nonce: String): String? {
+  suspend fun completeNativeGoogle(idToken: String, nonce: String): String? = sessionMutex.withLock {
+    currentCoroutineContext().ensureActive()
+    withContext(NonCancellable) { completeNativeGoogleLocked(idToken, nonce) }
+  }
+
+  private suspend fun completeNativeGoogleLocked(idToken: String, nonce: String): String? {
     logDiagnostic(
       flow = "NATIVE_GOOGLE",
       step = "COMPLETE_NATIVE_GOOGLE_START",
@@ -181,8 +193,17 @@ class HavenAuthClient(private val store: SecureAuthStore) {
   fun hasSavedSession(): Boolean = store.refreshToken != null
 
   /** Restores a session by rotating the stored refresh token, then checking /me. */
-  @Synchronized
-  fun restore(): Boolean {
+  suspend fun restore(): Boolean = sessionMutex.withLock {
+    currentCoroutineContext().ensureActive()
+    withContext(NonCancellable) { restoreLocked() }
+  }
+
+  private suspend fun restoreLocked(): Boolean {
+    currentCoroutineContext().ensureActive()
+    return withContext(NonCancellable) { rotateRefresh() }
+  }
+
+  private suspend fun rotateRefresh(): Boolean {
     val refresh = store.refreshToken ?: return false
     logDiagnostic("SESSION", "RESTORE_START", "Attempting session restoration with stored refresh token.")
     val response = request("POST", "/api/v1/auth/refresh", JSONObject().put("refresh_token", refresh))
@@ -202,7 +223,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return success
   }
 
-  private fun acceptTokens(body: JSONObject): Boolean {
+  private suspend fun acceptTokens(body: JSONObject): Boolean {
     val access = body.getString("access_token")
     val refresh = body.getString("refresh_token")
     // Persist the rotated token before any further request. Access stays in memory.
@@ -217,13 +238,23 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return true
   }
 
-  @Synchronized
-  fun signOut() {
+  suspend fun signOut(): Unit = withContext(NonCancellable) {
+    sessionMutex.withLock { signOutLocked() }
+  }
+
+  private suspend fun signOutLocked(): Unit {
     logDiagnostic("SESSION", "SIGN_OUT", "User requested sign out. Clearing tokens and session.")
-    val refresh = store.refreshToken
-    store.refreshToken = null
-    accessToken = null
-    SessionManager.signOut()
+    val refresh = try { store.refreshToken } catch (_: Exception) {
+      // Revocation is best effort; a locked/unavailable Keystore must not retain a local login.
+      null
+    }
+    try {
+      store.refreshToken = null
+      store.clearNativeNonce()
+    } finally {
+      accessToken = null
+      SessionManager.signOut()
+    }
     if (refresh != null) {
       try { request("POST", "/api/v1/auth/revoke", JSONObject().put("refresh_token", refresh)) }
       catch (_: Exception) { /* Local sign-out wins even if offline. */ }
@@ -235,20 +266,26 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     IOException("Request failed (HTTP $statusCode): $responseBody")
 
   /** Obtains a valid bearer access token, restoring session if needed. Safe for independent streaming or background calls. */
-  @Synchronized
-  fun getValidAccessToken(): String? {
-    if (accessToken == null && !restore()) return null
+  suspend fun getValidAccessToken(): String? = sessionMutex.withLock {
+    getValidAccessTokenLocked()
+  }
+
+  private suspend fun getValidAccessTokenLocked(): String? {
+    if (accessToken == null && !restoreLocked()) return null
     return accessToken
   }
 
   /** Serializes refresh rotation with restore/sign-out; never creates a fake session. */
-  @Synchronized
-  fun authenticatedGet(path: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
-    if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+  suspend fun authenticatedGet(path: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String = sessionMutex.withLock {
+    authenticatedGetLocked(path, expectedPersonId)
+  }
+
+  private suspend fun authenticatedGetLocked(path: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
+    if (accessToken == null && !restoreLocked()) throw IOException("Sign in to continue.")
     val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
     check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     var response = request("GET", path, null, accessToken)
-    if (response.first == 401 && restore()) {
+    if (response.first == 401 && restoreLocked()) {
       check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
       response = request("GET", path, null, accessToken)
     }
@@ -256,20 +293,28 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return response.second
   }
 
-  fun publicGet(path: String): String {
+  suspend fun optionalGet(path: String): String {
+    val person = SessionManager.session.value.personId
+    return if (person != null) authenticatedGet(path, expectedPersonId = person) else publicGet(path)
+  }
+
+  suspend fun publicGet(path: String): String {
     val response = request("GET", path, null)
     if (response.first != 200) throw HttpException(response.first, response.second)
     return response.second
   }
 
-  @Synchronized
-  fun authenticatedMutation(method: String, path: String, body: JSONObject? = null, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
+  suspend fun authenticatedMutation(method: String, path: String, body: JSONObject? = null, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String = sessionMutex.withLock {
+    authenticatedMutationLocked(method, path, body, expectedPersonId)
+  }
+
+  private suspend fun authenticatedMutationLocked(method: String, path: String, body: JSONObject? = null, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
     require(method == "POST" || method == "DELETE" || method == "PATCH")
-    if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+    if (accessToken == null && !restoreLocked()) throw IOException("Sign in to continue.")
     val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
     check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     var response = request(method, path, body, accessToken)
-    if (response.first == 401 && restore()) {
+    if (response.first == 401 && restoreLocked()) {
       check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
       response = request(method, path, body, accessToken)
     }
@@ -277,8 +322,7 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     return response.second
   }
 
-  @Synchronized
-  fun authenticatedMultipartUpload(
+  suspend fun authenticatedMultipartUpload(
     path: String,
     fieldName: String,
     filename: String,
@@ -286,44 +330,22 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     idempotencyKey: String? = null,
     mimeType: String = "image/jpeg",
     expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"
-  ): String {
-    if (accessToken == null && !restore()) throw IOException("Sign in to continue.")
+  ): String = sessionMutex.withLock {
+    if (accessToken == null && !restoreLocked()) throw IOException("Sign in to continue.")
     val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
     check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
-    fun upload(): Pair<Int, String> {
-      val boundary = "haven-${System.currentTimeMillis()}-${(1000..9999).random()}"
-      val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
-        requestMethod = "POST"
-        connectTimeout = 15_000
-        readTimeout = 60_000
-        doOutput = true
-        setRequestProperty("Accept", "application/json")
-        setRequestProperty("Authorization", "Bearer $accessToken")
-        if (idempotencyKey != null) setRequestProperty("Idempotency-Key", idempotencyKey)
-        setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-      }
-      return try {
-        connection.outputStream.use { output ->
-          output.write(("--$boundary\r\nContent-Disposition: form-data; name=\"$fieldName\"; filename=\"$filename\"\r\nContent-Type: $mimeType\r\n\r\n").toByteArray())
-          output.write(bytes)
-          output.write("\r\n--$boundary--\r\n".toByteArray())
-        }
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        status to (stream?.bufferedReader()?.use { it.readText() } ?: "")
-      } finally { connection.disconnect() }
-    }
+    suspend fun upload() = network.upload(path, fieldName, filename, bytes, mimeType,
+      checkNotNull(accessToken), idempotencyKey)
     var response = upload()
-    if (response.first == 401 && restore()) {
+    if (response.first == 401 && restoreLocked()) {
       check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
       response = upload()
     }
     if (response.first !in 200..299) throw HttpException(response.first, response.second)
-    return response.second
+    response.second
   }
 
-  @Synchronized
-  fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
+  suspend fun authenticatedImageUpload(path: String, bytes: ByteArray, uploadId: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
     return authenticatedMultipartUpload(
       path = path,
       fieldName = "image",
@@ -335,25 +357,6 @@ class HavenAuthClient(private val store: SecureAuthStore) {
     )
   }
 
-  private fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> {
-    val connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
-      requestMethod = method
-      connectTimeout = 10_000
-      readTimeout = 10_000
-      setRequestProperty("Accept", "application/json")
-      if (bearer != null) setRequestProperty("Authorization", "Bearer $bearer")
-      if (body != null) {
-        doOutput = true
-        setRequestProperty("Content-Type", "application/json")
-      }
-    }
-    return try {
-      if (body != null) connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-      val status = connection.responseCode
-      val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-      status to (stream?.bufferedReader()?.use { it.readText() } ?: "")
-    } finally {
-      connection.disconnect()
-    }
-  }
+  private suspend fun request(method: String, path: String, body: JSONObject?, bearer: String? = null): Pair<Int, String> =
+    network.request(method, path, body?.toString(), bearer)
 }
