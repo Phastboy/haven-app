@@ -63,11 +63,15 @@ jobs:
           cache-disabled: ${{ github.event_name == 'release' }}
       - name: Ensure Gradle wrapper is executable
         run: chmod +x ./gradlew
+      - name: Prepare pinned Gradle with verified official mirror fallback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/prepare-gradle.sh
       - name: Build, test, and lint
-        run: ./gradlew --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: '"$GRADLE_COMMAND" --no-daemon --continue :app:assembleDebug :app:testDebugUnitTest :app:lintDebug'
       - name: Verify Kotlin CIO runtime dependencies
         run: |
-          ./gradlew --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > runtime-dependencies.txt
+          "$GRADLE_COMMAND" --no-daemon :app:dependencies --configuration releaseRuntimeClasspath > runtime-dependencies.txt
           grep -q 'io.ktor:ktor-client-cio' runtime-dependencies.txt
           if grep -E 'com.squareup.okhttp3|com.squareup.retrofit2|io.ktor:ktor-client-(okhttp|java|android)' runtime-dependencies.txt; then
             echo 'Unexpected Java/OkHttp/Retrofit HTTP engine in runtime dependencies' >&2
@@ -83,7 +87,7 @@ jobs:
           KEYSTORE_PATH: ${{ runner.temp }}/haven-release.p12
           STORE_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.HAVEN_RELEASE_KEYSTORE_PASSWORD }}
-        run: ./gradlew --no-daemon :app:assembleRelease :app:lintRelease
+        run: '"$GRADLE_COMMAND" --no-daemon :app:assembleRelease :app:lintRelease'
       - name: Upload verification reports
         if: always()
         uses: actions/upload-artifact@v7.0.2
@@ -109,7 +113,7 @@ jobs:
           fi
           printf '\nSource commit: %s\nVariant: debug (testing only)\n' "$(git rev-parse HEAD)" >> apk-provenance.txt
           printf 'Workflow: %s/%s/actions/runs/%s\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> apk-provenance.txt
-          ./gradlew --version >> apk-provenance.txt
+          "$GRADLE_COMMAND" --version >> apk-provenance.txt
           "$tools/aapt" dump badging "$apk" >> apk-provenance.txt
           sha256sum "$apk" > apk-sha256.txt
       - uses: actions/upload-artifact@v7.0.2
@@ -136,7 +140,7 @@ jobs:
             exit 1
           fi
           printf '\nSource commit: %s\nVariant: release\nWorkflow: %s/%s/actions/runs/%s\n' "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-assets/apk-provenance.txt
-          ./gradlew --version >> release-assets/apk-provenance.txt
+          "$GRADLE_COMMAND" --version >> release-assets/apk-provenance.txt
           cd release-assets
           sha256sum haven-v0.0.2.apk > SHA256SUMS
       - name: Upload release candidate

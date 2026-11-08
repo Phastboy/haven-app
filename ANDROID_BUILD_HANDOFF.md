@@ -9,6 +9,9 @@ existing certificate checks. AI Studio reports are historical; inspect exact CI.
 
 - Temurin 21.0.13+9 in CI; Kotlin-only application sources, JVM target 17.
 - Gradle 9.9.0 with official distribution SHA-256 in wrapper properties.
+  CI prefers the wrapper; if its CDN fails, prepare-gradle.sh fetches the same
+  archive through Gradle's official GitHub release asset API and verifies that
+  pinned checksum before running it. Wrapper settings and app source stay clean.
 - AGP 9.5.1, Kotlin/Compose compiler 2.4.21, KSP 2.3.13, Room 2.8.5.
 - Compile API 37.2 / target 37, SDK build-tools 37.0.0, min SDK 24 retained.
 - Compose BOM 2026.09.00, Robolectric 4.17, Ktor 3.6.1 **CIO** and Coil 3.6.3
