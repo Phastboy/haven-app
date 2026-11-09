@@ -997,7 +997,8 @@ fun OffersScreen(
             error.contains("timeout", ignoreCase = true) ||
             error.contains("offline", ignoreCase = true) ||
             error.contains("resolve host", ignoreCase = true)
-          val errorTitle = if (isOffline) "You're offline" else "Something went wrong on our side"
+          val errorTitle = if (state.requiresSignIn) "Sign in to continue"
+            else if (isOffline) "You're offline" else "Something went wrong on our side"
           val errorBody = if (isOffline) "Check your connection and try again." else error
           val errorIcon = if (isOffline) Icons.Outlined.CloudOff else Icons.Outlined.ErrorOutline
 
@@ -1011,10 +1012,11 @@ fun OffersScreen(
               icon = errorIcon,
               title = errorTitle,
               body = errorBody,
-              primaryActionLabel = "Try again",
+              primaryActionLabel = if (state.requiresSignIn) "Sign in" else "Try again",
               onPrimaryAction = {
                 browserError = null
-                if (state.items.isNotEmpty() && state.nextCursor != null) viewModel.loadMore() else viewModel.refresh()
+                if (state.requiresSignIn) onNavigateToSignIn()
+                else if (state.items.isNotEmpty() && state.nextCursor != null) viewModel.loadMore() else viewModel.refresh()
               },
               testTag = "offers_error"
             )

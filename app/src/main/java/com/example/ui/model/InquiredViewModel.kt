@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Loaded collection, initial/refresh progress and independently retryable paging. */
 data class InquiredUiState(
   val offers: PaginatedOffers? = null,
   val loading: Boolean = false,
@@ -23,9 +24,11 @@ data class InquiredUiState(
   val loadingMore: Boolean = false,
   val pagingError: String? = null
 ) {
+  /** Available offers in server activity order, including accumulated pages. */
   val items: List<FeedOffer> get() = offers?.items.orEmpty()
 }
 
+/** Account-bound Inquired state; visit cancellation never discards loaded pages. */
 class InquiredViewModel(
   private val repository: InquiredRepository
 ) : ViewModel() {
@@ -37,12 +40,31 @@ class InquiredViewModel(
   private var request = 0L
   private var loadJob: kotlinx.coroutines.Job? = null
 
+  /** Grid coordinates retained while a child destination is open. */
+  var scrollIndex: Int = 0
+    private set
+  var scrollOffset: Int = 0
+    private set
+
+  /** Save the visible grid position without fetching or changing collection data. */
+  fun updateScrollPosition(index: Int, offset: Int) {
+    scrollIndex = index
+    scrollOffset = offset
+  }
+
+  /** Load only a never-loaded collection; a confirmed empty page is retained too. */
+  fun loadIfNeeded() {
+    if (_state.value.offers == null && !_state.value.loading) load()
+  }
+
+  /** End this visit's requests while keeping usable data and paging position. */
   fun cancelLoading() {
     request++
     loadJob?.cancel()
     _state.update { it.copy(loading = false, loadingMore = false) }
   }
 
+  /** Explicitly refresh the first page, retaining content until a confirmed response. */
   fun load() {
     cancelLoading()
     val generation = request
@@ -63,6 +85,7 @@ class InquiredViewModel(
     }
   }
 
+  /** Append one page, rejecting duplicate, cancelled and superseded results. */
   fun loadMore() {
     val before = _state.value
     val cursor = before.offers?.nextCursor ?: return
@@ -89,8 +112,10 @@ class InquiredViewModel(
   }
 
   companion object {
+    /** Create a model only while the requested account is still current. */
     fun factory(context: Context, personId: String?): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
       @Suppress("UNCHECKED_CAST")
+      /** Reject a different model/account instead of constructing cross-account state. */
       override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass.isAssignableFrom(InquiredViewModel::class.java))
         require(SessionManager.session.value.personId == personId)

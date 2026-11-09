@@ -129,4 +129,43 @@ class InquiredViewModelTest {
     assertTrue(model.state.value.items.isEmpty())
     model.cancelLoading()
   }
+  @Test fun `returning retains accumulated pages cursor and scroll without another first page request`() = runTest(dispatcher) {
+    val requests = mutableListOf<String?>()
+    val model = InquiredViewModel(repository { after ->
+      requests += after
+      if (after == null) PaginatedOffers(listOf(offer("a")), "next")
+      else PaginatedOffers(listOf(offer("b")), "later")
+    })
+    model.loadIfNeeded()
+    advanceUntilIdle()
+    model.loadMore()
+    advanceUntilIdle()
+    model.updateScrollPosition(1, 48)
+    model.cancelLoading()
+    model.loadIfNeeded()
+    advanceUntilIdle()
+    assertEquals(listOf(null, "next"), requests)
+    assertEquals(listOf("a", "b"), model.state.value.items.map { it.id })
+    assertEquals("later", model.state.value.offers?.nextCursor)
+    assertEquals(1, model.scrollIndex)
+    assertEquals(48, model.scrollOffset)
+  }
+
+  @Test fun `a loaded empty collection stays distinct from never loaded on return`() = runTest(dispatcher) {
+    var calls = 0
+    val model = InquiredViewModel(repository { calls++; PaginatedOffers(emptyList(), null) })
+    model.loadIfNeeded()
+    advanceUntilIdle()
+    model.cancelLoading()
+    model.loadIfNeeded()
+    advanceUntilIdle()
+    assertEquals(1, calls)
+    assertNotNull(model.state.value.offers)
+    assertFalse(model.state.value.loading)
+    model.load()
+    runCurrent()
+    advanceUntilIdle()
+    assertEquals(2, calls)
+  }
+
 }

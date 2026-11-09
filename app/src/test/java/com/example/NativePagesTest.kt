@@ -381,4 +381,26 @@ class NativePagesTest {
     rule.onNodeWithTag("inquired_grid").assertDoesNotExist()
   }
 
+  @Test fun `loaded Inquired refresh shows progress and retains offer cards`() {
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(listOf(testOffer), "next"), true, null,
+          {}, {}, {}, {})
+      }
+    }
+    rule.onNodeWithTag("inquired_refreshing").assertExists()
+    rule.onNodeWithTag("offer_card_${testOffer.id}").assertExists()
+  }
+
+  @Test fun `refreshing loaded empty Inquired shows progress instead of an empty-state claim`() {
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(emptyList(), null), true, null,
+          {}, {}, {}, {})
+      }
+    }
+    rule.onNodeWithTag("inquired_refreshing").assertExists()
+    rule.onNodeWithText("No inquiries yet").assertDoesNotExist()
+  }
+
 }

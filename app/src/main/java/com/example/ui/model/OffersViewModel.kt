@@ -36,6 +36,7 @@ data class OffersUiState(
   val isLoading: Boolean = false,
   val isRefreshing: Boolean = false,
   val error: String? = null,
+  val requiresSignIn: Boolean = false,
   val isFilterSheetVisible: Boolean = false,
   val draftCurrency: String = "Any",
   val draftMinPriceText: String = "",
@@ -109,7 +110,7 @@ class OffersViewModel(
       nextCursor = if (reset) null else before.nextCursor,
       isLoading = retained.isEmpty(),
       isRefreshing = retained.isNotEmpty(),
-      error = null
+      error = null, requiresSignIn = false
     ) }
     loadJob = viewModelScope.launch {
       fun isCurrent() = generation == request && SessionManager.session.value.sameAccount(actor)
@@ -135,12 +136,13 @@ class OffersViewModel(
         _uiState.update { it.copy(
           items = if (reset) page.items else (before.items + page.items).distinctBy { offer -> offer.id },
           categories = page.categories, currencies = page.currencies, nextCursor = page.nextCursor,
-          isLoading = false, isRefreshing = false, error = null
+          isLoading = false, isRefreshing = false, error = null, requiresSignIn = false
         ) }
       } catch (cancelled: CancellationException) {
         throw cancelled
       } catch (error: Exception) {
         if (isCurrent()) _uiState.update { it.copy(isLoading = false, isRefreshing = false,
+          requiresSignIn = (error as? OffersRequestException)?.requiresSignIn == true,
           error = if (error is OffersRequestException) error.message
             else if (reset) "Couldn’t load offers. Check your connection and try again."
             else "Couldn’t load more offers. Please try again.") }

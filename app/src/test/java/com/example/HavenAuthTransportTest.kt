@@ -237,4 +237,38 @@ class HavenAuthTransportTest {
     } finally { client.close() }
   }
 
+  @Test fun `Following distinguishes temporary refresh outage from rejected authentication`() = runTest {
+    var refreshStatus = HttpStatusCode.OK
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"feed-access","refresh_token":"feed-refresh"}""", refreshStatus)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> respond("expired", HttpStatusCode.Unauthorized)
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val repository = com.example.data.HavenOffersRepository(auth)
+      val query = com.example.data.OffersQuery(scope = "following", near = "off")
+      refreshStatus = HttpStatusCode.ServiceUnavailable
+      val temporary = runCatching { repository.fetch(query) }.exceptionOrNull()
+        as com.example.data.OffersRequestException
+      assertFalse(temporary.requiresSignIn)
+      assertEquals("Couldn’t refresh your session. Please try again.", temporary.message)
+      assertTrue(temporary.cause is HavenAuthClient.SessionRefreshException)
+      assertEquals("feed-refresh", store.refreshToken)
+      assertTrue(SessionManager.session.value.isAuthenticated)
+
+      refreshStatus = HttpStatusCode.Unauthorized
+      val rejected = runCatching { repository.fetch(query) }.exceptionOrNull()
+        as com.example.data.OffersRequestException
+      assertTrue(rejected.requiresSignIn)
+      assertEquals("Please sign in to view this collection.", rejected.message)
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
+    } finally { client.close() }
+  }
+
 }

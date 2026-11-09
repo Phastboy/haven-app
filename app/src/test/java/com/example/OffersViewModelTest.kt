@@ -184,4 +184,23 @@ class OffersViewModelTest {
     assertEquals("real", model.uiState.value.items.single().id)
   }
 
+  @Test fun `feed exposes sign-in action only for an authentication requirement`() = runTest(dispatcher) {
+    var signInRequired = true
+    val model = OffersViewModel(OffersRepository { query ->
+      if (query.scope == "following") throw com.example.data.OffersRequestException(
+        if (signInRequired) "Please sign in to view this collection." else "Couldn’t refresh your session. Please try again.",
+        IOException("request failure"), requiresSignIn = signInRequired)
+      page(emptyList())
+    })
+    advanceUntilIdle()
+    model.setScope("following")
+    advanceUntilIdle()
+    assertTrue(model.uiState.value.requiresSignIn)
+    signInRequired = false
+    model.refresh()
+    advanceUntilIdle()
+    assertFalse(model.uiState.value.requiresSignIn)
+    assertEquals("Couldn’t refresh your session. Please try again.", model.uiState.value.error)
+  }
+
 }

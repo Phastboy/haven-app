@@ -81,7 +81,7 @@ fun interface OffersRepository {
 }
 
 /** A server rejection with a safe, user-facing explanation. */
-class OffersRequestException(message: String, cause: Throwable) : IOException(message, cause)
+class OffersRequestException(message: String, cause: Throwable, val requiresSignIn: Boolean = false) : IOException(message, cause)
 
 /** Public discovery; the server owns filtering, visibility, and result order. */
 class HavenOffersRepository(
@@ -106,12 +106,16 @@ class HavenOffersRepository(
         response.second
       }
       parsePage(raw)
+    } catch (error: HavenAuthClient.SessionRefreshException) {
+      throw OffersRequestException("Couldn’t refresh your session. Please try again.", error)
+    } catch (error: HavenAuthClient.SignInRequiredException) {
+      throw OffersRequestException("Please sign in to view this collection.", error, requiresSignIn = true)
     } catch (error: HavenAuthClient.HttpException) {
       throw OffersRequestException(when (error.statusCode) {
         400 -> "This feed request was rejected. Check your filters and try again."
         401 -> "Please sign in to view this collection."
         else -> "Couldn’t load offers. Please try again."
-      }, error)
+      }, error, requiresSignIn = error.statusCode == 401)
     }
   }
 

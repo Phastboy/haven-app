@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -29,6 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -50,6 +54,7 @@ import com.example.ui.model.InquiredViewModel
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
+/** Native route binding that retains loaded pages and scroll across child navigation. */
 @Composable
 fun InquiredScreen(
   onBack: () -> Unit,
@@ -60,10 +65,15 @@ fun InquiredScreen(
   onOpenProvider: ((String) -> Unit)? = null
 ) {
   DisposableEffect(viewModel) {
-    viewModel.load()
+    viewModel.loadIfNeeded()
     onDispose { viewModel.cancelLoading() }
   }
   val state by viewModel.state.collectAsState()
+  val gridState = rememberLazyGridState(viewModel.scrollIndex, viewModel.scrollOffset)
+  LaunchedEffect(gridState, viewModel) {
+    snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
+      .collect { (index, offset) -> viewModel.updateScrollPosition(index, offset) }
+  }
   InquiredScreen(
     offers = state.offers,
     loading = state.loading,
@@ -76,10 +86,12 @@ fun InquiredScreen(
     onBrowseOffers = onBrowseOffers,
     onOpenProvider = onOpenProvider,
     onLoadMore = viewModel::loadMore,
-    modifier = modifier
+    modifier = modifier,
+    gridState = gridState
   )
 }
 
+/** Render server-backed initial, retained refresh, empty, error and paging states. */
 @Composable
 fun InquiredScreen(
   offers: PaginatedOffers?,
@@ -93,7 +105,8 @@ fun InquiredScreen(
   onOpenProvider: ((String) -> Unit)? = null,
   onLoadMore: () -> Unit = {},
   pagingError: String? = null,
-  loadingMore: Boolean = false
+  loadingMore: Boolean = false,
+  gridState: LazyGridState = rememberLazyGridState()
 ) {
   BackHandler(onBack = onBack)
 
@@ -154,6 +167,18 @@ fun InquiredScreen(
     if (loading && offers == null) {
       InquiredLoadingSkeleton()
       return
+    }
+
+    if (loading && offers != null) {
+      Row(
+        Modifier.fillMaxWidth().padding(16.dp).testTag("inquired_refreshing"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        CircularProgressIndicator(Modifier.size(20.dp), color = HavenColors.Primary)
+        Text("Refreshing inquired offers", color = HavenColors.TextSecondary)
+      }
+      if (offers.items.isEmpty()) return
     }
 
     if (error != null && offers != null) {
@@ -241,6 +266,7 @@ fun InquiredScreen(
     }
 
     LazyVerticalGrid(
+      state = gridState,
       columns = GridCells.Fixed(2),
       modifier = Modifier
         .fillMaxWidth()
@@ -305,6 +331,7 @@ fun InquiredScreen(
   }
 }
 
+/** Reserve card geometry only while the initial collection has no retained page. */
 @Composable
 private fun InquiredLoadingSkeleton() {
   LazyVerticalGrid(

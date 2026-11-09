@@ -185,9 +185,9 @@ Production uses `NativeOfferEditorScreen.kt` (170 lines) instead.
 
 ### 4.2 `ProfileChildScreens.kt`
 
-- Section 1, Saved: 76–386, 8 hardcoded items at 99–106.
-- Section 2, Following: 390–668, sample people.
-- Section 3, My Offers: 669–1147, sample offers.
+- Saved (section 1): lines 76–386, with 8 hardcoded items at 99–106.
+- Following (section 2): lines 390–668, using sample people.
+- My Offers (section 3): lines 669–1147, using sample offers.
 
 Its public functions are **overloads** of the live screens:
 
@@ -203,7 +203,7 @@ Every call site passes arguments that only the live overload accepts (`viewModel
 
 ### 4.3 `PublicOfferScreen.kt`
 
-One composable doing gallery pager, owner/saved toggles, inquiry sheet, toast timer, and message draft (116–135, 629).
+One composable owns the gallery pager, owner/saved toggles, inquiry sheet, toast timer, and message draft (116–135, 629).
 
 ### 4.4 `PublicProfileScreen.kt`
 
@@ -271,8 +271,8 @@ Grouping tests by subject is defensible. `NativePagesTest` mixing screen renderi
 
 1. **Delete or relocate the dead screens.** Remove `OfferManagementScreens.kt`, `ProfileChildScreens.kt`, `PublicOfferScreen.kt`, `PublicProfileScreen.kt`, `AuthMessageScreens.kt`, and `ConversationThreadView.kt` — or move them to a `prototype/` source set excluded from the app. This removes 4,848 lines and the overload ambiguity.
 2. **Split `OffersScreen.kt`** into `HavenNavHost`, per-destination route composables, and `FeedRoute`.
-3. **Split `HavenLocalFirstMessagingRepository`** into `LocalMessageStore`, `MessagingSync`, and `OutboxWorker`; inject the actor id.
-4. **Split `HavenAuthClient`** into session/token, HTTP, Google adapter, and diagnostics.
+3. **Extract responsibilities from `HavenLocalFirstMessagingRepository`** into `LocalMessageStore`, `MessagingSync`, and `OutboxWorker`; inject the actor id.
+4. **Separate `HavenAuthClient` responsibilities** into session/token, HTTP, Google adapter, and diagnostics.
 5. **Move `ReferenceLocationScreen` search** into a ViewModel with an injected repository.
 6. **Break `EditProfileScreen`** into `AvatarEditor` and `ProfileForm`.
 7. **Add guards:** an architecture test that fails on new top-level screens with zero references, and a soft line budget (warn at 400) to prevent regrowth.
