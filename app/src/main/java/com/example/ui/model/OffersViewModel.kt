@@ -10,6 +10,7 @@ import com.example.data.FeedOffer
 import com.example.data.HavenOffersRepository
 import com.example.data.OffersPage
 import com.example.data.OffersQuery
+import com.example.data.OffersRequestException
 import com.example.data.OffersRepository
 import com.example.data.messaging.db.HavenDatabase
 import com.example.data.offers.HavenLocalFirstOffersRepository
@@ -138,9 +139,10 @@ class OffersViewModel(
         ) }
       } catch (cancelled: CancellationException) {
         throw cancelled
-      } catch (_: Exception) {
+      } catch (error: Exception) {
         if (isCurrent()) _uiState.update { it.copy(isLoading = false, isRefreshing = false,
-          error = if (reset) "Couldn’t load offers. Check your connection and try again."
+          error = if (error is OffersRequestException) error.message
+            else if (reset) "Couldn’t load offers. Check your connection and try again."
             else "Couldn’t load more offers. Please try again.") }
       }
     }
@@ -219,7 +221,7 @@ class OffersViewModel(
     _uiState.update {
       it.copy(
         activeReference = candidate,
-        query = it.query.copy(near = candidate.near)
+        query = it.query.copy(scope = "public", near = candidate.near)
       )
     }
     refresh()
@@ -236,9 +238,13 @@ class OffersViewModel(
   }
 
   fun setScope(scope: String) {
+    if (scope != "public" && scope != "following") return
     if (_uiState.value.query.scope == scope) return
     _uiState.update {
-      it.copy(query = it.query.copy(scope = scope))
+      it.copy(
+        query = it.query.copy(scope = scope, near = if (scope == "following") "off" else it.query.near),
+        activeReference = if (scope == "following") null else it.activeReference
+      )
     }
     refresh()
   }

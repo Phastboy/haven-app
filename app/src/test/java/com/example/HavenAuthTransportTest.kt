@@ -176,4 +176,41 @@ class HavenAuthTransportTest {
       assertFalse(SessionManager.session.value.isAuthenticated)
     } finally { client.close() }
   }
+  @Test fun `Following sends bearer facets and cursor to the offers endpoint and preserves HTTP errors`() = runTest {
+    var status = HttpStatusCode.OK
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"feed-access","refresh_token":"feed-refresh"}""", HttpStatusCode.OK)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> {
+          assertEquals("/api/v1/offers", request.url.encodedPath)
+          assertEquals("Bearer feed-access", request.headers[HttpHeaders.Authorization])
+          assertEquals("following", request.url.parameters["scope"])
+          assertEquals("bread", request.url.parameters["q"])
+          assertEquals("food-groceries", request.url.parameters["category"])
+          assertEquals("NGN", request.url.parameters["currency"])
+          assertEquals("0", request.url.parameters["min_price"])
+          assertEquals("100", request.url.parameters["max_price"])
+          assertEquals("cursor+/=", request.url.parameters["after"])
+          assertEquals("off", request.url.parameters["near"])
+          respond("""{"items":[],"categories":[],"currencies":[],"next_cursor":null}""", status)
+        }
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val repository = com.example.data.HavenOffersRepository(auth)
+      val query = com.example.data.OffersQuery(search = "bread", category = "food-groceries",
+        currency = "NGN", minPrice = 0, maxPrice = 100, after = "cursor+/=", scope = "following", near = "off")
+      assertTrue(repository.fetch(query).items.isEmpty())
+      status = HttpStatusCode.BadRequest
+      val error = runCatching { repository.fetch(query) }.exceptionOrNull()
+      assertTrue(error is com.example.data.OffersRequestException)
+      assertEquals("This feed request was rejected. Check your filters and try again.", error?.message)
+      assertFalse(error?.message.orEmpty().contains("connection"))
+    } finally { client.close() }
+  }
+
 }

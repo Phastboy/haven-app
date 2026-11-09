@@ -80,6 +80,9 @@ fun interface OffersRepository {
   suspend fun fetch(query: OffersQuery): OffersPage
 }
 
+/** A server rejection with a safe, user-facing explanation. */
+class OffersRequestException(message: String, cause: Throwable) : IOException(message, cause)
+
 /** Public discovery; the server owns filtering, visibility, and result order. */
 class HavenOffersRepository(
   private val auth: HavenAuthClient? = null
@@ -104,8 +107,8 @@ class HavenOffersRepository(
       }
       parsePage(raw)
     } catch (error: HavenAuthClient.HttpException) {
-      throw IOException(when (error.statusCode) {
-        400 -> "Check your search and price filters, then try again."
+      throw OffersRequestException(when (error.statusCode) {
+        400 -> "This feed request was rejected. Check your filters and try again."
         401 -> "Please sign in to view this collection."
         else -> "Couldn’t load offers. Please try again."
       }, error)
