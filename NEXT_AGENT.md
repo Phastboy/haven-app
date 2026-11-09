@@ -1,3 +1,12 @@
+# Current coordinated release preflight — PR #35
+
+Owner authorized merge/release of Android #35 with backend #73 when their gates
+are met. Candidate 0.0.4/code 14; see RELEASE_V0.0.4.md. Existing checks passed
+at c1aadd1; fresh version/workflow CI and exact-head review are required.
+The backend strict-scrutiny register retains unfinished Q25 acceptance evidence;
+no merge or publication is claimed. No CI watching: resume when owner reports
+completion. Release authorization persists; no repeated approval is needed.
+
 # Current review — AI Studio swipe navigation and lint cleanup
 
 Owner requested review/corrective PR(s) for issues #21 and #19 after AI Studio's

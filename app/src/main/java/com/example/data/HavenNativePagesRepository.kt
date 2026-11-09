@@ -37,6 +37,8 @@ interface NativePagesRepository {
   suspend fun getProviderProfile(handle: String, after: String? = null, authenticated: Boolean = false): ProviderProfile
   suspend fun getMyOffers(after: String? = null): PaginatedOffers
   suspend fun getSavedOffers(after: String? = null): PaginatedOffers
+  /** List the authenticated person’s Inquired offers using an opaque activity cursor. */
+  suspend fun getInquired(after: String? = null): PaginatedOffers
   suspend fun getFollowing(after: String? = null): PaginatedFollowing
   suspend fun follow(handle: String): Boolean
   suspend fun unfollow(handle: String): Boolean
@@ -75,6 +77,19 @@ class HavenNativePagesRepository(private val auth: HavenAuthClient) : NativePage
   override suspend fun getSavedOffers(after: String?): PaginatedOffers = withContext(Dispatchers.IO) {
     val query = if (!after.isNullOrBlank()) "?after=${Uri.encode(after)}" else ""
     val path = "/api/v1/me/saved$query"
+    val raw = auth.authenticatedGet(path)
+    val json = JSONObject(raw)
+    val itemsArray = json.getJSONArray("items")
+    PaginatedOffers(
+      items = List(itemsArray.length()) { HavenOffersRepository.parseOffer(itemsArray.getJSONObject(it)) },
+      nextCursor = if (json.isNull("next_cursor")) null else json.getString("next_cursor")
+    )
+  }
+
+  /** Fetch the private Inquired collection, preserving opaque cursor encoding. */
+  override suspend fun getInquired(after: String?): PaginatedOffers = withContext(Dispatchers.IO) {
+    val query = if (!after.isNullOrBlank()) "?after=${Uri.encode(after)}" else ""
+    val path = "/api/v1/me/inquired$query"
     val raw = auth.authenticatedGet(path)
     val json = JSONObject(raw)
     val itemsArray = json.getJSONArray("items")

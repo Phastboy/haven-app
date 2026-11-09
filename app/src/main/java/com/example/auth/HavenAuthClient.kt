@@ -265,6 +265,12 @@ class HavenAuthClient(
   class HttpException(val statusCode: Int, val responseBody: String) :
     IOException("Request failed (HTTP $statusCode): $responseBody")
 
+  /** A temporary restoration failure; retained credentials may still be valid. */
+  class SessionRefreshException : IOException("Couldn’t refresh your session. Please try again.")
+
+  /** Authentication was absent or rejected and an explicit sign-in is required. */
+  class SignInRequiredException : IOException("Sign in to continue.")
+
   /** Obtains a valid bearer access token, restoring session if needed. Safe for independent streaming or background calls. */
   suspend fun getValidAccessToken(): String? = sessionMutex.withLock {
     getValidAccessTokenLocked()
@@ -281,14 +287,22 @@ class HavenAuthClient(
   }
 
   private suspend fun authenticatedGetLocked(path: String, expectedPersonId: String? = SessionManager.session.value.personId ?: "<restore-session>"): String {
-    if (accessToken == null && !restoreLocked()) throw IOException("Sign in to continue.")
+    if (accessToken == null && !restoreLocked()) {
+      if (hasSavedSession()) throw SessionRefreshException()
+      throw SignInRequiredException()
+    }
     val expectedOwner = if (expectedPersonId == "<restore-session>") SessionManager.session.value.personId else expectedPersonId
     check(expectedOwner != null && SessionManager.session.value.personId == expectedOwner) { "Account changed" }
     var response = request("GET", path, null, accessToken)
-    if (response.first == 401 && restoreLocked()) {
+    if (response.first == 401) {
+      if (!restoreLocked()) {
+        if (hasSavedSession()) throw SessionRefreshException()
+        throw SignInRequiredException()
+      }
       check(SessionManager.session.value.personId == expectedOwner) { "Account changed" }
       response = request("GET", path, null, accessToken)
     }
+    if (response.first == 401) throw SignInRequiredException()
     if (response.first != 200) throw HttpException(response.first, response.second)
     return response.second
   }

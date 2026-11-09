@@ -176,4 +176,99 @@ class HavenAuthTransportTest {
       assertFalse(SessionManager.session.value.isAuthenticated)
     } finally { client.close() }
   }
+  @Test fun `Following sends bearer facets and cursor to the offers endpoint and preserves HTTP errors`() = runTest {
+    var status = HttpStatusCode.OK
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"feed-access","refresh_token":"feed-refresh"}""", HttpStatusCode.OK)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> {
+          assertEquals("/api/v1/offers", request.url.encodedPath)
+          assertEquals("Bearer feed-access", request.headers[HttpHeaders.Authorization])
+          assertEquals("following", request.url.parameters["scope"])
+          assertEquals("bread", request.url.parameters["q"])
+          assertEquals("food-groceries", request.url.parameters["category"])
+          assertEquals("NGN", request.url.parameters["currency"])
+          assertEquals("0", request.url.parameters["min_price"])
+          assertEquals("100", request.url.parameters["max_price"])
+          assertEquals("cursor+/=", request.url.parameters["after"])
+          assertEquals("off", request.url.parameters["near"])
+          respond("""{"items":[],"categories":[],"currencies":[],"next_cursor":null}""", status)
+        }
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val repository = com.example.data.HavenOffersRepository(auth)
+      val query = com.example.data.OffersQuery(search = "bread", category = "food-groceries",
+        currency = "NGN", minPrice = 0, maxPrice = 100, after = "cursor+/=", scope = "following", near = "off")
+      assertTrue(repository.fetch(query).items.isEmpty())
+      status = HttpStatusCode.BadRequest
+      val error = runCatching { repository.fetch(query) }.exceptionOrNull()
+      assertTrue(error is com.example.data.OffersRequestException)
+      assertEquals("This feed request was rejected. Check your filters and try again.", error?.message)
+      assertFalse(error?.message.orEmpty().contains("connection"))
+    } finally { client.close() }
+  }
+
+  @Test fun `Inquired is a bearer profile collection with encoded paging`() = runTest {
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"collection-access","refresh_token":"collection-refresh"}""", HttpStatusCode.OK)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> {
+          assertEquals("/api/v1/me/inquired", request.url.encodedPath)
+          assertEquals("Bearer collection-access", request.headers[HttpHeaders.Authorization])
+          assertEquals("cursor+/=", request.url.parameters["after"])
+          assertNull(request.url.parameters["scope"])
+          respond("""{"items":[{"id":"offer-id","slug":"real-offer","title":"Real offer","maker_name":"Person","price_display":"Free","cover_url":null}],"next_cursor":"next"}""", HttpStatusCode.OK)
+        }
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val page = com.example.data.HavenInquiredRepository(auth).getInquired("cursor+/=").getOrThrow()
+      assertEquals("offer-id", page.items.single().id)
+      assertEquals("next", page.nextCursor)
+    } finally { client.close() }
+  }
+
+  @Test fun `Following distinguishes temporary refresh outage from rejected authentication`() = runTest {
+    var refreshStatus = HttpStatusCode.OK
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"feed-access","refresh_token":"feed-refresh"}""", refreshStatus)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> respond("expired", HttpStatusCode.Unauthorized)
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val repository = com.example.data.HavenOffersRepository(auth)
+      val query = com.example.data.OffersQuery(scope = "following", near = "off")
+      refreshStatus = HttpStatusCode.ServiceUnavailable
+      val temporary = runCatching { repository.fetch(query) }.exceptionOrNull()
+        as com.example.data.OffersRequestException
+      assertFalse(temporary.requiresSignIn)
+      assertEquals("Couldn’t refresh your session. Please try again.", temporary.message)
+      assertTrue(temporary.cause is HavenAuthClient.SessionRefreshException)
+      assertEquals("feed-refresh", store.refreshToken)
+      assertTrue(SessionManager.session.value.isAuthenticated)
+
+      refreshStatus = HttpStatusCode.Unauthorized
+      val rejected = runCatching { repository.fetch(query) }.exceptionOrNull()
+        as com.example.data.OffersRequestException
+      assertTrue(rejected.requiresSignIn)
+      assertEquals("Please sign in to view this collection.", rejected.message)
+      assertNull(store.refreshToken)
+      assertFalse(SessionManager.session.value.isAuthenticated)
+    } finally { client.close() }
+  }
+
 }

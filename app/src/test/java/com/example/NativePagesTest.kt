@@ -339,4 +339,68 @@ class NativePagesTest {
     assertEquals("Oct 2026", person.joined)
     assertEquals("https://example.com/avatar.jpg", person.avatarUrl)
   }
+  @Test fun `Inquired empty state browses offers`() {
+    var browsed = false
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(emptyList(), null), false, null,
+          {}, {}, {}, { browsed = true })
+      }
+    }
+    rule.onNodeWithTag("inquired_empty_browse").performClick()
+    assertEquals(true, browsed)
+  }
+
+  @Test fun `Inquired loaded cards open offers and expose paging retry`() {
+    var slug: String? = null
+    var retried = false
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(listOf(testOffer), "next"), false, null,
+          {}, {}, { slug = it }, {}, onLoadMore = { retried = true }, pagingError = "Could not load more")
+      }
+    }
+    rule.onNodeWithTag("offer_card_${testOffer.id}").assertExists()
+    rule.onNodeWithText("Retry").performScrollTo().performClick()
+    assertEquals(true, retried)
+    rule.onNodeWithTag("offer_card_${testOffer.id}").performScrollTo()
+    rule.onNodeWithText(testOffer.title).performClick()
+    assertEquals(testOffer.slug, slug)
+  }
+
+  @Test fun `Inquired failure displays retry and no fake results`() {
+    var retried = false
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(null, false, "Could not load", {}, { retried = true }, {}, {})
+      }
+    }
+    rule.onNodeWithTag("inquired_error").assertExists()
+    rule.onNodeWithText("Try again").performClick()
+    assertEquals(true, retried)
+    rule.onNodeWithTag("inquired_grid").assertDoesNotExist()
+  }
+
+  @Test fun `loaded Inquired refresh shows progress and retains offer cards`() {
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(listOf(testOffer), "next"), true, null,
+          {}, {}, {}, {})
+      }
+    }
+    rule.onNodeWithTag("inquired_refreshing").assertExists()
+    rule.onNodeWithTag("offer_card_${testOffer.id}").assertExists()
+  }
+
+  @Test fun `refreshing loaded empty Inquired shows progress instead of an empty-state claim`() {
+    rule.setContent {
+      HavenTheme {
+        com.example.ui.screens.InquiredScreen(PaginatedOffers(emptyList(), null), true, null,
+          {}, {}, {}, {})
+      }
+    }
+    rule.onNodeWithTag("inquired_refreshing").assertExists()
+    rule.onNodeWithText("No inquiries yet").assertDoesNotExist()
+  }
+
 }

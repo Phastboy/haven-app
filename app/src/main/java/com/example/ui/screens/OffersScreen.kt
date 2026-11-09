@@ -132,6 +132,7 @@ sealed interface OffersDestination {
   data class OfferEditor(val id: String? = null, val entryKey: String = java.util.UUID.randomUUID().toString()) : OffersDestination
   data object MyOffers : OffersDestination
   data object SavedOffers : OffersDestination
+  data object Inquired : OffersDestination
   data object Following : OffersDestination
   data class ConversationThread(val conversationId: String) : OffersDestination
   data object EditProfile : OffersDestination
@@ -179,6 +180,7 @@ fun OffersScreen(
         is OffersDestination.ConversationThread -> "thread|${destination.conversationId}"
         OffersDestination.MyOffers -> "mine"
         OffersDestination.SavedOffers -> "saved"
+        OffersDestination.Inquired -> "inquired"
         OffersDestination.Following -> "following"
         OffersDestination.EditProfile -> "edit_profile"
         OffersDestination.ReferenceLocation -> "reference_location"
@@ -192,6 +194,7 @@ fun OffersScreen(
           "thread" -> parts.getOrNull(1)?.let { OffersDestination.ConversationThread(it) }
           "mine" -> OffersDestination.MyOffers
           "saved" -> OffersDestination.SavedOffers
+          "inquired" -> OffersDestination.Inquired
           "following" -> OffersDestination.Following
           "edit_profile" -> OffersDestination.EditProfile
           "reference_location" -> OffersDestination.ReferenceLocation
@@ -675,6 +678,31 @@ fun OffersScreen(
         )
         return
       }
+      is OffersDestination.Inquired -> {
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
+          return
+        }
+        val inquiredModel: com.example.ui.model.InquiredViewModel = viewModel(
+          key = "inquired_${session.personId}",
+          factory = remember(context.applicationContext, session.personId) {
+            com.example.ui.model.InquiredViewModel.factory(context.applicationContext, session.personId)
+          }
+        )
+        InquiredScreen(
+          viewModel = inquiredModel,
+          onBack = { navStack = navStack.dropLast(1) },
+          onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+          onBrowseOffers = {
+            navStack = emptyList()
+            rootTabs.select(RootTab.OFFERS)
+          },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          modifier = modifier
+        )
+        return
+      }
       is OffersDestination.Following -> {
         if (!session.isAuthenticated) {
           onNavigateToSignIn()
@@ -969,7 +997,8 @@ fun OffersScreen(
             error.contains("timeout", ignoreCase = true) ||
             error.contains("offline", ignoreCase = true) ||
             error.contains("resolve host", ignoreCase = true)
-          val errorTitle = if (isOffline) "You're offline" else "Something went wrong on our side"
+          val errorTitle = if (state.requiresSignIn) "Sign in to continue"
+            else if (isOffline) "You're offline" else "Something went wrong on our side"
           val errorBody = if (isOffline) "Check your connection and try again." else error
           val errorIcon = if (isOffline) Icons.Outlined.CloudOff else Icons.Outlined.ErrorOutline
 
@@ -983,10 +1012,11 @@ fun OffersScreen(
               icon = errorIcon,
               title = errorTitle,
               body = errorBody,
-              primaryActionLabel = "Try again",
+              primaryActionLabel = if (state.requiresSignIn) "Sign in" else "Try again",
               onPrimaryAction = {
                 browserError = null
-                if (state.items.isNotEmpty() && state.nextCursor != null) viewModel.loadMore() else viewModel.refresh()
+                if (state.requiresSignIn) onNavigateToSignIn()
+                else if (state.items.isNotEmpty() && state.nextCursor != null) viewModel.loadMore() else viewModel.refresh()
               },
               testTag = "offers_error"
             )
@@ -1095,6 +1125,7 @@ fun OffersScreen(
               onSignOut = onSignOut,
               onOpenMyOffers = { navStack = navStack + OffersDestination.MyOffers },
               onOpenSavedOffers = { navStack = navStack + OffersDestination.SavedOffers },
+              onOpenInquired = { navStack = navStack + OffersDestination.Inquired },
               onOpenFollowing = { navStack = navStack + OffersDestination.Following },
               onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
               onOpenPublicProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },

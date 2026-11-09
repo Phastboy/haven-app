@@ -120,4 +120,87 @@ class OffersViewModelTest {
     } finally { com.example.ui.model.SessionManager.signOut() }
   }
 
+  @Test fun `Following retains facets resets cursor and disables proximity`() = runTest(dispatcher) {
+    val requests = mutableListOf<OffersQuery>()
+    val model = OffersViewModel(OffersRepository { query ->
+      requests += query
+      page(listOf(offer("followed")), "next-page")
+    })
+    advanceUntilIdle()
+    model.selectCategory("food-groceries")
+    model.onSearchQueryChange("bread")
+    model.applyReference(com.example.data.PlaceCandidate("Selected place", "explicit-reference"))
+    advanceUntilIdle()
+    model.setScope("following")
+    advanceUntilIdle()
+    assertEquals("following", requests.last().scope)
+    assertEquals("food-groceries", requests.last().category)
+    assertEquals("bread", requests.last().search)
+    assertEquals("off", requests.last().near)
+    assertNull(requests.last().after)
+    assertNull(model.uiState.value.activeReference)
+    model.loadMore()
+    advanceUntilIdle()
+    assertEquals("following", requests.last().scope)
+    assertEquals("next-page", requests.last().after)
+    model.applyReference(com.example.data.PlaceCandidate("Another place", "new-reference"))
+    advanceUntilIdle()
+    assertEquals("public", requests.last().scope)
+    assertEquals("new-reference", requests.last().near)
+  }
+
+  @Test fun `unsupported feed scopes never reach the repository`() = runTest(dispatcher) {
+    var calls = 0
+    val model = OffersViewModel(OffersRepository { calls++; page(emptyList()) })
+    advanceUntilIdle()
+    for (scope in listOf("saved", "inquired", "unknown", "")) model.setScope(scope)
+    advanceUntilIdle()
+    assertEquals(1, calls)
+    assertEquals("public", model.uiState.value.query.scope)
+  }
+
+  @Test fun `server rejection is preserved for Following and paging and retry succeeds`() = runTest(dispatcher) {
+    var reject = true
+    val explanation = "This feed request was rejected. Check your filters and try again."
+    val model = OffersViewModel(OffersRepository { query ->
+      if (query.scope == "following" && reject) {
+        throw com.example.data.OffersRequestException(explanation, IOException("HTTP 400"))
+      }
+      page(listOf(offer("real")), "next-page")
+    })
+    advanceUntilIdle()
+    model.setScope("following")
+    advanceUntilIdle()
+    assertEquals(explanation, model.uiState.value.error)
+    reject = false
+    model.refresh()
+    advanceUntilIdle()
+    assertNull(model.uiState.value.error)
+    assertEquals("real", model.uiState.value.items.single().id)
+    reject = true
+    model.loadMore()
+    advanceUntilIdle()
+    assertEquals(explanation, model.uiState.value.error)
+    assertEquals("real", model.uiState.value.items.single().id)
+  }
+
+  @Test fun `feed exposes sign-in action only for an authentication requirement`() = runTest(dispatcher) {
+    var signInRequired = true
+    val model = OffersViewModel(OffersRepository { query ->
+      if (query.scope == "following") throw com.example.data.OffersRequestException(
+        if (signInRequired) "Please sign in to view this collection." else "Couldn’t refresh your session. Please try again.",
+        IOException("request failure"), requiresSignIn = signInRequired)
+      page(emptyList())
+    })
+    advanceUntilIdle()
+    model.setScope("following")
+    advanceUntilIdle()
+    assertTrue(model.uiState.value.requiresSignIn)
+    signInRequired = false
+    model.refresh()
+    advanceUntilIdle()
+    assertFalse(model.uiState.value.requiresSignIn)
+    assertEquals("Couldn’t refresh your session. Please try again.", model.uiState.value.error)
+  }
+
 }
