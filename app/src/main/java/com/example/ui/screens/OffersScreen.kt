@@ -132,6 +132,7 @@ sealed interface OffersDestination {
   data class OfferEditor(val id: String? = null, val entryKey: String = java.util.UUID.randomUUID().toString()) : OffersDestination
   data object MyOffers : OffersDestination
   data object SavedOffers : OffersDestination
+  data object Inquired : OffersDestination
   data object Following : OffersDestination
   data class ConversationThread(val conversationId: String) : OffersDestination
   data object EditProfile : OffersDestination
@@ -179,6 +180,7 @@ fun OffersScreen(
         is OffersDestination.ConversationThread -> "thread|${destination.conversationId}"
         OffersDestination.MyOffers -> "mine"
         OffersDestination.SavedOffers -> "saved"
+        OffersDestination.Inquired -> "inquired"
         OffersDestination.Following -> "following"
         OffersDestination.EditProfile -> "edit_profile"
         OffersDestination.ReferenceLocation -> "reference_location"
@@ -192,6 +194,7 @@ fun OffersScreen(
           "thread" -> parts.getOrNull(1)?.let { OffersDestination.ConversationThread(it) }
           "mine" -> OffersDestination.MyOffers
           "saved" -> OffersDestination.SavedOffers
+          "inquired" -> OffersDestination.Inquired
           "following" -> OffersDestination.Following
           "edit_profile" -> OffersDestination.EditProfile
           "reference_location" -> OffersDestination.ReferenceLocation
@@ -675,6 +678,31 @@ fun OffersScreen(
         )
         return
       }
+      is OffersDestination.Inquired -> {
+        if (!session.isAuthenticated) {
+          onNavigateToSignIn()
+          navStack = navStack.dropLast(1)
+          return
+        }
+        val inquiredModel: com.example.ui.model.InquiredViewModel = viewModel(
+          key = "inquired_${session.personId}",
+          factory = remember(context.applicationContext, session.personId) {
+            com.example.ui.model.InquiredViewModel.factory(context.applicationContext, session.personId)
+          }
+        )
+        InquiredScreen(
+          viewModel = inquiredModel,
+          onBack = { navStack = navStack.dropLast(1) },
+          onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
+          onBrowseOffers = {
+            navStack = emptyList()
+            rootTabs.select(RootTab.OFFERS)
+          },
+          onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
+          modifier = modifier
+        )
+        return
+      }
       is OffersDestination.Following -> {
         if (!session.isAuthenticated) {
           onNavigateToSignIn()
@@ -1095,6 +1123,7 @@ fun OffersScreen(
               onSignOut = onSignOut,
               onOpenMyOffers = { navStack = navStack + OffersDestination.MyOffers },
               onOpenSavedOffers = { navStack = navStack + OffersDestination.SavedOffers },
+              onOpenInquired = { navStack = navStack + OffersDestination.Inquired },
               onOpenFollowing = { navStack = navStack + OffersDestination.Following },
               onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
               onOpenPublicProfile = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },

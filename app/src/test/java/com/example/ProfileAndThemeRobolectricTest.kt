@@ -213,4 +213,17 @@ class ProfileAndThemeRobolectricTest {
       saveScreenshot("messages-${theme.name.lowercase()}.png")
     }
   }
+  @Test fun `profile Inquired row opens the native collection`() {
+    var opened = false
+    compose.setContent {
+      HavenTheme {
+        ProfileScreen(ProfileUiState(profile = ProfileOverview("person", "real-person", "Real person",
+          null, "Joined November 2026", null, 0, 2, 1, emptyList())), {}, {}, {},
+          onOpenInquired = { opened = true })
+      }
+    }
+    compose.onNodeWithTag("profile_link_inquired").performScrollTo().performClick()
+    assertEquals(true, opened)
+  }
+
 }

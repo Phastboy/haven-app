@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
@@ -75,7 +76,8 @@ fun ProfileScreen(
   onOpenPublicProfile: ((String) -> Unit)? = null,
   onOpenEditProfile: (() -> Unit)? = null,
   scrollState: ScrollState = rememberScrollState(),
-  onModalVisibilityChanged: (Boolean) -> Unit = {}
+  onModalVisibilityChanged: (Boolean) -> Unit = {},
+  onOpenInquired: (() -> Unit)? = null
 ) {
   val context = LocalContext.current
   var appearance by remember { mutableStateOf(false) }
@@ -139,6 +141,9 @@ fun ProfileScreen(
           }
           ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) {
             onOpenSavedOffers?.invoke() ?: onOpenWeb("/profile/saved")
+          }
+          ProfileRow("Inquired offers", "View", Icons.Outlined.ChatBubbleOutline, tag = "profile_link_inquired") {
+            onOpenInquired?.invoke() ?: onOpenWeb("/profile/inquired")
           }
           ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) {
             onOpenFollowing?.invoke() ?: onOpenWeb("/profile/following")

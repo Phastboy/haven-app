@@ -213,4 +213,28 @@ class HavenAuthTransportTest {
     } finally { client.close() }
   }
 
+  @Test fun `Inquired is a bearer profile collection with encoded paging`() = runTest {
+    val client = client(MockEngine { request ->
+      when (request.url.encodedPath) {
+        "/api/v1/auth/refresh" -> respond(
+          """{"access_token":"collection-access","refresh_token":"collection-refresh"}""", HttpStatusCode.OK)
+        "/api/v1/me" -> respond(person, HttpStatusCode.OK)
+        else -> {
+          assertEquals("/api/v1/me/inquired", request.url.encodedPath)
+          assertEquals("Bearer collection-access", request.headers[HttpHeaders.Authorization])
+          assertEquals("cursor+/=", request.url.parameters["after"])
+          assertNull(request.url.parameters["scope"])
+          respond("""{"items":[{"id":"offer-id","slug":"real-offer","title":"Real offer","maker_name":"Person","price_display":"Free","cover_url":null}],"next_cursor":"next"}""", HttpStatusCode.OK)
+        }
+      }
+    })
+    try {
+      val auth = HavenAuthClient(store, HavenNetwork(client, "https://haven.test"))
+      assertTrue(auth.restore())
+      val page = com.example.data.HavenInquiredRepository(auth).getInquired("cursor+/=").getOrThrow()
+      assertEquals("offer-id", page.items.single().id)
+      assertEquals("next", page.nextCursor)
+    } finally { client.close() }
+  }
+
 }
