@@ -128,13 +128,13 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           mkdir -p release-assets
-          apk=release-assets/haven-v0.0.3.apk
+          apk=release-assets/haven-v0.0.4.apk
           cp app/build/outputs/apk/release/app-release.apk "$apk"
           tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
-          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='13' versionName='0.0.3'" release-assets/manifest.txt
+          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='14' versionName='0.0.4'" release-assets/manifest.txt
           if grep -q 'application-debuggable' release-assets/manifest.txt; then
             echo 'Release APK must not be debuggable' >&2
             exit 1
@@ -142,7 +142,7 @@ jobs:
           printf '\nSource commit: %s\nVariant: release\nWorkflow: %s/%s/actions/runs/%s\n' "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-assets/apk-provenance.txt
           "$GRADLE_COMMAND" --version >> release-assets/apk-provenance.txt
           cd release-assets
-          sha256sum haven-v0.0.3.apk > SHA256SUMS
+          sha256sum haven-v0.0.4.apk > SHA256SUMS
       - name: Upload release candidate
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/upload-artifact@v7.0.2
@@ -155,5 +155,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test "$GITHUB_REF_NAME" = v0.0.3
-          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.3.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber
+          test "$GITHUB_REF_NAME" = v0.0.4
+          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.4.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber
