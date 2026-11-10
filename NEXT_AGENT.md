@@ -1,3 +1,16 @@
+# PR #38 Gradle pin correction — 2026-11-10
+
+Run 42868427693 at e58a3c1 failed debug/release lint solely on the newly
+reported Gradle 9.9.1 update requirement; prior VectorRaster/UseKtx findings
+are absent. Update the wrapper URL and SHA-256 together. Official checksum
+retrieved from https://services.gradle.org/distributions/gradle-9.9.1-bin.zip.sha256:
+d8a18a7a841dd5df825d35a685fad6f2d7f12ac0c280e57b67c27b4a520ba228.
+Distribution was not downloaded locally per data budget. Existing mirror
+fallback derives version/checksum from wrapper properties; no script change
+or relaxed lint gate. Failure log retained /tmp/haven38-second-failure.log.
+Fresh CI remains required; no polling. Existing 2026-11-11 maintainer review
+and device/update/theme acceptance remain open.
+
 # PR #38 CI correction — 2026-11-10
 
 Run 42866164700 at 3ad7268 failed debug/release lint on VectorRaster
