@@ -1,7 +1,7 @@
 package com.example.updates
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.material3.AlertDialog
@@ -46,7 +46,7 @@ fun UpdatePrompt() {
             if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
               error = "Allow Haven to install updates, then return and tap Install."
               context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${context.packageName}")))
+                "package:${context.packageName}".toUri()))
             } else {
               GitHubUpdates.install(context, apk)
             }

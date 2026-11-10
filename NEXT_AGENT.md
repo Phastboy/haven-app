@@ -1,3 +1,13 @@
+# PR #38 CI correction — 2026-11-10
+
+Run 42866164700 at 3ad7268 failed debug/release lint on VectorRaster
+(288dp intrinsic logo) and UseKtx (Uri.parse). Corrected the vector's intrinsic
+size to 192dp; explicit 288dp presentation bounds and viewport/path stay intact.
+Use String.toUri for the installation-settings URI. No lint suppression or
+baseline added. Reports retained at /tmp/haven38-failed-reports and log at
+/tmp/haven38-failed.log. Fresh exact-head CI is required; no polling. Existing
+device/theme/update acceptance and 2026-11-11 maintainer review remain open.
+
 # Startup, GitHub updates and feed pagination — 2026-11-10
 
 Owner explicitly approved these changes. Branch `fix/startup-updates-feed`,
