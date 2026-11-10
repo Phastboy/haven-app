@@ -78,10 +78,10 @@ categories, a second page, category vocabulary, malformed filters, and rejecting
 personal scope. Android tests cover backend ordering/paging, changed criteria,
 failed requests/retry, invalid price input, and parsing without dummy images.
 
-After backend deployment, AI Studio should run the updated app against the live
+After backend deployment, the Android maintainer should run the updated app against the live
 endpoint, compare the native feed with its prototype, and test guest and signed-in
 browsing, search, categories, price bounds, empty results, retry, and paging. The
-backend is maintained in Haven; AI Studio owns Android/device verification.
+backend is maintained in Haven; the Android maintainer owns Android/device verification.
 Record its actual screenshot and device outcomes before claiming visual or live
 end-to-end verification. No load benchmark is required for this focused slice;
 existing release performance debt remains open.

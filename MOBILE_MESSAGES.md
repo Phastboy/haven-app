@@ -34,6 +34,6 @@ its right chevron, participant initials/avatar, unread marker, preview and time.
 CI run [41366162809](https://github.com/Phastboy/haven-app/actions/runs/41366162809)
 passed build, unit/Robolectric tests, Android Lint, and light/dark screenshots;
 the merged-main run [41369778485](https://github.com/Phastboy/haven-app/actions/runs/41369778485)
-also passed. Compare the full screen on the AI Studio device before claiming
+also passed. Compare the full screen on a supported Android device before claiming
 device-level visual acceptance. CI debug signing is separate from the pinned
-AI Studio signer used for the Android OAuth client.
+installed APK signer registered for the Android OAuth client.

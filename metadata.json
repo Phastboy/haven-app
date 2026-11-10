@@ -1,6 +1,0 @@
-{
-  "name": "Haven",
-  "description": "Native Android prototype for Haven: discover offers, know the people behind them, and start non-binding conversations. Built with Kotlin and Jetpack Compose; currently uses sample data and local state.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
-}

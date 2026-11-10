@@ -41,7 +41,7 @@ abstract class HavenDatabase : RoomDatabase() {
       }
     }
 
-    // AI Studio shipped two version-3 schemas: one before and one after location.
+    // Earlier releases shipped two version-3 schemas: one before and one after location.
     // Inspect the actual schema so both installations upgrade without data loss.
     val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
       override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {

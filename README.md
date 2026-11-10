@@ -2,105 +2,43 @@
 
 Find offers. Know who is behind them. Start a conversation.
 
-Haven connects people through what they offer. A person's identity and catalogue
-stay visible, so discovering an offer can lead to knowing the person behind it
-and returning to what they offer later.
+Native Android app built with Kotlin, Jetpack Compose and Material 3.
+Backend: [Phastboy/haven](https://github.com/Phastboy/haven).
 
-This repository contains the native Android prototype for Haven, built with
-Kotlin and Jetpack Compose. The main Haven project lives in
-[phastboy/haven](https://github.com/phastboy/haven).
+## Current app
 
-## Current state
+Native Google sign-in uses Credential Manager and the Haven API. Offers,
+profiles, saved offers, following, inquiries and messaging use backend data;
+Room retains supported feed/message data. Discovery supports All offers and
+Following, with explicit proximity in public discovery. There are no simulated
+successful writes or sample runtime offers.
 
-Sign-in is native Google only: Credential Manager obtains an ID token, the app
-exchanges it at `POST /api/v1/auth/google`, and `GET /api/v1/me` confirms the
-person. The app never opens a browser for authentication. The Offers feed uses
-`GET /api/v1/offers` for real public data, search, category and price filters, and
-cursor pagination. Its implementation requires backend 0.8.2 or later. Missing
-connectivity or an unavailable endpoint shows an error, never sample results. See
-[the integration contract](MOBILE_OFFERS_FEED.md).
+Version 0.0.5 adds branded startup, themed launch resources, GitHub APK update
+prompts and automatic feed pagination. See [the release test checklist](RELEASE_V0.0.5.md).
+The first updater-enabled APK requires manual installation. Later stable GitHub
+releases publish update metadata automatically; installation always requires
+Android confirmation. This app is distributed through GitHub releases.
 
-The prototype includes:
+## Build and develop
 
-- Welcome and native Google sign-in screens; email sign-in is visible but inactive.
-- Offer browsing, title search, currency and price filters, and saved-offer controls.
-- Full-screen offer detail with a swipeable gallery, provider card, and location breakdown.
-- Offer attachment sheets inside conversations.
-- A conversation inbox and message threads using local state.
-- Profile screens and theme controls.
+Open this repository in Android Studio with a compatible Gradle JDK and SDK.
+CI uses JDK 21, JVM target 17, Gradle 9.9.1, compile SDK 37.2, target SDK 37,
+build-tools 37.0.0 and minimum SDK 24. Exact dependencies live in
+`gradle/libs.versions.toml`; the wrapper verifies its distribution checksum.
 
-Google sign-in uses Credential Manager and posts the ID token to
-`POST /api/v1/auth/google`; the app only marks a person signed in after the
-`/api/v1/me` response. The browser PKCE flow, `/auth/callback` App Link and email
-magic link were removed. Refresh credentials are encrypted with Android Keystore
-and excluded from backup. Messages and saved state in the remaining prototype
-files do not represent server-persisted activity. The integrated feed opens real
-Haven web pages for offer detail/save, location, messages, and profile journeys;
-it does not navigate into those sample screens.
+Run builds/tests/lint in GitHub Actions to preserve the owner's local data budget.
+See [build and signing instructions](ANDROID_BUILD_HANDOFF.md).
+No generator platform, Gemini key, Firebase setup or backend secret is required.
+Keep the existing `com.aistudio.haven.xvykpt` application ID: it is the installed
+package identity and must remain stable for updates and Google OAuth.
 
-An inquiry is non-binding communication about an offer. Sending a message does
-not imply an agreement or reserve an offer. Payments and closing an exchange
-are outside this prototype.
+## Layout
 
-## Run locally
+- `app/src/main/java/com/example/`: app entry, data, screens, components, state and updates.
+- `app/src/main/res/`: native resources and light/dark launch branding.
+- `app/src/test/`: unit and Robolectric regression checks.
+- `prototype/`: design references, retained for visual comparison.
+- `.github/workflows/android-apk.yml`: build, tests, lint and signed release delivery.
 
-1. Open this repository in Android Studio with an Android SDK and a compatible
-   Gradle JDK configured.
-2. Sync the Gradle project. The build currently specifies compile SDK 36.1,
-   target SDK 36, and minimum SDK 24 (Android 7.0).
-3. Select the `app` debug configuration and an emulator or connected device.
-4. Build and run the app. Standard Android debug signing is used.
-
-The `Android APK` GitHub Action builds and tests on branch pushes and attaches a
-testing APK to each published release. It is debug signed and is not a production
-release artifact. Native Google sign-in needs an Android OAuth client in Google
-Cloud registered for the APK's package name and signing SHA-1; the package used by
-this app is `com.aistudio.haven.xvykpt`. Debug and release certificates require
-separate clients.
-
-No Gemini API key or Haven backend credentials are needed to build the app. The `.env.example` and Firebase/AI dependencies are inherited scaffolding;
-there are no Gemini calls in the current app source.
-
-The repository includes the Gradle 9.3.1 wrapper (`gradlew` and `gradlew.bat`).
-It downloads the pinned Gradle distribution on first use and verifies its checksum.
-Install Java 17 and the Android SDK (platform 36.1 and build tools 36.0.0),
-then set `JAVA_HOME` and `ANDROID_HOME` or configure the SDK through Android Studio.
-A separate system Gradle installation is unnecessary.
-
-## Project layout
-
-| Path | Purpose |
-|---|---|
-| `app/src/main/java/com/example/MainActivity.kt` | App entry point |
-| `app/src/main/java/com/example/ui/screens/` | Compose screens |
-| `app/src/main/java/com/example/ui/components/` | Shared controls, cards, and sheets |
-| `app/src/main/java/com/example/ui/model/` | View models, sample data, and local session state |
-| `app/src/main/java/com/example/ui/theme/` | Colors, typography, themes, and theme state |
-| `app/src/main/res/` | Android resources |
-| `app/src/test/` | Local tests, including Robolectric UI checks |
-| `metadata.json` | App name, description, and AI Studio capability metadata |
-| `PROJECT_INFO.md` | Project identity, app copy, and integration boundaries |
-
-## Development
-
-Build the debug APK, run unit/Robolectric tests, and check Kotlin/Java, resources,
-and manifest issues with Android Lint:
-
-```sh
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-```
-
-The Android APK workflow runs these checks on main and feature-branch pushes
-and pull requests. It uploads lint and test reports, including when a check fails.
-The local lint report is `app/build/reports/lint-results-debug.html`.
-Android Lint checks Android correctness and API usage; it does not enforce a
-complete Kotlin formatting style.
-
-Keep product language consistent with Haven: person, offer, inquiry, saved offer,
-and follow. Distinguish working backend behavior from prototype interactions.
-Proximity selection currently opens Haven web; native proximity API integration
-is still pending. The public mobile feed itself uses general discovery.
-
-Before release, remaining backend integration, persistence, error handling, and
-production app identity/signing need to be established. Android version `1.0` is the current
-scaffold value; it does not mean Haven's v1.0 product milestone is complete.
+Use person, offer and inquiry consistently. An inquiry is non-binding;
+payments and commitments remain outside the supported product scope.

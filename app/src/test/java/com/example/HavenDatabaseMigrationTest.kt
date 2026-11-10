@@ -15,7 +15,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class HavenDatabaseMigrationTest {
   @Test fun upgradesOriginalVersionThree() = verifyUpgrade(3, false)
-  @Test fun upgradesAiStudioVersionThree() = verifyUpgrade(3, true)
+  @Test fun upgradesLegacyVersionThree() = verifyUpgrade(3, true)
   @Test fun upgradesVersionTwoThroughBothMigrations() = verifyUpgrade(2, false)
 
   @Test fun migratesProvenSenderDespiteSharedConversationOwner() = verifyUpgrade(3, false, "verified-owner")

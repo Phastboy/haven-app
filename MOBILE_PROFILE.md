@@ -64,4 +64,4 @@ from runtime sources.
 Build/lint success is not a full prototype-fidelity acceptance. Compare the
 actual device profile/feed with the prototypes in both themes, including long
 names/bios, absent avatar/bio, counts, preview cards, navigation and insets.
-AI Studio owns Android/device testing; backend changes remain in Haven.
+the Android maintainer owns Android/device testing; backend changes remain in Haven.

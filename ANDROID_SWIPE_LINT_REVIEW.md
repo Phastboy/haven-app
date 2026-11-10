@@ -2,7 +2,7 @@
 
 ## Reviewed source and evidence
 
-AI Studio changed main in `2621d00`, following `2adebed` (the file-based handoff).
+Historical source changed main in `2621d00`, following `2adebed` (the file-based handoff).
 [Its CI 42384744900](https://github.com/Phastboy/haven-app/actions/runs/42384744900)
 passed existing checks but added no gesture regression tests. Both lint reports
 contain 40 warnings: 35 compatibility/version advisories and 5 legacy launcher
@@ -56,7 +56,7 @@ refresh credential rotation completes/persists before releasing its coroutine
 mutex, preventing old-refresh replay if its caller is cancelled. HTTP failures
 retain typed status/body and multipart keeps its stable upload identity.
 
-The earlier source review measured AI Studio's 65 → 40 warning improvement.
+The earlier source review measured the historical 65 → 40 warning improvement.
 This PR targets **zero warnings** in both lint variants: no baseline, suppression
 or disabled version checks. Lint warnings are errors, and CI verifies the resolved
 runtime uses CIO and contains no Retrofit/OkHttp/Java HTTP engines or Java app
