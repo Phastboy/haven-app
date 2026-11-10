@@ -12,7 +12,7 @@ import com.example.ui.model.ThreadContentState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScheduler
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -149,7 +149,7 @@ class ConversationThreadViewModelTest {
    * Runs pending continuations at the current virtual time without advancing
    * past delays, so in-flight work can be asserted deterministically.
    */
-  private fun TestScheduler.pump() = repeat(10) { runCurrent() }
+  private fun TestCoroutineScheduler.pump() = repeat(10) { runCurrent() }
 
   @Test
   fun coldOpenWithoutCachedHistoryReportsRemoteLoadingThenContent() = runTest(testDispatcher) {
