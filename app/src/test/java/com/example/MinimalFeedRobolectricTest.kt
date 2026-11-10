@@ -267,6 +267,9 @@ class MinimalFeedRobolectricTest {
       StartupGate(state.value, { retries++ }) { destination = it }
     } }
     compose.onNodeWithTag("startup_screen").assertIsDisplayed()
+    compose.onNodeWithContentDescription("Haven").assertIsDisplayed()
+    compose.onNodeWithText("Opening Haven…").assertDoesNotExist()
+    screenshot("startup-logo-light")
     assertNull(destination)
     compose.runOnIdle { state.value = StartupState.RETRY }
     compose.onNodeWithTag("startup_retry").performClick()

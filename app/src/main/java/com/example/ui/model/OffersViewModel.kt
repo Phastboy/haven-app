@@ -34,6 +34,7 @@ data class OffersUiState(
   val currencies: List<String> = emptyList(),
   val nextCursor: String? = null,
   val isLoading: Boolean = false,
+  val isLoadingMore: Boolean = false,
   val isRefreshing: Boolean = false,
   val error: String? = null,
   val requiresSignIn: Boolean = false,
@@ -92,7 +93,7 @@ class OffersViewModel(
   fun refresh() = load(reset = true)
 
   fun loadMore() {
-    if (!_uiState.value.isLoading && !_uiState.value.isRefreshing && _uiState.value.nextCursor != null) {
+    if (!_uiState.value.isLoadingMore && !_uiState.value.isLoading && !_uiState.value.isRefreshing && _uiState.value.nextCursor != null) {
       load(reset = false)
     }
   }
@@ -109,7 +110,8 @@ class OffersViewModel(
       items = retained,
       nextCursor = if (reset) null else before.nextCursor,
       isLoading = retained.isEmpty(),
-      isRefreshing = retained.isNotEmpty(),
+      isLoadingMore = !reset,
+      isRefreshing = reset && retained.isNotEmpty(),
       error = null, requiresSignIn = false
     ) }
     loadJob = viewModelScope.launch {
@@ -136,12 +138,12 @@ class OffersViewModel(
         _uiState.update { it.copy(
           items = if (reset) page.items else (before.items + page.items).distinctBy { offer -> offer.id },
           categories = page.categories, currencies = page.currencies, nextCursor = page.nextCursor,
-          isLoading = false, isRefreshing = false, error = null, requiresSignIn = false
+          isLoading = false, isLoadingMore = false, isRefreshing = false, error = null, requiresSignIn = false
         ) }
       } catch (cancelled: CancellationException) {
         throw cancelled
       } catch (error: Exception) {
-        if (isCurrent()) _uiState.update { it.copy(isLoading = false, isRefreshing = false,
+        if (isCurrent()) _uiState.update { it.copy(isLoading = false, isLoadingMore = false, isRefreshing = false,
           requiresSignIn = (error as? OffersRequestException)?.requiresSignIn == true,
           error = if (error is OffersRequestException) error.message
             else if (reset) "Couldn’t load offers. Check your connection and try again."

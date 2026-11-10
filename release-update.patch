@@ -1,0 +1,64 @@
+diff --git a/.github/workflows/android-apk.yml b/.github/workflows/android-apk.yml
+index fcfe1b4..9c0fc19 100644
+--- a/.github/workflows/android-apk.yml
++++ b/.github/workflows/android-apk.yml
+@@ -128,21 +128,33 @@ jobs:
+         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+         run: |
+           mkdir -p release-assets
+-          apk=release-assets/haven-v0.0.4.apk
++          apk=release-assets/haven-v0.0.5.apk
+           cp app/build/outputs/apk/release/app-release.apk "$apk"
+           tools="$ANDROID_HOME/build-tools/37.0.0"
+           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
+           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
+           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
+-          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='14' versionName='0.0.4'" release-assets/manifest.txt
++          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='15' versionName='0.0.5'" release-assets/manifest.txt
+           if grep -q 'application-debuggable' release-assets/manifest.txt; then
+             echo 'Release APK must not be debuggable' >&2
+             exit 1
+           fi
+           printf '\nSource commit: %s\nVariant: release\nWorkflow: %s/%s/actions/runs/%s\n' "$(git rev-parse HEAD)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-assets/apk-provenance.txt
+           "$GRADLE_COMMAND" --version >> release-assets/apk-provenance.txt
++          python3 - <<'PYMETA'
++          import hashlib, json, pathlib, re
++          root = pathlib.Path('release-assets')
++          apk = next(root.glob('haven-v*.apk'))
++          manifest = (root / 'manifest.txt').read_text()
++          identity = re.search(r"versionCode='(\d+)' versionName='([^']+)'", manifest)
++          assert identity, 'Missing APK identity'
++          (root / 'update.json').write_text(json.dumps(dict(
++              versionCode=int(identity[1]), versionName=identity[2], apkName=apk.name,
++              size=apk.stat().st_size, sha256=hashlib.sha256(apk.read_bytes()).hexdigest()
++          )) + '\n')
++          PYMETA
+           cd release-assets
+-          sha256sum haven-v0.0.4.apk > SHA256SUMS
++          sha256sum haven-v0.0.5.apk > SHA256SUMS
+       - name: Upload release candidate
+         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+         uses: actions/upload-artifact@v7.0.2
+@@ -155,5 +167,5 @@ jobs:
+         env:
+           GH_TOKEN: ${{ github.token }}
+         run: |
+-          test "$GITHUB_REF_NAME" = v0.0.4
+-          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.4.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt --clobber
++          test "$GITHUB_REF_NAME" = v0.0.5
++          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.5.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt release-assets/update.json --clobber
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 0baf69c..ceb9311 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -13,8 +13,8 @@ android {
+     applicationId = "com.aistudio.haven.xvykpt"
+     minSdk = 24
+     targetSdk = 37
+-    versionCode = 14
+-    versionName = "0.0.4"
++    versionCode = 15
++    versionName = "0.0.5"
+ 
+     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+   }

@@ -36,6 +36,30 @@ class OffersViewModelTest {
   private fun page(items: List<FeedOffer>, next: String? = null) = OffersPage(items,
     listOf(FeedCategory("food-groceries", "Food & groceries")), listOf("NGN"), next)
 
+  @Test fun `paging retains cards prevents duplicate requests and clears loading on failure`() = runTest(dispatcher) {
+    val pending = CompletableDeferred<OffersPage>()
+    var requests = 0
+    val model = OffersViewModel(OffersRepository { query ->
+      requests++
+      if (query.after == null) page(listOf(offer("1")), "next") else pending.await()
+    })
+    advanceUntilIdle()
+    model.loadMore()
+    testScheduler.runCurrent()
+    assertTrue(model.uiState.value.isLoadingMore)
+    assertFalse(model.uiState.value.isRefreshing)
+    assertEquals(listOf("1"), model.uiState.value.items.map { it.id })
+    model.loadMore()
+    testScheduler.runCurrent()
+    assertEquals(2, requests)
+    pending.completeExceptionally(IOException("offline"))
+    advanceUntilIdle()
+    assertFalse(model.uiState.value.isLoadingMore)
+    assertNotNull(model.uiState.value.error)
+    assertEquals("next", model.uiState.value.nextCursor)
+    assertEquals(listOf("1"), model.uiState.value.items.map { it.id })
+  }
+
   @Test fun `server order and cursors are preserved without local search filtering`() = runTest(dispatcher) {
     val requests = mutableListOf<OffersQuery>()
     val model = OffersViewModel(OffersRepository { query ->

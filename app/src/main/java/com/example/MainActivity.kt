@@ -48,6 +48,18 @@ enum class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+  override fun attachBaseContext(newBase: android.content.Context) {
+    com.example.ui.theme.ThemeManager.init(newBase)
+    val config = android.content.res.Configuration(newBase.resources.configuration)
+    val mode = com.example.ui.theme.ThemeManager.themeMode
+    if (mode != com.example.ui.theme.ThemeMode.SYSTEM) {
+      config.uiMode = (config.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or
+        if (mode == com.example.ui.theme.ThemeMode.DARK) android.content.res.Configuration.UI_MODE_NIGHT_YES
+        else android.content.res.Configuration.UI_MODE_NIGHT_NO
+    }
+    super.attachBaseContext(newBase.createConfigurationContext(config))
+  }
+
   private val signInViewModel: SignInViewModel by viewModels()
   private lateinit var auth: HavenAuthClient
   private val startupViewModel: StartupViewModel by viewModels {
@@ -62,12 +74,15 @@ class MainActivity : ComponentActivity() {
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    com.example.ui.theme.ThemeManager.init(this)
+    com.example.ui.theme.ThemeManager.applyLaunchMode(this)
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     com.example.ui.theme.ThemeManager.init(this)
     auth = HavenAuthClient.shared(this)
     setContent {
       HavenTheme {
+        com.example.updates.UpdatePrompt()
         val startup by startupViewModel.state.collectAsState()
         StartupGate(startup, startupViewModel::retry) { authenticated ->
           HavenApp(signInViewModel = signInViewModel,

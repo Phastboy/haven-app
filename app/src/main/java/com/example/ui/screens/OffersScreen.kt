@@ -74,6 +74,10 @@ import com.example.data.PaginatedOffers
 import com.example.data.PaginatedFollowing
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
@@ -213,6 +217,18 @@ fun OffersScreen(
     androidx.compose.runtime.snapshotFlow {
       gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
     }.collect { (index, offset) -> viewModel.updateScrollPosition(index, offset) }
+  }
+
+  LaunchedEffect(gridState, state.nextCursor, state.isLoading, state.isLoadingMore, state.isRefreshing, state.error, rootTabs.currentTab, currentDestination) {
+    androidx.compose.runtime.snapshotFlow {
+      val current = viewModel.uiState.value
+      val layout = gridState.layoutInfo
+      val last = layout.visibleItemsInfo.lastOrNull()?.index ?: -1
+      val nearEnd = last >= 0 && last >= layout.totalItemsCount - 7
+      if (rootTabs.currentTab == RootTab.OFFERS && currentDestination == null &&
+        nearEnd && current.items.isNotEmpty() && !current.isLoading &&
+        !current.isRefreshing && !current.isLoadingMore && current.error == null) current.nextCursor else null
+    }.collect { cursor -> if (cursor != null) viewModel.loadMore() }
   }
 
   val activeSlug = (currentDestination as? OffersDestination.OfferDetail)?.slug
@@ -953,18 +969,6 @@ fun OffersScreen(
               color = HavenColors.TextSecondary
             )
           }
-        } else if (state.items.isNotEmpty()) {
-          item(span = { GridItemSpan(2) }) {
-            val count = state.items.size
-            val countLabel = if (count == 1) "1 offer" else "$count offers"
-            val text = if (state.nextCursor != null) "$countLabel loaded" else countLabel
-            Text(
-              text,
-              fontSize = 12.sp,
-              fontFamily = InterFontFamily,
-              color = HavenColors.TextSecondary
-            )
-          }
         }
       }
 
@@ -982,12 +986,9 @@ fun OffersScreen(
 
       if (state.isLoading && state.items.isEmpty()) {
         items(4) { index -> OfferCardSkeleton(Modifier.testTag("offers_loading_skeleton_$index")) }
-      } else if (state.isLoading) {
-        item(span = { GridItemSpan(2) }) {
-          Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(Modifier.size(24.dp).testTag("offers_loading"), color = HavenColors.Primary)
-          }
-        }
+      } else if (state.isLoadingMore) {
+        items(2) { index -> OfferCardSkeleton(Modifier.testTag("offers_paging_skeleton_$index")
+          .semantics { if (index == 0) { liveRegion = LiveRegionMode.Polite; contentDescription = "Loading more offers" } }) }
       }
 
       if (error != null) {
@@ -1086,15 +1087,7 @@ fun OffersScreen(
         }
       }
 
-      if (!state.isLoading && state.nextCursor != null && error == null) {
-        item(span = { GridItemSpan(2) }) {
-          Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-            TextButton(onClick = viewModel::loadMore, modifier = Modifier.testTag("load_more_offers")) {
-              Text("More offers", fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, color = HavenColors.Primary)
-            }
-          }
-        }
-      }
+
     }
 
         }
