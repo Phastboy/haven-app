@@ -35,7 +35,9 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,14 +61,18 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.MessageDeliveryStatus
 import com.example.data.messaging.db.MessageEntity
+import com.example.ui.components.HavenEmptyState
 import com.example.ui.components.HavenInsets
+import com.example.ui.components.MessageBubbleSkeleton
 import com.example.ui.model.ConversationThreadUiState
+import com.example.ui.model.ThreadContentState
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
@@ -74,6 +80,11 @@ import com.example.ui.theme.InterFontFamily
  * Production Native Conversation Thread Screen for Haven.
  * Delivers local-first persisted reads, instant optimistic sends,
  * stable scroll anchoring, and delivery state tracking.
+ *
+ * The message area renders by [ThreadContentState]: cached content is shown
+ * immediately and ordinary refreshes stay quiet; bubble-shaped skeletons appear
+ * only while the initial history is genuinely missing, and a confirmed-empty or
+ * unloadable thread gets its own honest state instead of a blank list.
  */
 @Composable
 fun NativeConversationThreadScreen(
@@ -84,7 +95,8 @@ fun NativeConversationThreadScreen(
   onRetryMessage: (String) -> Unit,
   modifier: Modifier = Modifier,
   onLoadOlder: () -> Unit = {},
-  onOpenProfile: ((String) -> Unit)? = null
+  onOpenProfile: ((String) -> Unit)? = null,
+  onRefresh: () -> Unit = {}
 ) {
   val listState = rememberLazyListState()
   val isDragged by listState.interactionSource.collectIsDraggedAsState()
@@ -228,15 +240,9 @@ fun NativeConversationThreadScreen(
           }
         }
 
-        if (state.isSyncing) {
-          CircularProgressIndicator(
-            modifier = Modifier
-              .size(16.dp)
-              .padding(end = 12.dp),
-            strokeWidth = 2.dp,
-            color = HavenColors.Primary
-          )
-        } else if (onOpenProfile != null && handle.isNotBlank()) {
+        // The profile action stays available during ordinary refreshes; sync
+        // progress is scoped to the message area, never to header actions.
+        if (onOpenProfile != null && handle.isNotBlank()) {
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(6.dp))
@@ -255,8 +261,11 @@ fun NativeConversationThreadScreen(
       }
     }
 
-    // Offline / Sync banner if network unreachable but local cache is present
-    if (state.syncError != null) {
+    // Offline / queue-failure banner: shown only while content is retained or
+    // a send failed to queue. A thread that could not be loaded at all reports
+    // through its dedicated unavailable state below.
+    val bannerMessage = state.sendError ?: state.syncError
+    if (bannerMessage != null && state.contentState != ThreadContentState.UNAVAILABLE) {
       Box(
         modifier = Modifier
           .fillMaxWidth()
@@ -265,7 +274,7 @@ fun NativeConversationThreadScreen(
         contentAlignment = Alignment.Center
       ) {
         Text(
-          text = state.syncError,
+          text = bannerMessage,
           fontFamily = InterFontFamily,
           fontSize = 12.sp,
           color = HavenColors.TextSecondary
@@ -283,23 +292,70 @@ fun NativeConversationThreadScreen(
         .testTag("thread_messages_list"),
       verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-      item(key = "history_status") {
-        if (state.isLoadingOlder) {
-          CircularProgressIndicator(modifier = Modifier.size(20.dp))
-        } else if (state.hasOlder) {
-          Text(
-            text = state.olderError ?: "Earlier messages",
-            color = HavenColors.TextSecondary,
-            modifier = Modifier.clickable(onClick = onLoadOlder).padding(12.dp)
+      when (state.contentState) {
+        ThreadContentState.CONTENT -> {
+          item(key = "history_status") {
+            if (state.isLoadingOlder) {
+              CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            } else if (state.hasOlder) {
+              Text(
+                text = state.olderError ?: "Earlier messages",
+                color = HavenColors.TextSecondary,
+                modifier = Modifier.clickable(onClick = onLoadOlder).padding(12.dp)
+              )
+            }
+          }
+
+          items(state.messages, key = { it.clientMessageId }) { message ->
+            NativeMessageBubble(
+              message = message,
+              onRetry = { onRetryMessage(message.clientMessageId) }
+            )
+          }
+        }
+
+        ThreadContentState.EMPTY -> item(key = "thread_empty_state") {
+          Box(
+            modifier = Modifier.fillParentMaxHeight(0.8f),
+            contentAlignment = Alignment.Center
+          ) {
+            HavenEmptyState(
+              icon = Icons.Outlined.ChatBubbleOutline,
+              title = "No messages yet",
+              body = "Send a message below to start this conversation.",
+              testTag = "thread_empty_state"
+            )
+          }
+        }
+
+        ThreadContentState.UNAVAILABLE -> item(key = "thread_unavailable_state") {
+          Box(
+            modifier = Modifier.fillParentMaxHeight(0.8f),
+            contentAlignment = Alignment.Center
+          ) {
+            HavenEmptyState(
+              icon = Icons.Outlined.CloudOff,
+              title = "Couldn't load messages",
+              body = "Check your connection and try again.",
+              primaryActionLabel = "Try again",
+              onPrimaryAction = onRefresh,
+              testTag = "thread_unavailable_state"
+            )
+          }
+        }
+
+        ThreadContentState.RESOLVING_CACHE,
+        ThreadContentState.LOADING_HISTORY -> items(
+          count = threadSkeletonSpecs.size,
+          key = { index -> "message_skeleton_$index" }
+        ) { index ->
+          val spec = threadSkeletonSpecs[index]
+          MessageBubbleSkeleton(
+            fromMe = spec.fromMe,
+            bubbleWidth = spec.width,
+            bubbleHeight = spec.height
           )
         }
-      }
-
-      items(state.messages, key = { it.clientMessageId }) { message ->
-        NativeMessageBubble(
-          message = message,
-          onRetry = { onRetryMessage(message.clientMessageId) }
-        )
       }
 
       item(key = "thread_bottom_space") {
@@ -553,3 +609,23 @@ private fun NativeMessageBubble(
     }
   }
 }
+
+/** One bubble-shaped placeholder row: alignment and bubble size. */
+private data class ThreadSkeletonSpec(
+  val fromMe: Boolean,
+  val width: Dp,
+  val height: Dp
+)
+
+/**
+ * Conversation-shaped layout for the initial-history skeletons: varied widths
+ * and one/two-line bubbles, mostly incoming, like a freshly opened thread.
+ */
+private val threadSkeletonSpecs = listOf(
+  ThreadSkeletonSpec(fromMe = false, width = 190.dp, height = 44.dp),
+  ThreadSkeletonSpec(fromMe = true, width = 120.dp, height = 44.dp),
+  ThreadSkeletonSpec(fromMe = false, width = 240.dp, height = 78.dp),
+  ThreadSkeletonSpec(fromMe = false, width = 160.dp, height = 61.dp),
+  ThreadSkeletonSpec(fromMe = true, width = 205.dp, height = 61.dp),
+  ThreadSkeletonSpec(fromMe = false, width = 135.dp, height = 44.dp)
+)

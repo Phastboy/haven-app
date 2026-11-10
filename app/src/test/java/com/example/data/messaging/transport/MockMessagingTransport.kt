@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
  * simulated messages or timers.
  */
 class MockMessagingTransport(
-  private val simulatedDelayMs: Long = 0L
+  var simulatedDelayMs: Long = 0L
 ) : MessagingTransport {
 
   // Storage of sent messages keyed by clientMessageId for idempotency.
