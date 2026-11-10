@@ -46,7 +46,7 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      // Preserve the existing release signing identity.
+      // Preserve the existing testing signing identity.
       signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
