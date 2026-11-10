@@ -1,4 +1,4 @@
-> Current release status: see `RELEASE_V0.0.2.md` and `NEXT_AGENT.md`.
+> Current release status: see `RELEASE_V0.0.5.md` and `NEXT_AGENT.md`.
 > Native threads and offer lifecycle are integrated; production/device acceptance
 > remains separate from implementation and automated verification.
 
@@ -14,9 +14,9 @@
 | Implementation | Kotlin, Jetpack Compose, Material 3 |
 | Status | Native v0.1–v0.8 parity integrated; release acceptance tracked in NEXT_AGENT.md |
 | Parent project | https://github.com/phastboy/haven |
-| Android application ID | `com.aistudio.haven.xvykpt` (current scaffold identity) |
-| Android namespace | `com.example` (current scaffold namespace) |
-| Version name / code | `0.0.2` / `12` (authorized patch release target) |
+| Android application ID | `com.aistudio.haven.xvykpt` (installed package identity) |
+| Android namespace | `com.example` (current namespace) |
+| Version name / code | `0.0.5` / `15` (authorized patch release target) |
 | Minimum Android version | Android 7.0 / API 24 |
 
 ## Repository description
@@ -39,7 +39,7 @@ it does not create a commitment, reservation, or agreement.
 create/edit/photo/location, profile/avatar editing, saves/follows, inquiries and
 native messaging are integrated with the live Haven backend. Release CI verifies
 builds and automated regressions; authenticated production and physical-device
-acceptance remain separate. See NEXT_AGENT.md and RELEASE_V0.0.2.md.
+acceptance remain separate. See NEXT_AGENT.md and RELEASE_V0.0.5.md.
 
 The product description is reusable copy, not a claim that every journey is live
 in this prototype. Use the current capability disclosure above when describing this build.

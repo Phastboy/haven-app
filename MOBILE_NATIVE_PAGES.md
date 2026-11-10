@@ -4,7 +4,7 @@
 > and its contracts. Native create/edit and messaging are now merged; see
 > `MOBILE_OFFER_LIFECYCLE.md` and `MOBILE_NATIVE_API_BACKLOG.md`. Remaining API
 > work and the source-inspected Android tasks are in `MOBILE_NATIVE_API_SWEEP.md`
-> and `MOBILE_AI_STUDIO_HANDOFF.md`; sweep routes are released/deployed in v0.8.65.
+> and `MOBILE_NATIVE_API_SWEEP.md`; sweep routes are released/deployed in v0.8.65.
 
 
 Backend PR #53 merged at `d2c166a`; release v0.8.5 was published on 2026-11-02
@@ -13,12 +13,12 @@ provider profile, and 401 for anonymous private lists and save/unsave writes.
 Authenticated save persistence was tested locally, not against production.
 Android PR #9 merged at `0e011cc`; review fixes are on main at `b076605` and
 passed build/tests/lint in run 41419917646. Inspect that implementation before
-duplicating detail/save work in AI Studio. Device fidelity remains unaccepted.
+duplicating detail/save work in the Android app. Device fidelity remains unaccepted.
 
 Base URL: `https://haven.apps.mistral.run`.
 Use native Google sign-in (`POST /api/v1/auth/google`) with rotating bearer tokens
 for private requests. Do not request backend credentials or change backend code
-from AI Studio.
+from the Android maintainer.
 
 ## Five prototype screens
 
@@ -179,7 +179,7 @@ enquiries and create/edit/photo/location APIs are released.
 Profile/avatar/deletion/global-unread/SSE and scoped/proximity discovery are now
 released/deployed in v0.8.65 (CD run 42182772275). Their contracts and the exact
 remaining Android work are in `MOBILE_NATIVE_API_SWEEP.md` and
-`MOBILE_AI_STUDIO_HANDOFF.md`. Do not reactivate sample screens or simulate success.
+`MOBILE_NATIVE_API_SWEEP.md`. Do not reactivate sample screens or simulate success.
 
 Source/CI/deployment success does not establish authenticated end-to-end or
 physical-device acceptance. Historical local read/save evidence remains in
@@ -187,7 +187,7 @@ physical-device acceptance. Historical local read/save evidence remains in
 
 ## Next mobile pickup
 
-Read `MOBILE_AI_STUDIO_HANDOFF.md`. It was written after inspecting Android main
+Read `MOBILE_NATIVE_API_SWEEP.md`. It was written after inspecting Android main
 `5d1b681`, including current collection ViewModels. Preserve existing native
 create/edit and messaging; implement the documented missing actions/cache/live
 updates instead of reactivating sample screens. Merge Android PR #15's thread-key

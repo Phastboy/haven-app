@@ -1,92 +1,51 @@
-# Haven Android build and release handoff — current review
+# Android build and release
 
-Current corrective PR: #24, based on main `2621d00`. Release target is
-0.0.2 / versionCode 12. The owner authorized resolving reviews, merging and
-publishing this patch. Published 0.0.1 assets were attached by CI/CD. Preserve both signing configurations and
-existing certificate checks. AI Studio reports are historical; inspect exact CI.
+Supported tools are Android Studio, the Gradle wrapper and GitHub Actions.
+The wrapper pins Gradle 9.9.1 with an official SHA-256. CI uses Temurin
+21.0.13+9, JVM target 17, compile API 37.2, target 37 and build-tools 37.0.0.
+Minimum SDK remains 24. Exact library/tool versions are in the version catalog.
+Use Kotlin application sources and Ktor CIO; do not add Java/OkHttp engines.
 
-## Source and pinned recipe
+## Verification
 
-- Temurin 21.0.13+9 in CI; Kotlin-only application sources, JVM target 17.
-- Gradle 9.9.0 with official distribution SHA-256 in wrapper properties.
-  CI prefers the wrapper; if its CDN fails, prepare-gradle.sh fetches the same
-  archive through Gradle's official GitHub release asset API and verifies that
-  pinned checksum before running it. Wrapper settings and app source stay clean.
-- AGP 9.5.1, Kotlin/Compose compiler 2.4.21, KSP 2.3.13, Room 2.8.5.
-- Compile API 37.2 / target 37, SDK build-tools 37.0.0, min SDK 24 retained.
-- Compose BOM 2026.09.00, Robolectric 4.17, Ktor 3.6.1 **CIO** and Coil 3.6.3
-  Ktor image networking. Active dependencies are pinned in the version catalog.
-- CI uses current stable checkout/setup-java/setup-gradle/upload actions, builds
-  both variants, runs regressions on API 35/37 and rejects lint warnings.
-- CI checks the resolved runtime for unwanted Retrofit/OkHttp/Java HTTP engines.
-  Its runtime-dependencies.txt is included in verification reports.
-- Kotlin-only means our app and test source files, not third-party implementation
-  languages. AndroidX Test uses matching alpha03 test releases (Espresso 3.8.0,
-  core/runner 1.8.0, ext JUnit 1.4.0): published Espresso 3.7.0 sources reflect
-  `InputManager.getInstance()`, which fails on API 37. The newer implementation
-  obtains the input service from Context. These are test-only dependencies.
-
-Use CI to preserve the owner's local data budget:
+Use CI for builds/tests/lint to preserve the owner's local data budget:
 
 ```sh
-./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-./gradlew --no-daemon :app:assembleRelease :app:lintRelease
+./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:lintRelease
+./gradlew --no-daemon :app:assembleRelease
 ```
 
-The second command requires the unchanged release-signing environment below.
-Google sign-in remains Credential Manager plus the Haven API; no Firebase,
-Google-services JSON, Gemini key or backend/Cloudinary secret is required. The
-runtime auth API remains server-confirmed, rotating and account-guarded.
+Release builds require signing secrets below. CI rejects lint warnings and
+checks package, version, signing certificate and absence of debuggability.
+The wrapper fallback fetches the same official distribution and verifies the
+same pinned checksum. No generator environment or API key is needed.
 
-## Owned signing identity and continuity
+## Signing continuity
 
-The owner authorized independent signing after AI Studio's original private key
-was not exported. Our initial direct-download release intentionally retains the
-owned persistent certificate already used for the testing APK, preserving OAuth
-registration and update continuity. Treat this identity as the distribution key
-for future APK updates. It differs from AI Studio's certificate.
+Application ID: `com.aistudio.haven.xvykpt` (preserve for installed updates).
+SHA-1: `86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59`
+SHA-256: `B4:D1:A5:EC:00:68:C6:3D:55:49:E6:22:3D:86:D9:0D:C0:37:7D:C5:6B:C7:2D:34:FA:63:F9:38:BD:2D:B6:1E`
 
-Package: com.aistudio.haven.xvykpt
-SHA-1: 86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59
-SHA-256: B4:D1:A5:EC:00:68:C6:3D:55:49:E6:22:3D:86:D9:0D:C0:37:7D:C5:6B:C7:2D:34:FA:63:F9:38:BD:2D:B6:1E
+Keep both existing signing configurations and never regenerate keys to repair
+missing credentials. Register the package and certificate SHA-1 with the Google
+Android OAuth client. CI verification does not prove device Google sign-in.
 
-Register the Android OAuth client in the same project as the configured Web
-client using this SHA-1. CI signer checks do not establish Google sign-in success.
-For v0.0.2 the owner authorized publication after reviews/CI, with device findings
-tracked separately; the earlier sign-in publication hold is superseded.
-AI Studio builds use a different signer and require a fresh installation;
-preserve pending work before uninstalling them.
+CI secrets: `HAVEN_TEST_KEYSTORE_BASE64`, `HAVEN_RELEASE_KEYSTORE_BASE64` and
+`HAVEN_RELEASE_KEYSTORE_PASSWORD`. Release alias: `upload`. CI supplies
+`KEYSTORE_PATH`, `STORE_PASSWORD` and `KEY_PASSWORD`. Private owner backups
+stay ignored under `.signing`; never print or commit their contents.
 
-CI secrets: HAVEN_TEST_KEYSTORE_BASE64 for debug;
-HAVEN_RELEASE_KEYSTORE_BASE64 and HAVEN_RELEASE_KEYSTORE_PASSWORD for release.
-Release alias is upload. CI supplies KEYSTORE_PATH to a private runner-temporary
-PKCS12 and passes STORE_PASSWORD / KEY_PASSWORD from the protected secret.
-The release container uses a random password; the certificate/private key remain
-identical to our earlier testing identity. Neither container nor password is
-tracked in Git. Local backups (ignored .signing directory, restricted permissions):
-haven-testing.p12, haven-release.p12 and release-password. Keep secure independent
-owner-managed backups. Never print/commit keys or passwords, or regenerate the
-identity to work around missing CI secrets. The certificate's Android Debug DN
-is historical; release debuggability is controlled and checked in the APK manifest.
+## Release delivery
 
-## Artifacts, verification and publication
+PR/main workflows build and upload verification reports and APK candidates.
+Forks use an ephemeral debug signer and cannot produce distributable releases.
+Publishing a GitHub release triggers the automated signed APK build and upload.
+For v0.0.5 the workflow expects code 15 and emits `haven-v0.0.5.apk`,
+`SHA256SUMS`, `manifest.txt`, `apk-provenance.txt` and `update.json`.
+Metadata is derived from the actual built APK. Do not upload substitute assets.
+Check delivered source, package/version, signer and checksum before declaring
+delivery complete. Future releases must coordinate app version and workflow pins.
 
-.github/workflows/android-apk.yml builds/tests/lints on PR/main. Same-repository
-builds verify the expected release signer, package, code/name and absence of the
-application-debuggable flag. Forks perform debug-only verification with an
-ephemeral signer and cannot produce the distributable release artifact.
-
-Successful runs upload haven-android-release-apk containing haven-v0.0.2.apk,
-SHA256SUMS, manifest.txt and apk-provenance.txt. Provenance records actual source
-commit, variant, workflow run and toolchain. PR builds may use a temporary merge
-commit; final distribution must reference the verified main/tag commit.
-
-The published-release event builds and attaches the release APK and evidence to
-the public GitHub release. Draft creation does not invoke that publication job.
-The owner authorized merge and publication after review resolution and passing CI.
-Use the published-release workflow to attach assets automatically; do not manually
-upload APKs or metadata. Device findings will be tracked in separate issues.
-
-CI is not physical-device or authenticated production acceptance. Remaining
-journey, legacy unknown-owner draft recovery, visual and physical-device gates
-are tracked in RELEASE_V0.0.0.md. Do not mark the entire launch checklist done.
+Owner explicitly authorized v0.0.5 publication on 2026-11-10, with device findings
+to follow. This changes this release's publication hold; it does not mark device
+acceptance passed. Track testing in [the release checklist](RELEASE_V0.0.5.md).

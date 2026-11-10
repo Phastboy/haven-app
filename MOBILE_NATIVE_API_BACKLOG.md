@@ -8,7 +8,7 @@ implemented/tested code from the separately tracked deployment/device gates.
 This is parity for shipped v0.1–v0.8 journeys, authorized by the owner; no 0.9
 scope is introduced. Contracts: [existing native pages](MOBILE_NATIVE_PAGES.md),
 [offer lifecycle](MOBILE_OFFER_LIFECYCLE.md), [API sweep](MOBILE_NATIVE_API_SWEEP.md).
-Frontend tasks come from [the inspected Android handoff](MOBILE_AI_STUDIO_HANDOFF.md).
+Frontend tasks come from [the inspected Android handoff](MOBILE_NATIVE_API_SWEEP.md).
 
 ## Status at a glance
 
@@ -45,7 +45,7 @@ Frontend tasks come from [the inspected Android handoff](MOBILE_AI_STUDIO_HANDOF
 - [x] Android routes inbox/enquiry success to `NativeConversationThreadScreen`; production transport contains no simulator fallback.
 - [x] Android older-history paging and send/retry are implemented; Android PR #13 and subsequent CI provide implementation evidence.
 - [x] Duplicate `history_status` keys were found by source inspection and fixed separately in Android PR #15; its rendering regression/build/tests/lint pass.
-- [ ] Merge Android PR #15 before release (do not recreate its fix in AI Studio).
+- [ ] Merge Android PR #15 before release (do not recreate its fix in the Android app).
 - [ ] Android provider Follow and Following-row Unfollow use the real APIs and confirmed state.
 - [ ] Android sends optional thread offer tags by `offer_id`; existing attachment scaffolding is not wired to transport.
 - [ ] Authenticated production and physical-device conversation acceptance are recorded.
@@ -140,7 +140,7 @@ are included in the released backend.
 
 - [x] API sweep merged in PR #63, released as v0.8.65 and deployed by CD run 42182772275.
 - [x] API sweep CI/container/security checks passed; release build/scan/smoke and Deploy to Koyeb passed for `2a4797d`.
-- [ ] AI Studio completes the unchecked Android implementation tasks from the inspected handoff.
+- [ ] the Android maintainer completes the unchecked Android implementation tasks from the inspected handoff.
 - [ ] Physical-device and authenticated production acceptance are completed later with the owner.
 - [ ] Remaining obvious UI quality issues are corrected against the prototypes.
 

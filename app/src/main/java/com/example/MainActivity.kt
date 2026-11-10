@@ -62,12 +62,15 @@ class MainActivity : ComponentActivity() {
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    com.example.ui.theme.ThemeManager.init(this)
+    com.example.ui.theme.ThemeManager.applyLaunchMode(this)
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     com.example.ui.theme.ThemeManager.init(this)
     auth = HavenAuthClient.shared(this)
     setContent {
       HavenTheme {
+        com.example.updates.UpdatePrompt()
         val startup by startupViewModel.state.collectAsState()
         StartupGate(startup, startupViewModel::retry) { authenticated ->
           HavenApp(signInViewModel = signInViewModel,

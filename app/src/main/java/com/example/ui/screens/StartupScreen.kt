@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.HavenPrimaryButton
-import com.example.ui.components.HavenSpinner
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.ui.model.StartupState
 import com.example.ui.theme.HavenColors
 
@@ -30,8 +35,8 @@ fun StartupGate(state: StartupState, onRetry: () -> Unit, content: @Composable (
       verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
       if (state == StartupState.RESTORING) {
-        HavenSpinner(color = HavenColors.TextPrimary)
-        Text("Opening Haven…", color = HavenColors.TextSecondary)
+        Icon(painterResource(R.drawable.haven_launch_logo), contentDescription = "Haven",
+          tint = HavenColors.TextPrimary, modifier = Modifier.size(288.dp).semantics { stateDescription = "Restoring your session" })
       } else {
         Text("Couldn’t restore your session. Check your connection and try again.", color = HavenColors.TextPrimary)
         HavenPrimaryButton("Try again", onRetry, testTag = "startup_retry")

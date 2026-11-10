@@ -39,12 +39,28 @@ object ThemeManager {
     }
   }
 
+  /** Persist Android 12+ launch appearance; legacy activity resources keep the OS qualifier. */
+  fun applyLaunchMode(context: Context, mode: ThemeMode = themeMode) {
+    if (android.os.Build.VERSION.SDK_INT >= 31) {
+      context.getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(
+        when (mode) {
+          ThemeMode.LIGHT -> android.app.UiModeManager.MODE_NIGHT_NO
+          ThemeMode.DARK -> android.app.UiModeManager.MODE_NIGHT_YES
+          // The application API maps AUTO to an undefined local night qualifier,
+          // so resources inherit the system mode (unlike global setNightMode).
+          ThemeMode.SYSTEM -> android.app.UiModeManager.MODE_NIGHT_AUTO
+        }
+      )
+    }
+  }
+
   fun setMode(mode: ThemeMode, context: Context? = null) {
     themeMode = mode
     context?.let { ctx ->
       try {
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putString(KEY_THEME_MODE, mode.name) }
+        applyLaunchMode(ctx, mode)
       } catch (_: Exception) {
         // Fallback to in-memory state
       }

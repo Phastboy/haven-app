@@ -4,37 +4,13 @@ Status: NOT release-ready. Branch: `fix/v0.0.0-release-readiness`.
 Baseline: main `3191ee27386baedc6dc6c709e6e09b65a8688e8c`.
 Backend: deployed v0.8.65. Android and backend versions are independent.
 
-## APK identity and build parity
+## Historical build context
 
-Application ID remains `com.aistudio.haven.xvykpt`; versionName is `0.0.0`.
-Candidate versionCode is 10 (previous source declared 8). Before distribution,
-confirm AI Studio has not distributed a higher code; choose a greater code if so.
-Do not reset the version code to zero.
-
-Ask AI Studio for this report, without uploading private keys or passwords:
-
-> Report the source commit used for your latest APK; exact Gradle command and
-> variant; `./gradlew --version`; installed compile SDK and build-tools versions;
-> application ID, version name and code; signing certificate SHA-256; names of
-> build-time configuration inputs and which differ from repository defaults
-> (redact secret values); and the APK SHA-256. State whether the original
-> keystore can be exported securely; AI Studio cannot sign our builds for us.
-> Do not modify code or regenerate signing keys while collecting this report.
-
-A baseline APK and its build log allow inspection of actual manifest, signer,
-version and hash. Matching source/config/toolchain/variant produces comparable
-behavior; byte-for-byte equality is not assumed. Updating an installed APK
-requires the same application ID and signing identity plus a suitable version
-code. Each signer needs the matching Google Android OAuth registration.
-Keep the existing AI Studio signing configuration intact. Arrange any release
-key through secure secret storage;
-never put private keys/passwords into chat, Git, or build logs.
-
-Current CI: Temurin JDK 17; Gradle wrapper 9.3.1; SDK android-36.1;
-build-tools 36.0.0; `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`, plus
-`:app:assembleRelease :app:lintRelease` with protected release signing secrets.
-CI restores a persistent testing key and verifies its fingerprint. Its APK does not prove
-AI Studio signer parity, Google sign-in, or production release signing.
+This is an archived preparation record, not current operating instructions.
+The obsolete generator build/signing handoff has been removed by owner request.
+Use [the supported build instructions](ANDROID_BUILD_HANDOFF.md) for current
+SDK, toolchain, signing identity and delivery. Historical findings below retain
+their original evidence scope; they do not establish current acceptance.
 
 ## Confirmed blocker addressed on this branch
 
@@ -89,8 +65,7 @@ is an open upgrade acceptance item; never relabel them as another account's send
 
 ## Release preparation — 2026-11-07
 
-AI Studio main update `8fbf547` is integrated; its original report is preserved
-in `AI_STUDIO_BUILD_EVIDENCE.md` with disputed claims identified. CI builds both
+Historical source update `8fbf547` is integrated; the source history retains the original integration context. CI builds both
 variants, runs 94 debug unit/Robolectric tests and both lints, verifies release
 package/version/certificate and rejects a debuggable release APK. Candidate
 versionName/code: 0.0.0 / 10, increasing from distributed testing code 9.
@@ -99,7 +74,7 @@ The initial direct-download release retains our owned persistent certificate
 (SHA-1 86:28:69:97:15:15:73:65:3B:04:56:ED:AD:7A:2D:56:1D:7A:AE:59), so Google
 OAuth registration and installation continuity remain valid. This deliberately
 establishes that certificate as the initial distribution identity; it must be
-preserved for future updates. It is not the AI Studio certificate. The release
+preserved for future updates. This identity must remain stable. The release
 keystore uses alias upload and a random password held in Actions secrets
 HAVEN_RELEASE_KEYSTORE_BASE64 / HAVEN_RELEASE_KEYSTORE_PASSWORD. Ignored local
 backups are .signing/haven-release.p12 and .signing/release-password; keep secure
