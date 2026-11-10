@@ -1,12 +1,10 @@
 # Startup, GitHub updates and feed pagination — 2026-11-10
 
 Owner explicitly approved these changes. Branch `fix/startup-updates-feed`,
-based on main `1d37dcc`. Candidate 0.0.5/code 15 and workflow integration
-are retained in `release-update.patch`: GitHub rejected the available OAuth
-credential for lacking workflow scope. Apply `git apply release-update.patch`
-with a workflow-capable credential, then verify new exact-head CI before release.
-The pushed app source retains 0.0.4/code 14 until that coordinated patch lands.
- Branded restoration keeps
+based on main `1d37dcc`, candidate 0.0.5/code 15. Owner completed workflow
+authorization on 2026-11-10; release-update.patch has now been applied to the
+workflow and app version. Fresh exact-head CI remains required.
+Branded restoration keeps
 retry on failure; vector logo converted from owner-provided SVG. Android 12+
 persists the chosen app night mode for subsequent system splash windows.
 Legacy system starting windows can appear before app preference code runs;
@@ -17,7 +15,7 @@ public stable-release metadata and never carry Haven bearer credentials.
 Download checks size, checksum, package, version and identical signer sets;
 Android installer remains authoritative and requires person confirmation.
 The first APK containing this updater must still be installed manually.
-The pending workflow patch publishes update.json derived from the actual APK alongside existing
+The workflow publishes update.json derived from the actual APK alongside existing
 provenance, checksums and manifest. No existing assets are manually modified.
 
 Static XML parsing, workflow shell syntax and whitespace checks PASS locally.
