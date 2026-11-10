@@ -8,6 +8,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import com.example.BuildConfig
 import com.example.data.network.HavenCioClient
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareGet
 import io.ktor.utils.io.readAvailable
@@ -24,6 +25,7 @@ data class AvailableUpdate(
   val apkUrl: String, val sha256: String, val size: Long
 )
 
+/** Stable GitHub release discovery and verified, opt-in APK preparation. */
 object GitHubUpdates {
   private const val REPOSITORY = "https://github.com/Phastboy/haven-app/releases/download/"
   private const val MAX_APK = 150L * 1024 * 1024
@@ -48,6 +50,7 @@ object GitHubUpdates {
     return AvailableUpdate(code, metadata.getString("versionName"), release.optString("body").take(6000), url, sha, size)
   }
 
+  /** Return a newer stable release with supported metadata, or null for older release formats. */
   suspend fun check(): AvailableUpdate? = withContext(Dispatchers.IO) {
     val release = JSONObject(fetchBytes("https://api.github.com/repos/Phastboy/haven-app/releases/latest", 512 * 1024).decodeToString())
     if (release.getBoolean("draft") || release.getBoolean("prerelease")) return@withContext null
@@ -59,6 +62,7 @@ object GitHubUpdates {
     parseRelease(release, JSONObject(fetchBytes(url, 16 * 1024).decodeToString()), BuildConfig.VERSION_CODE.toLong())
   }
 
+  /** Read bounded public metadata; reject unsuccessful or oversized responses. */
   private suspend fun fetchBytes(url: String, limit: Int): ByteArray {
     val output = java.io.ByteArrayOutputStream()
     HavenCioClient.imageClient.prepareGet(url) { header("User-Agent", "Haven-Android/${BuildConfig.VERSION_NAME}") }.execute { response ->
@@ -84,7 +88,9 @@ object GitHubUpdates {
       val digest = MessageDigest.getInstance("SHA-256")
       var size = 0L
       partial.outputStream().use { output ->
-        HavenCioClient.imageClient.prepareGet(update.apkUrl).execute { response ->
+        HavenCioClient.imageClient.prepareGet(update.apkUrl) {
+          timeout { requestTimeoutMillis = 15 * 60 * 1000L }
+        }.execute { response ->
           check(response.status.value == 200)
           val channel = response.bodyAsChannel()
           val buffer = ByteArray(8192)
@@ -108,6 +114,7 @@ object GitHubUpdates {
     }
   }
 
+  /** Require a newer APK for this package with the installed certificate set. */
   // Legacy signatures are required only on API 24–27; modern devices use SigningInfo.
   @Suppress("DEPRECATION")
   private fun verifyIdentity(context: Context, file: File, update: AvailableUpdate) {
@@ -127,6 +134,7 @@ object GitHubUpdates {
     check(candidates.map { it.toCharsString() }.toSet() == current.map { it.toCharsString() }.toSet())
   }
 
+  /** Hand a private APK URI to Android; installation still requires confirmation. */
   fun install(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", file)
     context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")

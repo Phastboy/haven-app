@@ -39,6 +39,7 @@ object ThemeManager {
     }
   }
 
+  /** Persist Android 12+ launch appearance; legacy activity resources keep the OS qualifier. */
   fun applyLaunchMode(context: Context, mode: ThemeMode = themeMode) {
     if (android.os.Build.VERSION.SDK_INT >= 31) {
       context.getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(

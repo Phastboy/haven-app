@@ -1,3 +1,20 @@
+# PR #38 review corrections — 2026-11-10
+
+Exact-head build ef47ce2 PASS in run 42870484184; GitGuardian PASS.
+Codex/CodeRabbit findings confirmed and corrected: remove activity-level forced
+night context so legacy System selection reads real OS mode (Compose still
+honors explicit Light/Dark; legacy pre-process splash follows OS), allow APK
+requests 15 minutes with unchanged connect/socket inactivity limits, reject
+unchanged non-null pagination cursors before publishing results and preserve
+retryable retained data, announce session restoration in logo state semantics.
+Duplicate timeout findings describe the same defect. Added legacy API28 theme,
+unchanged-cursor and startup semantics regressions plus updater documentation.
+No review thread is considered resolved by edits alone; new exact-head CI and
+review disposition required. Copilot quota exhaustion and CodeRabbit skipped
+review are not passes. Acting maintainer/agent retains 2026-11-11 review target
+on owner notification, no CI polling; device/theme/update acceptance remains
+open. No merge/release. Earlier ef47ce2 pass does not verify these corrections.
+
 # PR #38 Gradle pin correction — 2026-11-10
 
 Run 42868427693 at e58a3c1 failed debug/release lint solely on the newly

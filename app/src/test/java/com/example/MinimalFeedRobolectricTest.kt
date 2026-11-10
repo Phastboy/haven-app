@@ -267,7 +267,8 @@ class MinimalFeedRobolectricTest {
       StartupGate(state.value, { retries++ }) { destination = it }
     } }
     compose.onNodeWithTag("startup_screen").assertIsDisplayed()
-    compose.onNodeWithContentDescription("Haven").assertIsDisplayed()
+    compose.onNodeWithContentDescription("Haven").assertIsDisplayed().assert(
+      SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Restoring your session"))
     compose.onNodeWithText("Opening Haven…").assertDoesNotExist()
     screenshot("startup-logo-light")
     assertNull(destination)

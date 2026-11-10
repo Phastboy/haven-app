@@ -134,6 +134,9 @@ class OffersViewModel(
         } else repository.fetch(query)
         coroutineContext.ensureActive()
         if (!isCurrent()) return@launch
+        check(reset || page.nextCursor == null || page.nextCursor != query.after) {
+          "Offer pagination cursor did not advance"
+        }
         displayedQuery = before.query.copy(after = null)
         _uiState.update { it.copy(
           items = if (reset) page.items else (before.items + page.items).distinctBy { offer -> offer.id },
