@@ -112,3 +112,19 @@ no checkbox is completed by deletion. No application code or release is changed.
 - `MOBILE_NATIVE_API_BACKLOG.md`: the Android maintainer completes the unchecked Android implementation tasks from the inspected handoff.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Physical-device and authenticated production acceptance are completed later with the owner.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Remaining obvious UI quality issues are corrected against the prototypes.
+
+## PR #44 review corrections — 2026-11-11
+
+CI 43001629738 on 5eb426e failed Compose Modifier-factory lint in the test
+helper. Converted it to a receiver-preserving Modifier extension. Confirmed
+review fixes: own-profile cards hide Save (with navigation regression), contrast
+sampling stays inside the glass circle, unsaved screenshots precede the state
+change, and shared accessibility labels use string resources. Screenshot names
+are test-owned literals; no untrusted path input exists (static analyzer warning).
+No blanket lint suppression or baseline added. Existing public-component KDoc
+covers its contract; tests do not need artificial docstrings for a bot percentage.
+Whitespace checked; Android build/tests/lint NOT RUN locally per data budget.
+Fresh CI and rendered artifacts still required; physical-device contrast,
+TalkBack and network failure evidence remain separate and unverified. Acting
+maintainer/executing agent reviews on owner notification, target 2026-11-12,
+with supported device/build prerequisites. No CI polling, merge or release.

@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -29,6 +31,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import com.example.data.ProfileOverview
+import com.example.ui.model.ProfileUiState
+import com.example.ui.screens.ProfileScreen
 import com.example.data.FeedOffer
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.SaveOfferButton
@@ -89,13 +94,13 @@ class SaveOfferButtonRobolectricTest {
   }
 
   private fun saveScreenshot(name: String) {
-    val file = File("build/reports/screenshots/$name")
+    val file = File("build/reports/screenshots", name)
     file.parentFile?.mkdirs()
     file.outputStream().use { captureRootBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
   }
 
   /** Deterministic mid-gray stripes standing in for a busy, unpredictable cover image. */
-  private fun busyStripes(): Modifier = Modifier.drawBehind {
+  private fun Modifier.busyStripes(): Modifier = drawBehind {
     val stripe = size.height / 6f
     for (i in 0..5) {
       drawRect(
@@ -111,11 +116,14 @@ class SaveOfferButtonRobolectricTest {
     return pixels[pixels.width / 2, pixels.height / 2].luminance()
   }
 
+  /** Samples the central square inside the circular scrim, excluding the cover. */
   private fun luminanceRange(tag: String): Pair<Float, Float> {
     val pixels = captureNodeBitmap(tag).asImageBitmap().toPixelMap()
     var darkest = 1f
     var brightest = 0f
-    for (x in 0 until pixels.width) for (y in 0 until pixels.height) {
+    val insetX = pixels.width / 4
+    val insetY = pixels.height / 4
+    for (x in insetX until pixels.width - insetX) for (y in insetY until pixels.height - insetY) {
       val value = pixels[x, y].luminance()
       darkest = minOf(darkest, value)
       brightest = maxOf(brightest, value)
@@ -201,15 +209,16 @@ class SaveOfferButtonRobolectricTest {
     val saved = mutableStateOf(false)
     compose.setContent {
       HavenTheme(mode.value) {
-        Box(Modifier.size(96.dp).then(busyStripes()), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(96.dp).busyStripes(), contentAlignment = Alignment.Center) {
           SaveOfferButton(saved = saved.value, onClick = {}, testTag = "busy_save")
         }
       }
     }
     for (theme in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
       compose.runOnIdle { mode.value = theme; saved.value = false }
-      val (unsavedDarkest, unsavedBrightest) = luminanceRange("busy_save")
+      val (unsavedDarkest, unsavedBrightest) = luminanceRange("busy_save_glass")
       val unsavedCenter = centerLuminance("busy_save")
+      saveScreenshot("save-button-busy-${theme.name.lowercase()}-unsaved.png")
       compose.runOnIdle { saved.value = true }
       val savedCenter = centerLuminance("busy_save")
       if (theme == ThemeMode.LIGHT) {
@@ -221,7 +230,6 @@ class SaveOfferButtonRobolectricTest {
         assertTrue("unsaved outline is visible", unsavedBrightest > 0.5f)
         assertTrue("saved fill is light", savedCenter > 0.5f)
       }
-      saveScreenshot("save-button-busy-${theme.name.lowercase()}-unsaved.png")
     }
     compose.runOnIdle { mode.value = ThemeMode.LIGHT; saved.value = true }
     saveScreenshot("save-button-busy-light-saved.png")
@@ -260,6 +268,26 @@ class SaveOfferButtonRobolectricTest {
     compose.onNodeWithContentDescription("Unsave offer").performClick()
     assertTrue("card heart still opens when no save callback is wired", opened)
     saveScreenshot("save-button-card-light.png")
+  }
+
+  @Test fun `own profile offers hide save action and still open normally`() {
+    var opened: String? = null
+    compose.setContent {
+      HavenTheme(ThemeMode.LIGHT) {
+        ProfileScreen(
+          state = ProfileUiState(profile = ProfileOverview(
+            "person", "real-person", "Real person", null, "Joined November 2026",
+            null, 1, 0, 0, listOf(offer)
+          )),
+          onRetry = {}, onOpenWeb = {}, onSignOut = {},
+          onOpenOffer = { opened = it }
+        )
+      }
+    }
+    compose.onNodeWithTag("offer_card_save").performScrollTo().assertIsDisplayed()
+    compose.onNodeWithContentDescription("Save offer").assertDoesNotExist()
+    compose.onNodeWithTag("offer_card_save").performClick()
+    assertEquals("chair", opened)
   }
 
   @Test fun `offer detail renders the shared 48dp control`() {

@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -75,9 +77,9 @@ fun SaveOfferButton(
 ) {
   val interactive = enabled && !saving
   val label = when {
-    saving -> "Saving offer"
-    saved -> "Unsave offer"
-    else -> "Save offer"
+    saving -> stringResource(R.string.saving_offer)
+    saved -> stringResource(R.string.unsave_offer)
+    else -> stringResource(R.string.save_offer)
   }
   Box(
     modifier = modifier
