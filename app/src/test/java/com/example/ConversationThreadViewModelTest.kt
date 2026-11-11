@@ -212,6 +212,29 @@ class ConversationThreadViewModelTest {
   }
 
   @Test
+  fun refreshFailureIsReclassifiedWhenDelayedCachedHistoryArrives() = runTest(testDispatcher) {
+    database.messageDao().insertMessage(MessageEntity(
+      clientMessageId = "late-cache", conversationId = "late-thread", senderPersonId = "peer",
+      isFromMe = false, text = "Retained", timestamp = 1L
+    ))
+    viewModel.clear()
+    viewModel = ConversationThreadViewModel(object : com.example.data.messaging.MessagingRepository by repository {
+      override fun observeMessages(conversationId: String) = kotlinx.coroutines.flow.flow {
+        kotlinx.coroutines.delay(100L)
+        emit(repository.snapshotMessages(conversationId))
+      }
+    })
+    transport.shouldFailNextFetch = true
+    viewModel.openConversation("late-thread", "owner-1")
+    testScheduler.pump()
+    assertNotNull(viewModel.uiState.value.syncError)
+    assertTrue(viewModel.uiState.value.messages.isEmpty())
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    assertEquals("Offline - viewing cached messages", viewModel.uiState.value.syncError)
+  }
+
+  @Test
   fun warmCachedThreadKeepsContentAndDistinguishesOfflineRefreshFailure() = runTest(testDispatcher) {
     database.conversationDao().upsertConversation(ConversationEntity(
       id = "conv-warm", ownerPersonId = "owner-1", otherUserId = "peer-1",

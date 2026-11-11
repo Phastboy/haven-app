@@ -54,11 +54,14 @@ class NativeThreadRenderingTest {
     )
   }
 
-  private fun setContentWith(state: ConversationThreadUiState, onRefresh: () -> Unit = {}) {
+  private fun setContentWith(state: ConversationThreadUiState, onRefresh: () -> Unit = {}) =
+    setContentWithState({ state }, onRefresh)
+
+  private fun setContentWithState(state: () -> ConversationThreadUiState, onRefresh: () -> Unit = {}) {
     rule.setContent {
       HavenTheme {
         NativeConversationThreadScreen(
-          state = state,
+          state = state(),
           onBack = {}, onInputChanged = {}, onSendMessage = {}, onRetryMessage = {},
           onOpenProfile = {}, onRefresh = onRefresh
         )
@@ -159,7 +162,7 @@ class NativeThreadRenderingTest {
 
   @Test fun appendedIncomingMessageDoesNotStealScrollWhileReadingHistory() {
     var uiState by mutableStateOf(ConversationThreadUiState(messages = incoming(30)))
-    setContentWith(uiState)
+    setContentWithState({ uiState })
     rule.waitForIdle()
     rule.onNodeWithTag("thread_messages_list").performScrollToIndex(0)
     rule.waitForIdle()
@@ -171,7 +174,7 @@ class NativeThreadRenderingTest {
 
   @Test fun appendedOwnSendingMessageScrollsIntoView() {
     var uiState by mutableStateOf(ConversationThreadUiState(messages = incoming(30)))
-    setContentWith(uiState)
+    setContentWithState({ uiState })
     rule.waitForIdle()
     rule.onNodeWithTag("thread_messages_list").performScrollToIndex(0)
     rule.waitForIdle()
@@ -188,7 +191,7 @@ class NativeThreadRenderingTest {
 
   @Test fun prependingOlderMessagesKeepsTheReadingAnchor() {
     var uiState by mutableStateOf(ConversationThreadUiState(messages = incoming(30)))
-    setContentWith(uiState)
+    setContentWithState({ uiState })
     rule.waitForIdle()
     rule.onNodeWithTag("thread_messages_list").performScrollToIndex(6)
     rule.waitForIdle()

@@ -154,6 +154,9 @@ class ConversationThreadViewModel(
         _uiState.update {
           it.copy(
             messages = messageList,
+            syncError = if (it.syncError != null) {
+              if (messageList.isEmpty()) "Couldn't load messages" else "Offline - viewing cached messages"
+            } else null,
             localHistoryResolved = true,
             emptyThreadConfirmed = it.emptyThreadConfirmed && messageList.isEmpty()
           )
