@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.HavenColors
@@ -36,6 +39,10 @@ import com.example.ui.theme.HavenColors
  * Animated Shimmer Modifier:
  * Renders a smooth, infinite grey gradient animation for loading states.
  * Automatically adapts between Light (#F3F4F6 -> #E5E7EB) and Dark (#23252A -> #32353E) themes.
+ *
+ * When the platform disables animations (`ANIMATOR_DURATION_SCALE == 0`) the
+ * gradient is rendered statically so reduced-motion users still see a placeholder
+ * without a pulsing animation.
  */
 @Composable
 fun Modifier.shimmerBackground(
@@ -43,30 +50,50 @@ fun Modifier.shimmerBackground(
   baseColor: Color? = null,
   highlightColor: Color? = null
 ): Modifier {
+  val context = LocalContext.current
+  val animationsEnabled = remember(context) {
+    // Default to animating if the platform setting is unavailable.
+    runCatching {
+      Settings.Global.getFloat(
+        context.contentResolver,
+        Settings.Global.ANIMATOR_DURATION_SCALE,
+        1f
+      ) != 0f
+    }.getOrDefault(true)
+  }
   val isDark = HavenColors.isDark
   val resolvedBase = baseColor ?: if (isDark) Color(0xFF22242B) else Color(0xFFF3F4F6)
   val resolvedHighlight = highlightColor ?: if (isDark) Color(0xFF2F323B) else Color(0xFFE5E7EB)
 
-  val transition = rememberInfiniteTransition(label = "shimmer_transition")
-  val translateAnim by transition.animateFloat(
-    initialValue = 0f,
-    targetValue = 1000f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(durationMillis = 1100, easing = LinearEasing),
-      repeatMode = RepeatMode.Restart
-    ),
-    label = "shimmer_translate"
-  )
-
-  val brush = Brush.linearGradient(
-    colors = listOf(
-      resolvedBase,
-      resolvedHighlight,
-      resolvedBase
-    ),
-    start = Offset(translateAnim - 400f, translateAnim - 400f),
-    end = Offset(translateAnim, translateAnim)
-  )
+  val brush = if (animationsEnabled) {
+    val transition = rememberInfiniteTransition(label = "shimmer_transition")
+    val translateAnim by transition.animateFloat(
+      initialValue = 0f,
+      targetValue = 1000f,
+      animationSpec = infiniteRepeatable(
+        animation = tween(durationMillis = 1100, easing = LinearEasing),
+        repeatMode = RepeatMode.Restart
+      ),
+      label = "shimmer_translate"
+    )
+    Brush.linearGradient(
+      colors = listOf(
+        resolvedBase,
+        resolvedHighlight,
+        resolvedBase
+      ),
+      start = Offset(translateAnim - 400f, translateAnim - 400f),
+      end = Offset(translateAnim, translateAnim)
+    )
+  } else {
+    Brush.linearGradient(
+      colors = listOf(
+        resolvedBase,
+        resolvedHighlight,
+        resolvedBase
+      )
+    )
+  }
 
   return this
     .clip(shape)

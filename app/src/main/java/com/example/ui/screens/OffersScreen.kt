@@ -312,7 +312,7 @@ fun OffersScreen(
       when (tab) {
         RootTab.OFFERS -> Unit
         RootTab.MESSAGES -> messagesModel.load(person, force = true)
-        RootTab.PROFILE -> profileModel.load(person, force = true)
+        RootTab.PROFILE -> profileModel.load(person)
       }
     } },
     activationKey = rootResumeGeneration
@@ -442,6 +442,9 @@ fun OffersScreen(
           if (!confirmed) {
             savedOffers = savedOffers?.copy(items = (savedOffers?.items ?: emptyList()).filter { it.slug != slug })
           }
+          // A confirmed save/unsave changes the profile's saved count; mark the
+          // retained profile stale so the next profile entry refreshes it.
+          profileModel.invalidate()
         }
       } catch (cancelled: CancellationException) { throw cancelled }
       catch (_: Exception) {
@@ -642,6 +645,8 @@ fun OffersScreen(
               myOffersRetry++
               detailRetry++
               viewModel.refresh()
+              // Creating or editing an offer changes the profile's owned-offer count.
+              profileModel.invalidate()
               navStack = listOf(OffersDestination.MyOffers)
             })
           return

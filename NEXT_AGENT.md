@@ -1,3 +1,38 @@
+# Issues #30 / #31 profile retention and skeleton shell — 2026-11-11
+
+Branch `fix/30-31-profile-retention-skeleton` off `main` (d64f2be). No release
+authorized; no merge performed.
+
+#30: `ProfileViewModel.load` now retains the same-account profile on re-entry.
+`ProfileUiState` gains `refreshing`; `loading` is true only on a true cache miss.
+An explicit freshness policy (`FRESHNESS_WINDOW_MS = 30s`, injectable clock) skips
+redundant requests, an in-flight guard prevents overlapping fetches, a failed
+refresh keeps the profile with a nonblocking error, and a different `personId`
+always resets state so another account's cache is never reused. `invalidate()`
+marks retained data stale after edits/collection changes. `OffersScreen` now
+calls `load(person)` (non-forced) on profile activation/resume, keeps `force` for
+retry and post-edit refresh, and invalidates after a confirmed save/unsave and
+after an offer is created or edited.
+
+#31: `ProfileScreen` always renders the static shell. Missing remote identity and
+counts reserve geometry with reusable `ProfileIdentitySkeleton`/`ProfileCountSkeleton`
+(no page spinner; `profile_loading` removed) and offers reuse `OffersGridSkeleton`.
+Profile-dependent rows/edit/Manage/Public view are disabled without identity;
+Appearance stays available. Skeletons are noninteractive and announced as
+loading. Shared `shimmerBackground` renders statically when the platform animator
+duration scale is 0 (reduced motion). Light/dark use existing tokens.
+
+Tests added: `ProfileViewModelRetentionTest` (repeated entry, stale refresh,
+overlap, offline refresh, cold-miss error, account switch, invalidate, clear) and
+`ProfileShellRobolectricTest` (cold start shell/skeletons, disabled controls,
+static Appearance, retained-while-refreshing, nonblocking retry, cold-start
+failure). Existing profile/theme/appearance tests kept by inspection.
+
+Whitespace PASS; no local Android execution per owner data budget. Fresh
+exact-head CI required before review/merge; no CI polling. Shares
+`OffersScreen.kt` with #34 (PR #44) at disjoint regions (save state vs. profile
+load) — rebase if that merges first. Device verification remains separate.
+
 # PR #39 / #40 review corrections — 2026-11-11
 
 Owner requests review resolution and merge, explicitly no release. Confirmed
