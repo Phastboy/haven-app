@@ -1,3 +1,29 @@
+# Issue #34 shared save button — 2026-11-11
+
+Owner issue #34: one configurable, theme-aware save control reused by feed,
+provider and saved cards plus offer detail, removing the unconditional white
+card-heart tint. Added `ui/components/SaveOfferButton.kt` with
+`SaveOfferButtonDefaults` presets (card 28dp/16dp, detail 44dp/22dp) over a
+shared 48dp touch target. The scrim is `HavenColors.Canvas` at 0.85 alpha,
+matching the existing detail `FrostedCircleButton`; no platform backdrop blur is
+assumed, so it is valid on minSdk 24. Saved fill uses `HavenColors.Primary` and
+the unsaved outline uses `HavenColors.TextPrimary`. Pending/disabled keep the
+icon, change the label (Save/Unsave/Saving offer) and dim to 0.55 without
+accepting clicks.
+
+`FeedOfferCard` (feed/provider/saved) and `OfferDetailScreen` /
+`NativeOfferDetailScreen` now render the shared control; `OffersScreen` wires the
+detail `saving` flag from `savingSlugs`. Auth, network writes, rollback and owner
+suppression stay in the screen/state layers.
+
+Verification is Robolectric (`SaveOfferButtonRobolectricTest`): touch target
+>=48dp with distinct 28/44 visible circles, Save/Unsave/Saving semantics,
+enabled/disabled/pending click behaviour, and rendered centre-pixel contrast over
+mid-gray busy stripes plus a theme-following scrim over black/white covers in
+both themes. Screenshots land in `build/reports/screenshots/`. Android checks run
+on GitHub CI only; no local Gradle execution per data budget. No release
+authorized.
+
 # PR #39 / #40 review corrections — 2026-11-11
 
 Owner requests review resolution and merge, explicitly no release. Confirmed
