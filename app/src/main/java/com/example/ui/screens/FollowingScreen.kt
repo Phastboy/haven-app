@@ -63,7 +63,8 @@ fun FollowingScreen(
   viewModel: FollowingViewModel = viewModel(factory = FollowingViewModel.factory(LocalContext.current)),
   onOpenProvider: (String) -> Unit = {},
   onOpenWebFollow: (String) -> Unit = {},
-  onDiscoverOffers: () -> Unit = {}
+  onDiscoverOffers: () -> Unit = {},
+  onUnfollowConfirmed: () -> Unit = {}
 ) {
   val state by viewModel.state.collectAsState()
   FollowingScreen(
@@ -76,7 +77,7 @@ fun FollowingScreen(
     onRetry = viewModel::load,
     onOpenProvider = onOpenProvider,
     onOpenWebFollow = onOpenWebFollow,
-    onUnfollow = viewModel::unfollow,
+    onUnfollow = { handle -> viewModel.unfollow(handle, onUnfollowConfirmed) },
     onDiscoverOffers = onDiscoverOffers,
     onLoadMore = viewModel::loadMore,
     modifier = modifier

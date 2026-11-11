@@ -312,7 +312,7 @@ fun OffersScreen(
       when (tab) {
         RootTab.OFFERS -> Unit
         RootTab.MESSAGES -> messagesModel.load(person, force = true)
-        RootTab.PROFILE -> profileModel.load(person, force = true)
+        RootTab.PROFILE -> profileModel.load(person)
       }
     } },
     activationKey = rootResumeGeneration
@@ -442,6 +442,9 @@ fun OffersScreen(
           if (!confirmed) {
             savedOffers = savedOffers?.copy(items = (savedOffers?.items ?: emptyList()).filter { it.slug != slug })
           }
+          // A confirmed save/unsave changes the profile's saved count; mark the
+          // retained profile stale so the next profile entry refreshes it.
+          profileModel.invalidate()
         }
       } catch (cancelled: CancellationException) { throw cancelled }
       catch (_: Exception) {
@@ -534,6 +537,7 @@ fun OffersScreen(
                 scope.launch {
                   try {
                     val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
+                    if (SessionManager.session.value.personId == actor) profileModel.invalidate()
                     if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
                       providerProfile = providerProfile?.let {
                         if (it.person.id == person.id) it.copy(person = it.person.copy(isFollowing = confirmed)) else it
@@ -643,6 +647,8 @@ fun OffersScreen(
               myOffersRetry++
               detailRetry++
               viewModel.refresh()
+              // Creating or editing an offer changes the profile's owned-offer count.
+              profileModel.invalidate()
               navStack = listOf(OffersDestination.MyOffers)
             })
           return
@@ -662,6 +668,9 @@ fun OffersScreen(
         )
         MyOffersScreen(
           viewModel = myOffersModel,
+          onOfferDeleted = {
+            if (SessionManager.session.value.personId == session.personId) profileModel.invalidate()
+          },
           onBack = { navStack = navStack.dropLast(1) },
           onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
           onCreateOffer = { navStack = navStack + OffersDestination.OfferEditor() },
@@ -734,6 +743,9 @@ fun OffersScreen(
         )
         FollowingScreen(
           viewModel = followingModel,
+          onUnfollowConfirmed = {
+            if (SessionManager.session.value.personId == session.personId) profileModel.invalidate()
+          },
           onBack = { navStack = navStack.dropLast(1) },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },

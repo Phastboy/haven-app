@@ -25,10 +25,8 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +43,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.data.theme.HavenThemePreferencesRepository
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -55,6 +55,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import com.example.ui.components.FeedOfferCard
 import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.components.OffersGridSkeleton
+import com.example.ui.components.ProfileCountSkeleton
+import com.example.ui.components.ProfileIdentitySkeleton
 import com.example.ui.model.ProfileUiState
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
@@ -87,15 +90,20 @@ fun ProfileScreen(
     onDispose { onModalVisibilityChanged(false) }
   }
   val profile = state.profile
+  val hasProfile = profile != null
   // Loading/error content must not measure against and clamp the retained profile offset.
   val loadingScrollState = rememberScrollState()
-  val contentScrollState = if (profile == null) loadingScrollState else scrollState
+  val contentScrollState = if (hasProfile) scrollState else loadingScrollState
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("profile_screen")) {
     HavenTopBarContainer {
       Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text("My profile", fontFamily = InterFontFamily, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        TextButton(enabled = profile != null, onClick = {
+        if (state.refreshing && hasProfile) {
+          Text("Refreshing…", fontFamily = InterFontFamily, fontSize = 12.sp,
+            color = HavenColors.TextSecondary, modifier = Modifier.testTag("profile_refreshing"))
+        }
+        TextButton(enabled = hasProfile, onClick = {
           profile?.let { onOpenPublicProfile?.invoke(it.handle) ?: onOpenWeb("/profiles/${it.handle}") }
         }) {
           Text("Public view", color = HavenColors.TextSecondary)
@@ -104,13 +112,21 @@ fun ProfileScreen(
     }
     Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(contentScrollState).padding(16.dp),
       horizontalAlignment = Alignment.CenterHorizontally) {
-      if (state.loading) CircularProgressIndicator(Modifier.padding(24.dp).testTag("profile_loading"), color = HavenColors.Primary)
+      // Nonblocking feedback: a failed refresh keeps the retained profile on screen.
       state.error?.let { error ->
-        Text(error, modifier = Modifier.testTag("profile_error"))
-        TextButton(onClick = onRetry) { Text("Try again") }
+        if (hasProfile) {
+          Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(error, modifier = Modifier.weight(1f).testTag("profile_error"),
+              fontFamily = InterFontFamily, fontSize = 13.sp, color = HavenColors.TextSecondary)
+            TextButton(onClick = onRetry, modifier = Modifier.testTag("profile_retry")) { Text("Try again") }
+          }
+        } else {
+          Text(error, modifier = Modifier.testTag("profile_error"))
+          TextButton(onClick = onRetry, modifier = Modifier.testTag("profile_retry")) { Text("Try again") }
+        }
       }
+      Spacer(Modifier.height(16.dp))
       if (profile != null) {
-        Spacer(Modifier.height(16.dp))
         Box(Modifier.size(96.dp).clip(CircleShape).background(HavenColors.SurfaceContainer),
           contentAlignment = Alignment.Center) {
           val initial: @Composable () -> Unit = {
@@ -129,35 +145,56 @@ fun ProfileScreen(
           Text(bio, fontFamily = InterFontFamily, fontSize = 16.sp, lineHeight = 24.sp,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp).testTag("profile_bio"))
         }
-        TextButton(onClick = { onOpenEditProfile?.invoke() ?: onOpenWeb("/profile/edit") }, modifier = Modifier.padding(top = 16.dp)
-          .testTag("profile_edit_button")) {
-          Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
-          Text("Edit profile", modifier = Modifier.padding(start = 8.dp))
+      } else {
+        ProfileIdentitySkeleton()
+      }
+      // Local/static action: available immediately, but gated on real identity data.
+      TextButton(enabled = hasProfile, onClick = { onOpenEditProfile?.invoke() ?: onOpenWeb("/profile/edit") },
+        modifier = Modifier.padding(top = 16.dp).testTag("profile_edit_button")) {
+        Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
+        Text("Edit profile", modifier = Modifier.padding(start = 8.dp))
+      }
+      Spacer(Modifier.height(24.dp))
+      Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+        ProfileRow("My offers", Icons.Outlined.GridView,
+          value = { ProfileCount(profile?.let { "${it.offerCount} ${if (it.offerCount == 1L) "offer" else "offers"}" }) },
+          tag = "profile_link_my_offers", enabled = hasProfile) {
+          onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers")
         }
-        Spacer(Modifier.height(24.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
-          ProfileRow("My offers", "${profile.offerCount} ${if (profile.offerCount == 1L) "offer" else "offers"}", Icons.Outlined.GridView) {
-            onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers")
-          }
-          ProfileRow("Saved offers", "${profile.savedCount} saved", Icons.Outlined.FavoriteBorder) {
-            onOpenSavedOffers?.invoke() ?: onOpenWeb("/profile/saved")
-          }
-          ProfileRow("Inquired offers", "View", Icons.Outlined.ChatBubbleOutline, tag = "profile_link_inquired") {
-            onOpenInquired?.invoke() ?: onOpenWeb("/profile/inquired")
-          }
-          ProfileRow("Following", "${profile.followingCount} ${if (profile.followingCount == 1L) "person" else "people"}", Icons.Outlined.Group) {
-            onOpenFollowing?.invoke() ?: onOpenWeb("/profile/following")
-          }
-          ProfileRow("Appearance", ThemeManager.themeMode.title, Icons.Outlined.Palette,
-            tag = "profile_link_appearance") { appearance = true }
+        ProfileRow("Saved offers", Icons.Outlined.FavoriteBorder,
+          value = { ProfileCount(profile?.let { "${it.savedCount} saved" }) },
+          tag = "profile_link_saved", enabled = hasProfile) {
+          onOpenSavedOffers?.invoke() ?: onOpenWeb("/profile/saved")
         }
-        Row(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically) {
-          Text("Your offers", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
-          TextButton(onClick = { onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers") }) { Text("Manage") }
+        ProfileRow("Inquired offers", Icons.Outlined.ChatBubbleOutline,
+          value = { ProfileCount("View") },
+          tag = "profile_link_inquired", enabled = hasProfile) {
+          onOpenInquired?.invoke() ?: onOpenWeb("/profile/inquired")
         }
-        if (profile.offers.isEmpty()) Text("No public offers yet.", color = HavenColors.TextSecondary,
+        ProfileRow("Following", Icons.Outlined.Group,
+          value = { ProfileCount(profile?.let { "${it.followingCount} ${if (it.followingCount == 1L) "person" else "people"}" }) },
+          tag = "profile_link_following", enabled = hasProfile) {
+          onOpenFollowing?.invoke() ?: onOpenWeb("/profile/following")
+        }
+        // Locally persisted appearance: always available, even before remote data.
+        ProfileRow("Appearance", Icons.Outlined.Palette,
+          value = { ProfileCount(ThemeManager.themeMode.title) },
+          tag = "profile_link_appearance", enabled = true) { appearance = true }
+      }
+      Row(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        Text("Your offers", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
+        TextButton(enabled = hasProfile, onClick = { onOpenMyOffers?.invoke() ?: onOpenWeb("/profile/offers") }) { Text("Manage") }
+      }
+      if (profile == null) {
+        Box(Modifier.fillMaxWidth().semantics { contentDescription = "Loading offers" }
+          .testTag("profile_offers_skeleton")) {
+          OffersGridSkeleton(itemCount = 4)
+        }
+      } else if (profile.offers.isEmpty()) {
+        Text("No public offers yet.", color = HavenColors.TextSecondary,
           modifier = Modifier.padding(vertical = 16.dp))
+      } else {
         profile.offers.chunked(2).forEach { row ->
           Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { offer ->
@@ -249,13 +286,28 @@ fun ProfileScreen(
     dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") } })
 }
 
+/** A remote count placeholder, or its confirmed text once the profile has loaded. */
 @Composable
-private fun ProfileRow(label: String, value: String, icon: ImageVector, tag: String = "profile_row", onClick: () -> Unit) {
-  Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 16.dp).testTag(tag),
+private fun ProfileCount(text: String?) {
+  if (text != null) Text(text, fontSize = 12.sp, color = HavenColors.TextSecondary)
+  else ProfileCountSkeleton()
+}
+
+@Composable
+private fun ProfileRow(
+  label: String,
+  icon: ImageVector,
+  value: @Composable () -> Unit,
+  tag: String = "profile_row",
+  enabled: Boolean = true,
+  onClick: () -> Unit
+) {
+  Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick)
+    .padding(horizontal = 16.dp, vertical = 16.dp).testTag(tag),
     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
     Icon(icon, null, tint = HavenColors.TextPrimary, modifier = Modifier.size(20.dp))
     Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp, color = HavenColors.TextPrimary)
-    Text(value, fontSize = 12.sp, color = HavenColors.TextSecondary)
+    value()
     Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = HavenColors.TextSecondary, modifier = Modifier.size(16.dp))
   }
 }
