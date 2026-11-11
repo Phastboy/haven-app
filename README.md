@@ -14,7 +14,7 @@ Following, with explicit proximity in public discovery. There are no simulated
 successful writes or sample runtime offers.
 
 Version 0.0.5 adds branded startup, themed launch resources, GitHub APK update
-prompts and automatic feed pagination. See [the release test checklist](RELEASE_V0.0.5.md).
+prompts and automatic feed pagination. See [the device test checklist](docs/testing/v0.0.5.md).
 The first updater-enabled APK requires manual installation. Later stable GitHub
 releases publish update metadata automatically; installation always requires
 Android confirmation. This app is distributed through GitHub releases.
