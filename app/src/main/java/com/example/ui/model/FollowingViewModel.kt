@@ -80,7 +80,7 @@ class FollowingViewModel(
     }
   }
 
-  fun unfollow(handle: String) {
+  fun unfollow(handle: String, onSuccess: () -> Unit = {}) {
     if (handle in _state.value.pendingUnfollowHandles) return
     val currentFollowing = _state.value.following ?: return
     val person = currentFollowing.items.firstOrNull { it.handle == handle } ?: return
@@ -101,6 +101,7 @@ class FollowingViewModel(
           _state.update {
             it.copy(pendingUnfollowHandles = it.pendingUnfollowHandles - handle)
           }
+          onSuccess()
         }
         .onFailure { error ->
           if (error is CancellationException) throw error

@@ -96,9 +96,9 @@ class ProfileViewModelRetentionTest {
 
     model.load("owner")
     runCurrent()
-    model.load("owner", force = true) // already in flight: ignored
+    model.load("owner") // ordinary re-entry coalesces
     runCurrent()
-    model.load("owner", force = true)
+    model.load("owner")
     runCurrent()
 
     gate.complete(Unit)
@@ -178,6 +178,54 @@ class ProfileViewModelRetentionTest {
     advanceUntilIdle()
     assertEquals(2, repo.loads)
     assertEquals("owner", model.state.value.profile?.id)
+  }
+
+  @Test fun `invalidation during fetch survives its stale response`() = runTest(dispatcher) {
+    val gate = CompletableDeferred<Unit>()
+    val repo = FakeRepo { gate.await(); profile("owner") }
+    val model = ProfileViewModel(repo) { clock }
+    model.load("owner")
+    runCurrent()
+    model.invalidate()
+    gate.complete(Unit)
+    advanceUntilIdle()
+    model.load("owner")
+    advanceUntilIdle()
+    assertEquals(2, repo.loads)
+  }
+
+  @Test fun `forced load during fetch queues one post mutation refresh`() = runTest(dispatcher) {
+    val gate = CompletableDeferred<Unit>()
+    var calls = 0
+    val repo = FakeRepo {
+      if (++calls == 1) { gate.await(); profile("owner") }
+      else profile("owner").copy(displayName = "Updated person")
+    }
+    val model = ProfileViewModel(repo) { clock }
+    model.load("owner")
+    runCurrent()
+    model.invalidate()
+    model.load("owner", force = true)
+    model.load("owner", force = true)
+    gate.complete(Unit)
+    advanceUntilIdle()
+    assertEquals(2, repo.loads)
+    assertEquals("Updated person", model.state.value.profile?.displayName)
+  }
+
+  @Test fun `account switch drops queued refresh for previous account`() = runTest(dispatcher) {
+    val gate = CompletableDeferred<Unit>()
+    val repo = FakeRepo { gate.await(); profile("A") }
+    val model = ProfileViewModel(repo) { clock }
+    model.load("A")
+    runCurrent()
+    model.load("A", force = true)
+    repo.fetcher = { profile("B") }
+    model.load("B")
+    gate.complete(Unit)
+    advanceUntilIdle()
+    assertEquals(2, repo.loads)
+    assertEquals("B", model.state.value.profile?.id)
   }
 
   @Test fun `clear resets so the next load is a fresh cache miss`() = runTest(dispatcher) {

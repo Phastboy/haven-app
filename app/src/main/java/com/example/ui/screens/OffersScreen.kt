@@ -536,6 +536,7 @@ fun OffersScreen(
                 scope.launch {
                   try {
                     val confirmed = if (target) nativePagesRepo.follow(handle) else nativePagesRepo.unfollow(handle)
+                    if (SessionManager.session.value.personId == actor) profileModel.invalidate()
                     if (SessionManager.session.value.personId == actor && currentProviderHandle == handle) {
                       providerProfile = providerProfile?.let {
                         if (it.person.id == person.id) it.copy(person = it.person.copy(isFollowing = confirmed)) else it
@@ -666,6 +667,9 @@ fun OffersScreen(
         )
         MyOffersScreen(
           viewModel = myOffersModel,
+          onOfferDeleted = {
+            if (SessionManager.session.value.personId == session.personId) profileModel.invalidate()
+          },
           onBack = { navStack = navStack.dropLast(1) },
           onOpenOffer = { slug -> navStack = navStack + OffersDestination.OfferDetail(slug) },
           onCreateOffer = { navStack = navStack + OffersDestination.OfferEditor() },
@@ -738,6 +742,9 @@ fun OffersScreen(
         )
         FollowingScreen(
           viewModel = followingModel,
+          onUnfollowConfirmed = {
+            if (SessionManager.session.value.personId == session.personId) profileModel.invalidate()
+          },
           onBack = { navStack = navStack.dropLast(1) },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           onOpenWebFollow = { handle -> openWeb("/profiles/${Uri.encode(handle)}") },

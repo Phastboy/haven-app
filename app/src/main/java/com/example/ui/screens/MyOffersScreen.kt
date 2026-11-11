@@ -69,7 +69,8 @@ fun MyOffersScreen(
   viewModel: MyOffersViewModel = viewModel(factory = MyOffersViewModel.factory(LocalContext.current)),
   onOpenOffer: (String) -> Unit = {},
   onCreateOffer: () -> Unit = {},
-  onEditOffer: (String) -> Unit = {}
+  onEditOffer: (String) -> Unit = {},
+  onOfferDeleted: () -> Unit = {}
 ) {
   val state by viewModel.state.collectAsState()
   MyOffersScreen(
@@ -83,7 +84,7 @@ fun MyOffersScreen(
     onOpenOffer = onOpenOffer,
     onCreateOffer = onCreateOffer,
     onEditOffer = onEditOffer,
-    onDeleteOffer = viewModel::deleteOffer,
+    onDeleteOffer = { slug -> viewModel.deleteOffer(slug, onOfferDeleted) },
     onLoadMore = viewModel::loadMore,
     modifier = modifier
   )

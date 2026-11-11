@@ -121,3 +121,19 @@ no checkbox is completed by deletion. No application code or release is changed.
 - `MOBILE_NATIVE_API_BACKLOG.md`: the Android maintainer completes the unchecked Android implementation tasks from the inspected handoff.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Physical-device and authenticated production acceptance are completed later with the owner.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Remaining obvious UI quality issues are corrected against the prototypes.
+
+## PR #45 review corrections — 2026-11-11
+
+Passing source 8cee490 (CI 43004286703) had confirmed freshness races. Added
+invalidation generation so pre-write responses cannot mark the profile fresh;
+forced requests during a fetch coalesce into one follow-up. Request identity
+and account reset protect replacement work. Added regressions for in-flight
+invalidation, forced follow-up and account switch; ordinary re-entry still
+coalesces. Confirmed provider follow/unfollow, Following unfollow and My offers
+delete now invalidate profile only after success and with current-account guards.
+No source from PR #44 included; preserve its own-profile showSave=false change
+when the branches integrate. Whitespace PASS; local Android checks NOT RUN per
+data budget. Fresh CI and device mutation-return/slow-network evidence remain
+required. Acting maintainer/executing agent reviews on owner notification,
+target 2026-11-12; supported signed build/device are prerequisites. No polling,
+merge or release performed.

@@ -9,6 +9,7 @@ import com.example.data.HavenProfileRepository
 import com.example.data.ProfileOverview
 import com.example.data.ProfileRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,9 +36,14 @@ class ProfileViewModel(
   private var job: Job? = null
   private var actor: String? = null
   private var lastLoadedAt: Long? = null
+  private var generation = 0L
+  private var requestId = 0L
+  private var refreshQueued = false
 
   fun clear() {
     job?.cancel()
+    requestId++
+    refreshQueued = false
     actor = null
     lastLoadedAt = null
     _state.value = ProfileUiState()
@@ -50,7 +56,10 @@ class ProfileViewModel(
    * without a redundant background fetch while the profile is off-screen.
    */
   fun invalidate() {
-    if (actor != null) lastLoadedAt = null
+    if (actor != null) {
+      generation++
+      lastLoadedAt = null
+    }
   }
 
   /**
@@ -62,16 +71,21 @@ class ProfileViewModel(
    * clean state, so another account's cached profile is never reused.
    *
    * [force] bypasses the freshness window, but no second request is started
-   * while one is already in flight, so rapid re-entry cannot stack requests.
+   * while one is already in flight. Forced loads coalesce into one follow-up.
    */
   fun load(personId: String, force: Boolean = false) {
     if (actor != personId) {
       job?.cancel()
+      requestId++
+      refreshQueued = false
       actor = personId
       lastLoadedAt = null
       _state.value = ProfileUiState(loading = true)
     } else {
-      if (job?.isActive == true) return
+      if (job?.isActive == true) {
+        if (force) refreshQueued = true
+        return
+      }
       val current = _state.value
       val fresh = current.profile != null &&
         lastLoadedAt?.let { now() - it < FRESHNESS_WINDOW_MS } == true
@@ -83,25 +97,36 @@ class ProfileViewModel(
       }
     }
     val requestActor = actor
-    job = viewModelScope.launch {
+    val currentRequest = ++requestId
+    val requestedGeneration = generation
+    job = viewModelScope.launch(start = CoroutineStart.LAZY) {
       try {
         val profile = repository.load()
         check(profile.id == personId) { "Profile identity changed" }
-        if (actor != requestActor) return@launch
-        lastLoadedAt = now()
+        if (actor != requestActor || requestId != currentRequest) return@launch
+        lastLoadedAt = if (generation == requestedGeneration) now() else null
         _state.value = ProfileUiState(profile = profile)
       } catch (cancelled: CancellationException) {
         throw cancelled
       } catch (_: Exception) {
-        if (actor != requestActor) return@launch
+        if (actor != requestActor || requestId != currentRequest) return@launch
         val retained = _state.value.profile
         _state.value = if (retained != null) {
           ProfileUiState(profile = retained, error = LOAD_ERROR)
         } else {
           ProfileUiState(error = LOAD_ERROR)
         }
+      } finally {
+        if (actor == requestActor && requestId == currentRequest) {
+          job = null
+          if (refreshQueued) {
+            refreshQueued = false
+            load(personId, force = true)
+          }
+        }
       }
     }
+    job?.start()
   }
 
   companion object {
