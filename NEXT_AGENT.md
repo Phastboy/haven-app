@@ -128,3 +128,8 @@ Fresh CI and rendered artifacts still required; physical-device contrast,
 TalkBack and network failure evidence remain separate and unverified. Acting
 maintainer/executing agent reviews on owner notification, target 2026-11-12,
 with supported device/build prerequisites. No CI polling, merge or release.
+
+PR #44 follow-up: run 43004058297 failed unit-test compilation due to an
+incorrect top-level assertDoesNotExist import introduced in b04cb62. Removed
+the import; existing repository tests call the node member without it. Both
+lint tasks passed on that run; tests did not execute. Fresh CI remains required.
