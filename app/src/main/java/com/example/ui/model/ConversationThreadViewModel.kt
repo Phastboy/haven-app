@@ -23,6 +23,30 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * What the thread's message area should render for the initial history.
+ *
+ * Cached content always wins, so ordinary refreshes never blank the screen:
+ * [RESOLVING_CACHE] and [LOADING_HISTORY] are only reachable while no cached
+ * message exists to display.
+ */
+enum class ThreadContentState {
+  /** Cached or synced messages are available to render. */
+  CONTENT,
+
+  /** The thread was opened and the first local Room emission has not arrived yet. */
+  RESOLVING_CACHE,
+
+  /** The local cache holds no message yet and the remote history load has not settled. */
+  LOADING_HISTORY,
+
+  /** A successful sync confirmed this thread has no messages. */
+  EMPTY,
+
+  /** The history could not be loaded and no cached message exists to fall back to. */
+  UNAVAILABLE
+}
+
 data class ConversationThreadUiState(
   val conversation: ConversationEntity? = null,
   val messages: List<MessageEntity> = emptyList(),
@@ -32,10 +56,28 @@ data class ConversationThreadUiState(
   val inputText: String = "",
   val isSyncing: Boolean = false,
   val syncError: String? = null,
+  val sendError: String? = null,
+  /** True once the local Room query has emitted at least once for this thread. */
+  val localHistoryResolved: Boolean = false,
+  /** True once a successful sync confirmed the persisted thread is empty. */
+  val emptyThreadConfirmed: Boolean = false,
   val pendingAttachedOfferSlug: String? = null,
   val pendingAttachedOfferTitle: String? = null,
   val pendingAttachedOfferPrice: String? = null
-)
+) {
+  /**
+   * Derived, never stored: the renderer decides skeletons, empty state,
+   * unavailable state or message content from this value alone.
+   */
+  val contentState: ThreadContentState
+    get() = when {
+      messages.isNotEmpty() -> ThreadContentState.CONTENT
+      !localHistoryResolved -> ThreadContentState.RESOLVING_CACHE
+      syncError != null && !isSyncing -> ThreadContentState.UNAVAILABLE
+      emptyThreadConfirmed -> ThreadContentState.EMPTY
+      else -> ThreadContentState.LOADING_HISTORY
+    }
+}
 
 class ConversationThreadViewModel(
   private val repository: MessagingRepository,
@@ -92,7 +134,10 @@ class ConversationThreadViewModel(
         messages = emptyList(),
         inputText = "",
         isSyncing = true,
-        syncError = null
+        syncError = null,
+        sendError = null,
+        localHistoryResolved = false,
+        emptyThreadConfirmed = false
       )
     }
 
@@ -106,7 +151,16 @@ class ConversationThreadViewModel(
     // Observe local messages from Room
     observeMessagesJob = viewModelScope.launch {
       repository.observeMessages(conversationId).collect { messageList ->
-        _uiState.update { it.copy(messages = messageList) }
+        _uiState.update {
+          it.copy(
+            messages = messageList,
+            syncError = if (it.syncError != null) {
+              if (messageList.isEmpty()) "Couldn't load messages" else "Offline - viewing cached messages"
+            } else null,
+            localHistoryResolved = true,
+            emptyThreadConfirmed = it.emptyThreadConfirmed && messageList.isEmpty()
+          )
+        }
       }
     }
 
@@ -149,21 +203,42 @@ class ConversationThreadViewModel(
     refreshJob = viewModelScope.launch {
       val syncResult = repository.syncThreadHistory(convId, owner)
       if (generation != request) return@launch
-      if (syncResult.isSuccess) repository.markConversationRead(convId)
-      val hasOlder = if (syncResult.isSuccess) repository.hasOlderMessages(convId) else _uiState.value.hasOlder
-      _uiState.update {
-        it.copy(
-          isSyncing = false,
-          hasOlder = hasOlder,
-          syncError = if (syncResult.isFailure) "Offline - viewing cached messages" else null
-        )
+      if (syncResult.isSuccess) {
+        repository.markConversationRead(convId)
+        val hasOlder = repository.hasOlderMessages(convId)
+        // Read the persisted rows directly: the reactive Room emission can lag
+        // behind this update, and only a confirmed empty store may settle the
+        // empty state without flashing it over content that is about to land.
+        val snapshotEmpty = repository.snapshotMessages(convId).isEmpty()
+        _uiState.update {
+          it.copy(
+            isSyncing = false,
+            hasOlder = hasOlder,
+            syncError = null,
+            sendError = null,
+            emptyThreadConfirmed = snapshotEmpty
+          )
+        }
+      } else {
+        _uiState.update {
+          it.copy(
+            isSyncing = false,
+            syncError = if (it.messages.isEmpty()) {
+              "Couldn't load messages"
+            } else {
+              "Offline - viewing cached messages"
+            }
+          )
+        }
       }
     }
   }
 
   fun loadOlderMessages() {
     val id = currentConversationId ?: return
-    if (_uiState.value.isLoadingOlder || !_uiState.value.hasOlder) return
+    // Paging back only makes sense once content exists; without it the request
+    // would run against a thread whose history has not been loaded yet.
+    if (_uiState.value.messages.isEmpty() || _uiState.value.isLoadingOlder || !_uiState.value.hasOlder) return
     _uiState.update { it.copy(isLoadingOlder = true, olderError = null) }
     val request = generation
     olderJob = viewModelScope.launch {
@@ -210,13 +285,15 @@ class ConversationThreadViewModel(
     if (text.isEmpty()) return
 
     viewModelScope.launch {
-      // Clear input optimistically
+      // Clear input optimistically; a fresh attempt supersedes any earlier
+      // queue failure feedback.
       _uiState.update {
         it.copy(
           inputText = "",
           pendingAttachedOfferSlug = null,
           pendingAttachedOfferTitle = null,
-          pendingAttachedOfferPrice = null
+          pendingAttachedOfferPrice = null,
+          sendError = null
         )
       }
 
@@ -232,7 +309,7 @@ class ConversationThreadViewModel(
       catch (_: Exception) {
         if (currentConversationId == convId) _uiState.update { it.copy(
           inputText = if (it.inputText.isBlank()) text else it.inputText,
-          syncError = "Couldn’t queue your message. Please try again.") }
+          sendError = "Couldn’t queue your message. Please try again.") }
       }
     }
   }

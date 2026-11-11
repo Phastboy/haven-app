@@ -5,11 +5,14 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.messaging.HavenLocalFirstMessagingRepository
 import com.example.data.messaging.db.ConversationEntity
 import com.example.data.messaging.db.HavenDatabase
+import com.example.data.messaging.db.MessageEntity
 import com.example.data.messaging.transport.MockMessagingTransport
 import com.example.ui.model.ConversationThreadViewModel
+import com.example.ui.model.ThreadContentState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -139,6 +142,120 @@ class ConversationThreadViewModelTest {
     testScheduler.advanceUntilIdle()
     assertEquals("Unsent draft survives recreation", viewModel.uiState.value.inputText)
     assertEquals("offer", viewModel.uiState.value.pendingAttachedOfferSlug)
+    viewModel.clear()
+  }
+
+  /**
+   * Runs pending continuations at the current virtual time without advancing
+   * past delays, so in-flight work can be asserted deterministically.
+   */
+  private fun TestCoroutineScheduler.pump() = repeat(10) { runCurrent() }
+
+  @Test
+  fun coldOpenWithoutCachedHistoryReportsRemoteLoadingThenContent() = runTest(testDispatcher) {
+    transport.simulatedDelayMs = 500L
+    viewModel.openConversation("conv-cold-open")
+    // Pump queued continuations without advancing virtual time, so the
+    // simulated transport delay stays in flight while the state is asserted.
+    testScheduler.pump()
+    // Local cache resolved empty and the remote history load is in flight.
+    assertEquals(ThreadContentState.LOADING_HISTORY, viewModel.uiState.value.contentState)
+    assertTrue(viewModel.uiState.value.isSyncing)
+    assertTrue(viewModel.uiState.value.messages.isEmpty())
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    assertTrue(viewModel.uiState.value.messages.isNotEmpty())
+    viewModel.clear()
+  }
+
+  @Test
+  fun coldSyncFailureMarksThreadUnavailableAndRetryRecoversContent() = runTest(testDispatcher) {
+    transport.shouldFailNextFetch = true
+    viewModel.openConversation("conv-cold-fail")
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.UNAVAILABLE, viewModel.uiState.value.contentState)
+    assertEquals("Couldn't load messages", viewModel.uiState.value.syncError)
+    assertTrue(viewModel.uiState.value.messages.isEmpty())
+
+    viewModel.refreshThread()
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    assertEquals(null, viewModel.uiState.value.syncError)
+    assertTrue(viewModel.uiState.value.messages.isNotEmpty())
+    viewModel.clear()
+  }
+
+  @Test
+  fun successfulEmptySyncConfirmsEmptyThreadAndQuietPollDoesNotFlashSkeletons() = runTest(testDispatcher) {
+    transport.threadPages["latest"] = com.example.data.messaging.transport.ConversationThreadPageDto(
+      conversationId = "conv-empty",
+      otherPerson = com.example.data.messaging.transport.RemotePersonDto("peer", "peer", "Peer", null),
+      messages = emptyList(),
+      nextCursor = null,
+      isUnread = false
+    )
+    viewModel.openConversation("conv-empty")
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.EMPTY, viewModel.uiState.value.contentState)
+    assertTrue(viewModel.uiState.value.emptyThreadConfirmed)
+
+    // An ordinary poll refresh on a settled empty thread stays quiet: it must
+    // not flip the empty state back to loading skeletons.
+    transport.simulatedDelayMs = 500L
+    viewModel.refreshThread()
+    testScheduler.pump()
+    assertTrue(viewModel.uiState.value.isSyncing)
+    assertEquals(ThreadContentState.EMPTY, viewModel.uiState.value.contentState)
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.EMPTY, viewModel.uiState.value.contentState)
+    viewModel.clear()
+  }
+
+  @Test
+  fun refreshFailureIsReclassifiedWhenDelayedCachedHistoryArrives() = runTest(testDispatcher) {
+    database.messageDao().insertMessage(MessageEntity(
+      clientMessageId = "late-cache", conversationId = "late-thread", senderPersonId = "peer",
+      isFromMe = false, text = "Retained", timestamp = 1L
+    ))
+    viewModel.clear()
+    viewModel = ConversationThreadViewModel(object : com.example.data.messaging.MessagingRepository by repository {
+      override fun observeMessages(conversationId: String) = kotlinx.coroutines.flow.flow {
+        kotlinx.coroutines.delay(100L)
+        emit(repository.snapshotMessages(conversationId))
+      }
+    })
+    transport.shouldFailNextFetch = true
+    viewModel.openConversation("late-thread", "owner-1")
+    testScheduler.pump()
+    assertNotNull(viewModel.uiState.value.syncError)
+    assertTrue(viewModel.uiState.value.messages.isEmpty())
+    testScheduler.advanceUntilIdle()
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    assertEquals("Offline - viewing cached messages", viewModel.uiState.value.syncError)
+  }
+
+  @Test
+  fun warmCachedThreadKeepsContentAndDistinguishesOfflineRefreshFailure() = runTest(testDispatcher) {
+    database.conversationDao().upsertConversation(ConversationEntity(
+      id = "conv-warm", ownerPersonId = "owner-1", otherUserId = "peer-1",
+      displayName = "Chidi Okeke", handle = "@chidi", avatarUrl = null,
+      lastMessageBody = "Cached hello", lastMessageAt = "2026-11-04T12:00:00Z",
+      lastMessageTimestamp = 1700000000000L, isUnread = false
+    ))
+    database.messageDao().insertMessage(MessageEntity(
+      clientMessageId = "warm-1", conversationId = "conv-warm", senderPersonId = "peer-1",
+      isFromMe = false, text = "Cached hello", timestamp = 1700000000000L
+    ))
+    transport.shouldFailNextFetch = true
+    viewModel.openConversation("conv-warm", "owner-1")
+    testScheduler.pump()
+    // Cached content renders without waiting for the refresh to settle.
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    testScheduler.advanceUntilIdle()
+    // A failed refresh with retained content keeps the content.
+    assertEquals(ThreadContentState.CONTENT, viewModel.uiState.value.contentState)
+    assertEquals("Offline - viewing cached messages", viewModel.uiState.value.syncError)
+    assertEquals(1, viewModel.uiState.value.messages.size)
     viewModel.clear()
   }
 
