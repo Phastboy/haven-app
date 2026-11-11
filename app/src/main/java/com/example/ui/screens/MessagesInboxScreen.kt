@@ -24,6 +24,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,11 +36,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import com.example.data.InboxConversation
 import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.components.InboxConversationRowSkeleton
+import com.example.ui.model.InboxContentState
 import com.example.ui.model.MessagesInboxUiState
 import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
@@ -54,6 +62,25 @@ fun MessagesInboxScreen(
   modifier: Modifier = Modifier,
   listState: LazyListState = rememberLazyListState()
 ) {
+  // New activity reorders the canonical latest-message list. A reader parked
+  // at the top is anchored to the previously first row, which would leave a
+  // new arrival hidden above the viewport; reveal it instead. A reader
+  // mid-list is anchored to a later row and keeps their position untouched.
+  // A restored or freshly composed list starts where it already was.
+  var previousFirstId by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(state.items.firstOrNull()?.id) {
+    val first = state.items.firstOrNull()
+    if (first == null) {
+      previousFirstId = null
+      return@LaunchedEffect
+    }
+    if (previousFirstId != null &&
+      listState.layoutInfo.visibleItemsInfo.firstOrNull()?.key == previousFirstId) {
+      listState.scrollToItem(0)
+    }
+    previousFirstId = first.id
+  }
+
   Column(modifier.fillMaxSize().background(HavenColors.Canvas).testTag("messages_inbox_screen")) {
     HavenTopBarContainer(backgroundColor = HavenColors.Canvas) {
       Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {
@@ -61,25 +88,23 @@ fun MessagesInboxScreen(
           fontSize = 20.sp, color = HavenColors.TextPrimary)
       }
     }
-    when {
-      state.loading && state.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = HavenColors.Primary, modifier = Modifier.testTag("messages_loading"))
+    // Offline banner: shown only while cached rows stay visible. An inbox that
+    // could not be loaded at all reports through its unavailable state below.
+    if (state.offlineBanner != null && state.contentState == InboxContentState.CONTENT) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(HavenColors.SurfaceContainer)
+          .padding(vertical = 4.dp, horizontal = 16.dp)
+          .testTag("messages_offline_banner"),
+        contentAlignment = Alignment.Center
+      ) {
+        Text(state.offlineBanner, fontFamily = InterFontFamily,
+          fontSize = 12.sp, color = HavenColors.TextSecondary)
       }
-      state.error != null && state.items.isEmpty() -> Column(Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(state.error, color = HavenColors.TextSecondary, fontFamily = InterFontFamily,
-          fontSize = 14.sp, modifier = Modifier.testTag("messages_error"))
-        TextButton(onClick = onRetry) { Text("Try again") }
-      }
-      state.items.isEmpty() -> Column(Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("No messages yet", color = HavenColors.TextPrimary, fontFamily = InterFontFamily,
-          fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-        Spacer(Modifier.height(8.dp))
-        Text("When you message someone about an offer or someone reaches out to you, conversations will appear here.",
-          color = HavenColors.TextSecondary, fontFamily = InterFontFamily, fontSize = 14.sp)
-      }
-      else -> LazyColumn(Modifier.fillMaxSize().testTag("messages_list"), state = listState) {
+    }
+    when (state.contentState) {
+      InboxContentState.CONTENT -> LazyColumn(Modifier.fillMaxSize().testTag("messages_list"), state = listState) {
         items(state.items, key = InboxConversation::id) { item ->
           InboxConversationRow(item, onClick = { onSelectConversation(item.id) })
         }
@@ -93,9 +118,56 @@ fun MessagesInboxScreen(
           }
         }
       }
+      InboxContentState.RESOLVING_CACHE,
+      InboxContentState.LOADING -> LazyColumn(Modifier.fillMaxSize().testTag("messages_skeleton_list")) {
+        items(
+          count = inboxSkeletonSpecs.size,
+          key = { index -> "inbox_skeleton_$index" }
+        ) { index ->
+          val spec = inboxSkeletonSpecs[index]
+          InboxConversationRowSkeleton(
+            nameWidth = spec.nameWidth,
+            previewWidth = spec.previewWidth
+          )
+        }
+      }
+      InboxContentState.EMPTY -> Column(Modifier.fillMaxSize().padding(32.dp).testTag("messages_empty_state"),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text("No messages yet", color = HavenColors.TextPrimary, fontFamily = InterFontFamily,
+          fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+        Spacer(Modifier.height(8.dp))
+        Text("When you message someone about an offer or someone reaches out to you, conversations will appear here.",
+          color = HavenColors.TextSecondary, fontFamily = InterFontFamily, fontSize = 14.sp)
+      }
+      InboxContentState.UNAVAILABLE -> Column(Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        if (state.error != null) Text(state.error, color = HavenColors.TextSecondary, fontFamily = InterFontFamily,
+          fontSize = 14.sp, modifier = Modifier.testTag("messages_error"))
+        TextButton(onClick = onRetry, modifier = Modifier.testTag("messages_retry")) { Text("Try again") }
+      }
     }
   }
 }
+
+/**
+ * One row-shaped placeholder: name-bar and preview-line widths, varied like a
+ * freshly opened inbox.
+ */
+private data class InboxSkeletonSpec(
+  val nameWidth: Dp,
+  val previewWidth: Dp
+)
+
+private val inboxSkeletonSpecs = listOf(
+  InboxSkeletonSpec(nameWidth = 150.dp, previewWidth = 240.dp),
+  InboxSkeletonSpec(nameWidth = 120.dp, previewWidth = 190.dp),
+  InboxSkeletonSpec(nameWidth = 170.dp, previewWidth = 285.dp),
+  InboxSkeletonSpec(nameWidth = 105.dp, previewWidth = 150.dp),
+  InboxSkeletonSpec(nameWidth = 160.dp, previewWidth = 230.dp),
+  InboxSkeletonSpec(nameWidth = 130.dp, previewWidth = 270.dp),
+  InboxSkeletonSpec(nameWidth = 115.dp, previewWidth = 175.dp),
+  InboxSkeletonSpec(nameWidth = 155.dp, previewWidth = 215.dp)
+)
 
 @Composable
 private fun InboxConversationRow(item: InboxConversation, onClick: () -> Unit) {

@@ -4,6 +4,7 @@ import com.example.data.ConversationInboxPage
 import com.example.data.HavenMessagesRepository
 import com.example.data.InboxConversation
 import com.example.data.MessagesInboxRepository
+import com.example.ui.model.InboxContentState
 import com.example.ui.model.MessagesInboxViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -92,6 +93,15 @@ class MessagesInboxViewModelTest {
     advanceUntilIdle()
     assertTrue(model.state.value.items.isEmpty())
     assertEquals("Couldn’t load messages. Please try again.", model.state.value.error)
+    assertEquals(InboxContentState.UNAVAILABLE, model.state.value.contentState)
+  }
+
+  @Test fun `fallback load settles the empty state once it succeeds`() = runTest(dispatcher) {
+    val model = MessagesInboxViewModel(fakeInboxRepo { ConversationInboxPage(emptyList(), null) })
+    model.load("owner")
+    advanceUntilIdle()
+    assertEquals(InboxContentState.EMPTY, model.state.value.contentState)
+    assertTrue(model.state.value.items.isEmpty())
   }
 
   @Test fun `repository parses the current-person inbox response`() {

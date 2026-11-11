@@ -1,4 +1,4 @@
-# PR #39 review corrections — 2026-11-11
+# PR #39 / #40 review corrections — 2026-11-11
 
 Owner requests review resolution and merge, explicitly no release. Confirmed
 rendering tests captured immutable state outside composition; changing-state
