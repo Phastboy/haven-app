@@ -19,7 +19,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -211,6 +213,21 @@ class ProfileAndThemeRobolectricTest {
       compose.onNodeWithTag("conversation_conv-1").performClick()
       assertEquals("conv-1", selected)
       saveScreenshot("messages-${theme.name.lowercase()}.png")
+    }
+  }
+  @Test fun `messages inbox renders row skeletons in both themes`() {
+    val mode = mutableStateOf(ThemeMode.LIGHT)
+    compose.setContent {
+      HavenTheme(mode.value) {
+        MessagesInboxScreen(MessagesInboxUiState(), {}, {}, {})
+      }
+    }
+    for (theme in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
+      mode.value = theme
+      compose.waitForIdle()
+      compose.onNodeWithText("Messages").assertIsDisplayed()
+      compose.onAllNodesWithTag("conversation_row_skeleton").assertCountEquals(8)
+      saveScreenshot("messages-skeleton-${theme.name.lowercase()}.png")
     }
   }
   @Test fun `profile Inquired row opens the native collection`() {

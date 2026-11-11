@@ -38,6 +38,13 @@ interface MessagingRepository {
   fun observeConversation(conversationId: String): Flow<ConversationEntity?>
   suspend fun refreshConversations(ownerPersonId: String): Result<Unit>
   suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean>
+  /**
+   * One-shot read of the currently persisted inbox rows for an owner,
+   * bypassing the reactive flow. Used to decide settled states after a sync:
+   * the transaction has committed by the time callers run this, so it reflects
+   * what the flow is about to emit.
+   */
+  suspend fun snapshotConversations(ownerPersonId: String): List<ConversationEntity>
   suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
   suspend fun loadOlderMessages(conversationId: String): Result<Boolean>
   suspend fun hasOlderMessages(conversationId: String): Boolean = true
@@ -128,6 +135,10 @@ class HavenLocalFirstMessagingRepository(
     } else {
       Result.failure(result.exceptionOrNull() ?: RuntimeException("Failed to refresh conversations"))
     }
+  }
+
+  override suspend fun snapshotConversations(ownerPersonId: String): List<ConversationEntity> = withContext(ioDispatcher) {
+    conversationDao.getConversations(ownerPersonId)
   }
 
   override suspend fun loadMoreConversations(ownerPersonId: String): Result<Boolean> = withContext(ioDispatcher) {

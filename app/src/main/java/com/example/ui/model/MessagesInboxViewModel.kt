@@ -21,6 +21,31 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * What the inbox message area should render.
+ *
+ * Cached rows always win, so ordinary revalidations never blank the screen:
+ * [RESOLVING_CACHE] and [LOADING] are only reachable while no cached row
+ * exists to display, and a successfully loaded empty inbox keeps its truthful
+ * empty shell across later refreshes instead of flashing a spinner again.
+ */
+enum class InboxContentState {
+  /** Cached or synced conversation rows are available to render. */
+  CONTENT,
+
+  /** The inbox was opened and the first local Room emission has not arrived yet. */
+  RESOLVING_CACHE,
+
+  /** The local cache holds no row yet and the remote inbox load has not settled. */
+  LOADING,
+
+  /** A successful load confirmed this inbox has no conversations. */
+  EMPTY,
+
+  /** The inbox could not be loaded and no cached row exists to fall back to. */
+  UNAVAILABLE
+}
+
 data class MessagesInboxUiState(
   val items: List<InboxConversation> = emptyList(),
   val nextCursor: String? = null,
@@ -28,8 +53,27 @@ data class MessagesInboxUiState(
   val loadingMore: Boolean = false,
   val error: String? = null,
   val globalUnread: Boolean = false,
-  val unreadConfirmed: Boolean = false
-)
+  val unreadConfirmed: Boolean = false,
+  /** Offline-style refresh failure while cached rows stay visible. */
+  val offlineBanner: String? = null,
+  /** True once the local Room query has emitted at least once for this owner. */
+  val localHistoryResolved: Boolean = false,
+  /** True once a successful load confirmed the persisted inbox is empty. */
+  val emptyInboxConfirmed: Boolean = false
+) {
+  /**
+   * Derived, never stored: the renderer decides row skeletons, the empty
+   * shell, the unavailable state or conversation rows from this value alone.
+   */
+  val contentState: InboxContentState
+    get() = when {
+      items.isNotEmpty() -> InboxContentState.CONTENT
+      !localHistoryResolved -> InboxContentState.RESOLVING_CACHE
+      error != null && !loading -> InboxContentState.UNAVAILABLE
+      emptyInboxConfirmed -> InboxContentState.EMPTY
+      else -> InboxContentState.LOADING
+    }
+}
 
 class MessagesInboxViewModel(
   private val repository: MessagesInboxRepository,
@@ -74,7 +118,9 @@ class MessagesInboxViewModel(
   }
 
   fun load(personId: String, force: Boolean = false) {
-    if (!force && actor == personId && (_state.value.loading || _state.value.items.isNotEmpty() || _state.value.nextCursor == null && _state.value.error != null)) {
+    // A loaded-empty inbox counts as loaded: re-entering the tab revalidates
+    // quietly instead of flashing the cold loading state again.
+    if (!force && actor == personId && (_state.value.loading || _state.value.items.isNotEmpty() || _state.value.emptyInboxConfirmed || _state.value.nextCursor == null && _state.value.error != null)) {
       refreshUnread()
       return
     }
@@ -84,7 +130,7 @@ class MessagesInboxViewModel(
 
     val hasExistingItems = _state.value.items.isNotEmpty()
     if (!hasExistingItems) {
-      _state.value = _state.value.copy(loading = true, loadingMore = false, error = null)
+      _state.value = _state.value.copy(loading = true, loadingMore = false, error = null, offlineBanner = null)
     }
 
     refreshUnread()
@@ -98,7 +144,9 @@ class MessagesInboxViewModel(
             val inboxItems = entities.map { it.toInboxConversation() }
             _state.value = _state.value.copy(
               items = inboxItems,
-              loading = if (inboxItems.isNotEmpty()) false else _state.value.loading
+              loading = if (inboxItems.isNotEmpty()) false else _state.value.loading,
+              localHistoryResolved = true,
+              emptyInboxConfirmed = _state.value.emptyInboxConfirmed && inboxItems.isEmpty()
             )
           }
         }
@@ -109,12 +157,23 @@ class MessagesInboxViewModel(
         val result = localMessagingRepository.refreshConversations(personId)
         if (actor == personId) {
           if (result.isSuccess) {
-            _state.value = _state.value.copy(loading = false, error = null)
+            // Read the persisted rows directly: the reactive Room emission can
+            // lag behind this update, and only a confirmed empty store may
+            // settle the empty state without flashing it over rows that are
+            // about to land.
+            val snapshotEmpty = localMessagingRepository.snapshotConversations(personId).isEmpty()
+            _state.value = _state.value.copy(
+              loading = false,
+              error = null,
+              offlineBanner = null,
+              emptyInboxConfirmed = snapshotEmpty
+            )
           } else {
             val isCacheAvailable = _state.value.items.isNotEmpty()
             _state.value = _state.value.copy(
               loading = false,
-              error = if (isCacheAvailable) null else "Couldn’t load messages. Please try again."
+              error = if (isCacheAvailable) null else "Couldn’t load messages. Please try again.",
+              offlineBanner = if (isCacheAvailable) "Offline - viewing cached messages" else null
             )
           }
         }
@@ -124,11 +183,19 @@ class MessagesInboxViewModel(
       job = viewModelScope.launch {
         try {
           val page = repository.load(null)
-          if (actor == personId) _state.value = page.toState().copy(globalUnread = _state.value.globalUnread, unreadConfirmed = _state.value.unreadConfirmed)
+          if (actor == personId) _state.value = page.toState().copy(
+            globalUnread = _state.value.globalUnread,
+            unreadConfirmed = _state.value.unreadConfirmed,
+            localHistoryResolved = true,
+            emptyInboxConfirmed = page.items.isEmpty()
+          )
         } catch (cancelled: CancellationException) {
           throw cancelled
         } catch (_: Exception) {
-          if (actor == personId) _state.value = MessagesInboxUiState(error = "Couldn’t load messages. Please try again.")
+          if (actor == personId) _state.value = MessagesInboxUiState(
+            error = "Couldn’t load messages. Please try again.",
+            localHistoryResolved = true
+          )
         }
       }
     }
