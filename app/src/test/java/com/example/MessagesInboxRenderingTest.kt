@@ -38,10 +38,13 @@ class MessagesInboxRenderingTest {
     )
   }
 
-  private fun setContentWith(state: MessagesInboxUiState, onRetry: () -> Unit = {}) {
+  private fun setContentWith(state: MessagesInboxUiState, onRetry: () -> Unit = {}) =
+    setContentWithState({ state }, onRetry)
+
+  private fun setContentWithState(state: () -> MessagesInboxUiState, onRetry: () -> Unit = {}) {
     rule.setContent {
       HavenTheme {
-        MessagesInboxScreen(state = state, onRetry = onRetry, onLoadMore = {}, onSelectConversation = {})
+        MessagesInboxScreen(state = state(), onRetry = onRetry, onLoadMore = {}, onSelectConversation = {})
       }
     }
   }
@@ -137,7 +140,7 @@ class MessagesInboxRenderingTest {
 
   @Test fun newArrivalIsVisibleWhileParkedAtTheTopOfTheInbox() {
     var uiState by mutableStateOf(MessagesInboxUiState(items = conversations(30), localHistoryResolved = true))
-    setContentWith(uiState)
+    setContentWithState({ uiState })
     rule.waitForIdle()
     rule.onNodeWithTag("messages_list").performScrollToIndex(0)
     rule.waitForIdle()
@@ -155,7 +158,7 @@ class MessagesInboxRenderingTest {
 
   @Test fun newArrivalDoesNotStealScrollWhileReadingDeeperRows() {
     var uiState by mutableStateOf(MessagesInboxUiState(items = conversations(30), localHistoryResolved = true))
-    setContentWith(uiState)
+    setContentWithState({ uiState })
     rule.waitForIdle()
     rule.onNodeWithTag("messages_list").performScrollToIndex(10)
     rule.waitForIdle()

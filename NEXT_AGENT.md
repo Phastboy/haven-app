@@ -1,3 +1,18 @@
+# PR #40 review corrections — 2026-11-11
+
+Owner requests review resolution and merge, explicitly no release. Confirmed
+rendering tests captured immutable state outside composition; changing-state
+cases now invoke a state provider inside composition. Confirmed refresh/cache
+race: failed refresh status must survive later Room content. Corrected failure
+presentation and added deterministic delayed-cache regression alongside existing
+warm-cache tests. Failing runs retained in /tmp/haven39-failure.log and
+/tmp/haven40-failure.log. Whitespace PASS; no local Android execution per data
+budget. Fresh exact-head CI required before resolving findings/merge. Acting
+maintainer/agent owns evidence review on owner notification, target 2026-11-12;
+no CI polling. Device evidence remains separate. Camera capture for offer images
+is owner-approved future work alongside opt-in location issue #28, not part of
+these PRs. No release/tag authorized; batch for later eligible release.
+
 # Android handoff — v0.0.5, 2026-11-10
 
 Read AGENTS.md, prd.md, MOBILE_OFFERS_FEED.md and PROJECT_INFO.md.

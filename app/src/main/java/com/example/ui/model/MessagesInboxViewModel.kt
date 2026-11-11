@@ -56,6 +56,8 @@ data class MessagesInboxUiState(
   val unreadConfirmed: Boolean = false,
   /** Offline-style refresh failure while cached rows stay visible. */
   val offlineBanner: String? = null,
+  /** Retained independently so a late Room emission cannot hide refresh failure. */
+  val refreshFailed: Boolean = false,
   /** True once the local Room query has emitted at least once for this owner. */
   val localHistoryResolved: Boolean = false,
   /** True once a successful load confirmed the persisted inbox is empty. */
@@ -144,6 +146,8 @@ class MessagesInboxViewModel(
             val inboxItems = entities.map { it.toInboxConversation() }
             _state.value = _state.value.copy(
               items = inboxItems,
+              offlineBanner = if (_state.value.refreshFailed && inboxItems.isNotEmpty()) "Offline - viewing cached messages" else null,
+              error = if (inboxItems.isNotEmpty() && _state.value.error == "Couldn’t load messages. Please try again.") null else _state.value.error,
               loading = if (inboxItems.isNotEmpty()) false else _state.value.loading,
               localHistoryResolved = true,
               emptyInboxConfirmed = _state.value.emptyInboxConfirmed && inboxItems.isEmpty()
@@ -166,12 +170,14 @@ class MessagesInboxViewModel(
               loading = false,
               error = null,
               offlineBanner = null,
+              refreshFailed = false,
               emptyInboxConfirmed = snapshotEmpty
             )
           } else {
             val isCacheAvailable = _state.value.items.isNotEmpty()
             _state.value = _state.value.copy(
               loading = false,
+              refreshFailed = true,
               error = if (isCacheAvailable) null else "Couldn’t load messages. Please try again.",
               offlineBanner = if (isCacheAvailable) "Offline - viewing cached messages" else null
             )

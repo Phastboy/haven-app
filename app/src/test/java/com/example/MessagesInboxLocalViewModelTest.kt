@@ -156,6 +156,33 @@ class MessagesInboxLocalViewModelTest {
   }
 
   @Test
+  fun refreshFailureStaysVisibleWhenCachedRowsArriveAfterFailure() = runTest(testDispatcher) {
+    database.conversationDao().upsertConversation(cachedConversation("late-row", "late-owner", 1L))
+    viewModel.clear()
+    viewModel = MessagesInboxViewModel(
+      repository = object : MessagesInboxRepository {
+        override suspend fun load(after: String?) = ConversationInboxPage(emptyList(), null)
+        override suspend fun getGlobalUnread() = false
+      },
+      localMessagingRepository = object : com.example.data.messaging.MessagingRepository by repository {
+        override fun observeConversations(ownerPersonId: String) = kotlinx.coroutines.flow.flow {
+          kotlinx.coroutines.delay(100L)
+          emit(repository.snapshotConversations(ownerPersonId))
+        }
+      }
+    )
+    transport.shouldFailNextFetch = true
+    viewModel.load("late-owner")
+    testScheduler.pump()
+    assertTrue(viewModel.state.value.refreshFailed)
+    assertTrue(viewModel.state.value.items.isEmpty())
+    testScheduler.advanceUntilIdle()
+    assertEquals(InboxContentState.CONTENT, viewModel.state.value.contentState)
+    assertEquals("Offline - viewing cached messages", viewModel.state.value.offlineBanner)
+    assertNull(viewModel.state.value.error)
+  }
+
+  @Test
   fun warmCachedRowsRetainContentAndReportOfflineRefreshFailure() = runTest(testDispatcher) {
     database.conversationDao().upsertConversation(cachedConversation("conv-warm", "owner-warm", 1_700_000_000_000L))
     transport.shouldFailNextFetch = true
