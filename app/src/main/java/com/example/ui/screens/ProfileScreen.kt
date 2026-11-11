@@ -198,7 +198,7 @@ fun ProfileScreen(
         profile.offers.chunked(2).forEach { row ->
           Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { offer ->
-              FeedOfferCard(offer, Modifier.weight(1f)) {
+              FeedOfferCard(offer, Modifier.weight(1f), showSave = false) {
                 onOpenOffer?.invoke(offer.slug) ?: onOpenWeb("/offers/${offer.slug}")
               }
             }

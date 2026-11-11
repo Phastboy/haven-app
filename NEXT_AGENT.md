@@ -33,6 +33,32 @@ exact-head CI required before review/merge; no CI polling. Shares
 `OffersScreen.kt` with #34 (PR #44) at disjoint regions (save state vs. profile
 load) — rebase if that merges first. Device verification remains separate.
 
+# Issue #34 shared save button — 2026-11-11
+
+Owner issue #34: one configurable, theme-aware save control reused by feed,
+provider and saved cards plus offer detail, removing the unconditional white
+card-heart tint. Added `ui/components/SaveOfferButton.kt` with
+`SaveOfferButtonDefaults` presets (card 28dp/16dp, detail 44dp/22dp) over a
+shared 48dp touch target. The scrim is `HavenColors.Canvas` at 0.85 alpha,
+matching the existing detail `FrostedCircleButton`; no platform backdrop blur is
+assumed, so it is valid on minSdk 24. Saved fill uses `HavenColors.Primary` and
+the unsaved outline uses `HavenColors.TextPrimary`. Pending/disabled keep the
+icon, change the label (Save/Unsave/Saving offer) and dim to 0.55 without
+accepting clicks.
+
+`FeedOfferCard` (feed/provider/saved) and `OfferDetailScreen` /
+`NativeOfferDetailScreen` now render the shared control; `OffersScreen` wires the
+detail `saving` flag from `savingSlugs`. Auth, network writes, rollback and owner
+suppression stay in the screen/state layers.
+
+Verification is Robolectric (`SaveOfferButtonRobolectricTest`): touch target
+>=48dp with distinct 28/44 visible circles, Save/Unsave/Saving semantics,
+enabled/disabled/pending click behaviour, and rendered centre-pixel contrast over
+mid-gray busy stripes plus a theme-following scrim over black/white covers in
+both themes. Screenshots land in `build/reports/screenshots/`. Android checks run
+on GitHub CI only; no local Gradle execution per data budget. No release
+authorized.
+
 # PR #39 / #40 review corrections — 2026-11-11
 
 Owner requests review resolution and merge, explicitly no release. Confirmed
@@ -137,3 +163,24 @@ data budget. Fresh CI and device mutation-return/slow-network evidence remain
 required. Acting maintainer/executing agent reviews on owner notification,
 target 2026-11-12; supported signed build/device are prerequisites. No polling,
 merge or release performed.
+
+## PR #44 review corrections — 2026-11-11
+
+CI 43001629738 on 5eb426e failed Compose Modifier-factory lint in the test
+helper. Converted it to a receiver-preserving Modifier extension. Confirmed
+review fixes: own-profile cards hide Save (with navigation regression), contrast
+sampling stays inside the glass circle, unsaved screenshots precede the state
+change, and shared accessibility labels use string resources. Screenshot names
+are test-owned literals; no untrusted path input exists (static analyzer warning).
+No blanket lint suppression or baseline added. Existing public-component KDoc
+covers its contract; tests do not need artificial docstrings for a bot percentage.
+Whitespace checked; Android build/tests/lint NOT RUN locally per data budget.
+Fresh CI and rendered artifacts still required; physical-device contrast,
+TalkBack and network failure evidence remain separate and unverified. Acting
+maintainer/executing agent reviews on owner notification, target 2026-11-12,
+with supported device/build prerequisites. No CI polling, merge or release.
+
+PR #44 follow-up: run 43004058297 failed unit-test compilation due to an
+incorrect top-level assertDoesNotExist import introduced in b04cb62. Removed
+the import; existing repository tests call the node member without it. Both
+lint tasks passed on that run; tests did not execute. Fresh CI remains required.

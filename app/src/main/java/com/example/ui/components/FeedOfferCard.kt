@@ -10,12 +10,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -23,10 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,24 +75,13 @@ fun FeedOfferCard(
           }
         }
       )
-      if (showSave) Box(
-        modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
-          .clickable(enabled = !saving, role = Role.Button, onClick = { (onSave ?: onOpen).invoke() }),
-        contentAlignment = Alignment.Center
-      ) {
-        Box(
-          Modifier.size(28.dp).clip(RoundedCornerShape(14.dp))
-            .background(Color.Black.copy(alpha = 0.25f)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = if (saving) "Saving offer" else if (saved) "Unsave offer" else "Save offer",
-            tint = Color.White,
-            modifier = Modifier.size(16.dp)
-          )
-        }
-      }
+      if (showSave) SaveOfferButton(
+        saved = saved,
+        saving = saving,
+        onClick = { (onSave ?: onOpen).invoke() },
+        modifier = Modifier.align(Alignment.TopEnd),
+        testTag = "offer_save_${offer.id}"
+      )
     }
     Spacer(Modifier.height(10.dp))
     Text(

@@ -501,7 +501,8 @@ fun OffersScreen(
           },
           onOpenProvider = { handle -> navStack = navStack + OffersDestination.ProviderProfile(handle) },
           onSignInRequested = onNavigateToSignIn,
-          modifier = modifier
+          modifier = modifier,
+          saving = currentDestination.slug in savingSlugs
         )
         return
       }
