@@ -37,9 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,6 +66,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.SubcomposeAsyncImage
+import com.example.ui.components.SaveOfferButton
+import com.example.ui.components.SaveOfferButtonDefaults
 import com.example.ui.components.shimmerBackground
 import com.example.ui.model.Offer
 import com.example.data.OfferDetail
@@ -100,7 +100,8 @@ fun OfferDetailScreen(
   onSignInRequested: () -> Unit,
   modifier: Modifier = Modifier,
   onOpenProvider: (() -> Unit)? = null,
-  formattedPrice: String? = null
+  formattedPrice: String? = null,
+  saving: Boolean = false
 ) {
   val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
   var authIntent by remember { mutableStateOf<DetailAuthIntent?>(null) }
@@ -133,6 +134,7 @@ fun OfferDetailScreen(
         OfferGallery(
           offer = offer,
           isSaved = isSaved,
+          saving = saving,
           statusBarTop = statusBarTop,
           onBack = onBack,
           onToggleSave = {
@@ -234,7 +236,8 @@ fun NativeOfferDetailScreen(
   onBack: () -> Unit, onRetry: () -> Unit, onToggleSave: () -> Unit,
   onMessageProvider: () -> Unit, onSignInRequested: () -> Unit,
   onOpenProvider: (String) -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  saving: Boolean = false
 ) {
   BackHandler(enabled = offer == null, onBack = onBack)
   if (offer == null) {
@@ -262,7 +265,8 @@ fun NativeOfferDetailScreen(
     onToggleSave = onToggleSave, onMessageProvider = onMessageProvider,
     onSignInRequested = onSignInRequested, modifier = modifier,
     onOpenProvider = { onOpenProvider(offer.makerHandle) },
-    formattedPrice = offer.priceDisplay
+    formattedPrice = offer.priceDisplay,
+    saving = saving
   )
 }
 
@@ -286,6 +290,7 @@ private fun OfferDetailLoadingSkeleton(modifier: Modifier = Modifier) {
 private fun OfferGallery(
   offer: Offer,
   isSaved: Boolean,
+  saving: Boolean,
   statusBarTop: androidx.compose.ui.unit.Dp,
   onBack: () -> Unit,
   onToggleSave: () -> Unit
@@ -363,18 +368,14 @@ private fun OfferGallery(
         )
       }
 
-      FrostedCircleButton(
-        contentDescription = if (isSaved) "Unsave offer" else "Save offer",
+      SaveOfferButton(
+        saved = isSaved,
+        saving = saving,
         onClick = onToggleSave,
+        containerSize = SaveOfferButtonDefaults.DetailContainerSize,
+        iconSize = SaveOfferButtonDefaults.DetailIconSize,
         testTag = "offer_detail_save"
-      ) {
-        Icon(
-          imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-          contentDescription = null,
-          tint = HavenColors.TextPrimary,
-          modifier = Modifier.size(22.dp)
-        )
-      }
+      )
     }
 
     if (images.size > 1) {
