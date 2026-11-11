@@ -2,7 +2,7 @@
 
 > Current inventory (2026-11-06): this document preserves the original page batch
 > and its contracts. Native create/edit and messaging are now merged; see
-> `MOBILE_OFFER_LIFECYCLE.md` and `MOBILE_NATIVE_API_BACKLOG.md`. Remaining API
+> `MOBILE_OFFER_LIFECYCLE.md` and [historical record](https://github.com/Phastboy/haven-app/blob/e90cfb3d0c79be41856c707a5d69e0a1a418ea32/MOBILE_NATIVE_API_BACKLOG.md). Remaining API
 > work and the source-inspected Android tasks are in `MOBILE_NATIVE_API_SWEEP.md`
 > and `MOBILE_NATIVE_API_SWEEP.md`; sweep routes are released/deployed in v0.8.65.
 
@@ -183,7 +183,7 @@ remaining Android work are in `MOBILE_NATIVE_API_SWEEP.md` and
 
 Source/CI/deployment success does not establish authenticated end-to-end or
 physical-device acceptance. Historical local read/save evidence remains in
-[the v0.8.5 report](verification/native-api-v085/RESULT.md).
+[the v0.8.5 report](https://github.com/Phastboy/haven/blob/main/expts/rust/verification/native-api-v085/RESULT.md).
 
 ## Next mobile pickup
 

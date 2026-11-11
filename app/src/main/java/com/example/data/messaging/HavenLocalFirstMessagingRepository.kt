@@ -48,6 +48,13 @@ interface MessagingRepository {
   suspend fun syncThreadHistory(conversationId: String, ownerPersonId: String? = null): Result<Unit>
   suspend fun loadOlderMessages(conversationId: String): Result<Boolean>
   suspend fun hasOlderMessages(conversationId: String): Boolean = true
+  /**
+   * One-shot read of the currently persisted rows for a thread, bypassing the
+   * reactive flow. Used to decide settled states after a sync: the transaction
+   * has committed by the time callers run this, so it reflects what the flow
+   * is about to emit.
+   */
+  suspend fun snapshotMessages(conversationId: String): List<MessageEntity>
   suspend fun sendMessage(
     conversationId: String,
     text: String,
@@ -205,6 +212,10 @@ class HavenLocalFirstMessagingRepository(
 
   override suspend fun hasOlderMessages(conversationId: String): Boolean = withContext(ioDispatcher) {
     syncStateDao.getSyncState("thread_$conversationId")?.nextCursor != null
+  }
+
+  override suspend fun snapshotMessages(conversationId: String): List<MessageEntity> = withContext(ioDispatcher) {
+    messageDao.getMessages(conversationId)
   }
 
   override suspend fun loadOlderMessages(conversationId: String): Result<Boolean> = threadMutex.withLock {
