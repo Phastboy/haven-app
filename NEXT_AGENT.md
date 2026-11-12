@@ -220,3 +220,28 @@ PR #44 follow-up: run 43004058297 failed unit-test compilation due to an
 incorrect top-level assertDoesNotExist import introduced in b04cb62. Removed
 the import; existing repository tests call the node member without it. Both
 lint tasks passed on that run; tests did not execute. Fresh CI remains required.
+
+## Integrated offer location + camera — 2026-11-12
+
+Owner approves #43 with camera #41/PR #46. Location modules separate pure fix
+validation/precision, Android foreground acquisition, permission/review state,
+lifecycle integration and stateless editor UI. Both Create/Edit reuse them.
+No automatic request/reacquisition: tap, permission, bounded current fix, review,
+explicit add to draft, then existing submit. Manual selection/removal cancel
+pending work. Stop/disposal/account changes invalidate callbacks; process restart
+requires another tap. Selected tokens use existing SavedStateHandle draft recovery.
+New backend POST /api/v1/me/offer-places/coordinates validates/signs the existing
+place model for bearer owner; it does not publish or write an offer. Backend must
+be deployed before device end-to-end acceptance; failure retains prior draft.
+Camera integration fixes duplicate provider class, rejects oversized captures,
+preflights both sources before draft insertion, rejects cross-editor/account
+results, and blocks submit while capture/validation/location review is pending.
+CI 43132409960 originally failed 3 provider tests and junit-version lint; uses
+separate capture provider plus official junit 1.4.0-alpha04. No lint suppression.
+Local static XML/whitespace checks only; no Android Gradle per budget. Regression
+coverage added for location intent/review/failure/cancel/late results/precision,
+provider coexistence and photo limits. Fresh CI and physical-device permission,
+rotation/process restart, camera and public saved-location evidence NOT RUN.
+Acting maintainer/executing agent owns CI/review on owner notification and device
+prerequisite review 2026-11-13; signed build, deployed backend and supported phone
+required. No polling, merge or release. See docs/testing/offer-capture.md.

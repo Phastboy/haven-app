@@ -5,7 +5,7 @@ coreKtx = "1.19.1"
 junit = "4.13.2"
 # Espresso 3.7 reflects InputManager.getInstance(), removed on API 37.
 # These matching test-only releases use Context.getSystemService instead.
-junitVersion = "1.4.0-alpha03"
+junitVersion = "1.4.0-alpha04"
 espressoCore = "3.8.0-alpha03"
 lifecycleRuntimeKtx = "2.11.0"
 lifecycleViewmodelCompose = "2.11.0"

@@ -116,6 +116,38 @@ class OfferCameraFilesTest {
     assertEquals(file.name, OfferCameraFiles.fileName(context, OfferCameraFiles.uri(context, file).toString()))
   }
 
+  @Test fun oversizedCaptureIsRejectedBeforeEnteringDraft() {
+    val file = capturedFile()
+    java.io.RandomAccessFile(file, "rw").use { it.setLength(OfferCameraFiles.MAX_IMAGE_BYTES + 1) }
+    assertNull(OfferCameraFiles.consume(context, file.name))
+    assertFalse(file.exists())
+  }
+
+  @Test fun cameraAndUpdateProvidersHaveIndependentComponentIdentities() {
+    val camera = context.packageManager.resolveContentProvider(OfferCameraFiles.authority(context), 0)!!
+    val updates = context.packageManager.resolveContentProvider(context.packageName + ".updates", 0)!!
+    assertFalse(camera.name == updates.name)
+    val file = File(context.cacheDir, "updates/test.apk").apply { parentFile?.mkdirs(); writeText("apk") }
+    val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".updates", file)
+    assertEquals("/updates/test.apk", uri.path)
+    assertNotNull(OfferCameraFiles.consume(context, capturedFile().name))
+  }
+
+  @Test fun sharedPhotoPreflightRejectsOversizedAndInvalidBytes() {
+    val file = capturedFile()
+    OfferImageInputs.validate(context.contentResolver, OfferCameraFiles.uri(context, file).toString())
+    java.io.RandomAccessFile(file, "rw").use { it.setLength(OfferCameraFiles.MAX_IMAGE_BYTES + 1) }
+    try {
+      OfferImageInputs.validate(context.contentResolver, OfferCameraFiles.uri(context, file).toString())
+      throw AssertionError("oversized photo accepted")
+    } catch (_: java.io.IOException) { }
+    file.writeText("not a photo")
+    try {
+      OfferImageInputs.validate(context.contentResolver, OfferCameraFiles.uri(context, file).toString())
+      throw AssertionError("invalid photo accepted")
+    } catch (_: java.io.IOException) { }
+  }
+
   @Test fun cameraCaptureNeedsNoAppPermission() {
     @Suppress("DEPRECATION")
     val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)

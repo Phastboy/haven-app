@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.HavenTopBarContainer
+import com.example.ui.components.OfferLocationSection
 import com.example.ui.components.OfferPhotosSection
 import com.example.ui.components.havenBottomSafePadding
 import com.example.ui.model.OfferEditorState
@@ -31,7 +32,8 @@ import com.example.ui.theme.InterFontFamily
 fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBack: () -> Unit, onSaved: () -> Unit) {
   val state by model.state.collectAsState()
   var confirmLeave by remember { mutableStateOf(false) }
-  var placeQuery by rememberSaveable { mutableStateOf("") }
+  var locationPending by remember { mutableStateOf(false) }
+  var photoPending by remember { mutableStateOf(false) }
   val leave = {
     if (!state.busy) {
       if (state.dirty) confirmLeave = true else onBack()
@@ -57,11 +59,13 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           OfferPhotosSection(
             images = state.images,
+            captureKey = model.captureKey,
             busy = state.busy,
             onImagesAdded = model::addImages,
             onMoveImage = model::moveImage,
             onRemoveImage = { index -> model.change { it.copy(images = it.images.filterIndexed { position, _ -> position != index }) } },
             onError = model::showError,
+            onPendingChanged = { photoPending = it },
           )
         }
         EditorField("Title", state.title, "Name what you are offering.", !state.busy, "${state.title.length}/50") { value -> model.change { it.copy(title = value) } }
@@ -71,28 +75,18 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
           EditorField("Price (minor units)", state.price, "For NGN, enter kobo: ₦1,500 = 150000. Enter 0 for free.", !state.busy, numeric = true) { value -> model.change { it.copy(price = value) } }
           EditorChoice("Currency", state.options!!.currencies.map { it to it }, state.currency, !state.busy) { value -> model.change { it.copy(currency = value) } }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          EditorLabel("Offer location (optional)")
-          Text("The selected address will be public on this offer. This does not turn on proximity discovery.", color = HavenColors.TextSecondary)
-          state.place?.let { place ->
-            Text(place.label, color = HavenColors.TextPrimary)
-            TextButton(onClick = { model.change { it.copy(place = null) } }, enabled = !state.busy) { Text("Remove location") }
-          }
-          OutlinedTextField(value = placeQuery, onValueChange = { placeQuery = it }, label = { Text("Search for a place") }, enabled = !state.busy && !state.searching, modifier = Modifier.fillMaxWidth())
-          OutlinedButton(onClick = { model.search(placeQuery) }, enabled = !state.busy && !state.searching && placeQuery.trim().length >= 3) { Text(if (state.searching) "Searching…" else "Search places") }
-          state.placeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-          val choices = (state.places + state.options!!.recentPlaces).distinctBy { it.token }
-          choices.forEach { place ->
-            TextButton(onClick = { model.change { it.copy(place = place) } }, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) { Text(place.label, modifier = Modifier.fillMaxWidth()) }
-          }
-          if (choices.isEmpty()) Text("You can save this offer without a location.", color = HavenColors.TextSecondary)
-        }
+        OfferLocationSection(
+          editorKey = model, state = state,
+          onSelect = { place -> model.change { it.copy(place = place) } },
+          onSearch = model::search, sign = model::capturedPlace,
+          onPendingChanged = { locationPending = it },
+        )
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("offer_editor_error")) }
       }
     }
     Column(Modifier.fillMaxWidth().background(HavenColors.Canvas).havenBottomSafePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
       state.progress?.let { Text(it, color = HavenColors.TextSecondary) }
-      Button(onClick = model::save, enabled = !state.loading && state.options != null && !state.busy,
+      Button(onClick = model::save, enabled = !state.loading && state.options != null && !state.busy && !locationPending && !photoPending,
         colors = ButtonDefaults.buttonColors(containerColor = HavenColors.Primary),
         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("offer_editor_submit")) {
         Text(if (state.busy) "Saving…" else if (state.allowPrivateSave && state.images.isEmpty()) "Save private offer" else if (editing) "Save changes" else "Publish offer")

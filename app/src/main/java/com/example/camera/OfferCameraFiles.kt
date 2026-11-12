@@ -22,6 +22,8 @@ object OfferCameraFiles {
   /** Abandoned captures older than this are deleted when the editor opens. */
   const val MAX_AGE_MS = 24L * 60L * 60L * 1000L
 
+  const val MAX_IMAGE_BYTES = 5L * 1024L * 1024L
+
   private const val DIRECTORY = "offer-captures"
 
   fun authority(context: Context): String = context.packageName + AUTHORITY_SUFFIX
@@ -41,7 +43,7 @@ object OfferCameraFiles {
    */
   fun consume(context: Context, name: String): String? {
     val file = resolve(context, name) ?: return null
-    if (!file.isFile || file.length() <= 0L) {
+    if (!file.isFile || file.length() <= 0L || file.length() > MAX_IMAGE_BYTES) {
       file.delete()
       return null
     }

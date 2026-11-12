@@ -4,6 +4,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import com.example.ui.model.SessionManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,16 +34,28 @@ data class OfferCameraCapture(
 @Composable
 fun rememberOfferCameraCapture(
   onCaptured: (uri: String) -> Unit,
+  captureKey: String = "offer",
   onFailure: (message: String) -> Unit,
 ): OfferCameraCapture {
   val context = LocalContext.current
   // Only the file name is saved. The provider URI is rebuilt on return, so a
   // recreated activity can still consume the capture without a stale grant.
   var pendingName by rememberSaveable { mutableStateOf<String?>(null) }
+  var pendingKey by rememberSaveable { mutableStateOf<String?>(null) }
+  var pendingActor by rememberSaveable { mutableStateOf<String?>(null) }
+  var active by remember { mutableStateOf(true) }
+  DisposableEffect(Unit) {
+    active = true
+    onDispose { active = false }
+  }
 
   val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { confirmed ->
     val name = pendingName ?: return@rememberLauncherForActivityResult
     pendingName = null
+    if (!active || pendingKey != captureKey || pendingActor != SessionManager.session.value.personId) {
+      OfferCameraFiles.cancel(context, name)
+      return@rememberLauncherForActivityResult
+    }
     if (!confirmed) {
       OfferCameraFiles.cancel(context, name)
       onFailure("Photo was not taken. Your offer draft is unchanged.")
@@ -48,7 +63,7 @@ fun rememberOfferCameraCapture(
     }
     val uri = OfferCameraFiles.consume(context, name)
     if (uri == null) {
-      onFailure("The camera did not return a photo. Try again or add one from your gallery.")
+      onFailure("The camera returned no usable photo or a photo larger than 5 MB. Try again or choose a smaller photo.")
     } else {
       onCaptured(uri)
     }
@@ -61,6 +76,8 @@ fun rememberOfferCameraCapture(
         try {
           val target = OfferCameraFiles.uri(context, file)
           pendingName = file.name
+          pendingKey = captureKey
+          pendingActor = SessionManager.session.value.personId
           launcher.launch(target)
         } catch (_: Exception) {
           pendingName = null

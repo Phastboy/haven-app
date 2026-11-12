@@ -136,3 +136,13 @@ Haven is engineered natively for Android. The Haven backend and its documented p
 4. **Release verification**: Run Android tests and a full native Google sign-in and core-journey pass on the installed build. Record any backend or deployment dependency that prevents completion.
 
 The implementation sequence follows Haven's released scope and development-freeze decisions. New product capabilities require an explicit product decision; mobile implementation does not expand the backend contract by implication.
+
+### Owner-approved offer capture — 2026-11-11
+
+Create/Edit may explicitly capture one foreground current location, review its
+coordinates and reported accuracy, and add it to the draft. Approximate readings
+remain labelled approximate. Capture does not submit an offer or change discovery.
+Manual place selection/removal remain available; leaving cancels acquisition and
+there is no automatic resume/reacquisition. Selected draft locations persist via
+the existing signed token and become public only through confirmed submission.
+Camera photos share the current image preview/validation/upload journey.
