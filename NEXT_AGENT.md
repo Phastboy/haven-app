@@ -290,3 +290,9 @@ Device capture/TalkBack/privacy acceptance remains NOT RUN and must not be
 reported as passed. Fresh release-head CI/review and delivered APK/update metadata
 identity are required. No local Gradle. Owner-directed publication is not evidence
 of installed-device acceptance or a standing waiver for future releases.
+
+Prepublication rendered evidence review: 43dae3d has 282 passing tests and zero
+lint issues per variant. Dark location screenshot exposed a test wrapper missing
+HavenColors.Canvas (the actual native screen already paints it). Corrected the
+wrapper to match production before accepting refreshed visual evidence. No
+application behavior change; release-head checks remain required.

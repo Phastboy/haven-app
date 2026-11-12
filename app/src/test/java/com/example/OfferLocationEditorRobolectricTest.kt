@@ -3,6 +3,8 @@ package com.example
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,7 @@ import com.example.location.CapturedLocation
 import com.example.location.OfferLocationCaptureState
 import com.example.ui.components.OfferLocationEditor
 import com.example.ui.model.OfferEditorState
+import com.example.ui.theme.HavenColors
 import com.example.ui.theme.HavenTheme
 import com.example.ui.theme.ThemeMode
 import java.io.File
@@ -46,7 +49,7 @@ class OfferLocationEditorRobolectricTest {
     val point = CapturedLocation(6.5, 3.4, 900f, true)
     compose.setContent {
       HavenTheme(mode.value) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().background(HavenColors.Canvas).verticalScroll(rememberScrollState())) {
           OfferLocationEditor(state.value, "town", {}, OfferLocationCaptureState(candidate = point),
             {}, {}, { accepted++ }, {}, { place -> state.value = state.value.copy(place = place) })
         }
