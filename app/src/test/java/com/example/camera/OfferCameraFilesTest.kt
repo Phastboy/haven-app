@@ -1,5 +1,6 @@
 package com.example.camera
 
+import com.example.images.OfferImageInputs
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager

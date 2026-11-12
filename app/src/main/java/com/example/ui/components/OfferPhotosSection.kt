@@ -5,7 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.example.camera.OfferImageInputs
+import com.example.images.OfferImageInputs
 import com.example.ui.model.SessionManager
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext

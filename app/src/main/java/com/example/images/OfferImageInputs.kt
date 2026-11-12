@@ -1,4 +1,4 @@
-package com.example.camera
+package com.example.images
 
 import android.content.ContentResolver
 import androidx.core.net.toUri
@@ -6,6 +6,8 @@ import java.io.IOException
 
 /** Shared preflight for camera/gallery bytes before they enter the offer draft. */
 object OfferImageInputs {
+  const val MAX_IMAGE_BYTES = 5L * 1024L * 1024L
+
   /** Reads at most limit+1 bytes; unknown or misleading provider sizes cannot bypass the limit. */
   fun validate(resolver: ContentResolver, uri: String) {
     resolver.openInputStream(uri.toUri())?.use { stream ->
@@ -17,7 +19,7 @@ object OfferImageInputs {
         val count = stream.read(chunk)
         if (count < 0) break
         total += count
-        if (total > OfferCameraFiles.MAX_IMAGE_BYTES) throw IOException("Choose photos up to 5 MB.")
+        if (total > MAX_IMAGE_BYTES) throw IOException("Choose photos up to 5 MB.")
         val copy = minOf(count, header.size - headerSize)
         if (copy > 0) { chunk.copyInto(header, headerSize, 0, copy); headerSize += copy }
       }

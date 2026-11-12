@@ -1,6 +1,7 @@
 package com.example.camera
 
 import android.content.ContentResolver
+import com.example.images.OfferImageInputs
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
@@ -22,7 +23,7 @@ object OfferCameraFiles {
   /** Abandoned captures older than this are deleted when the editor opens. */
   const val MAX_AGE_MS = 24L * 60L * 60L * 1000L
 
-  const val MAX_IMAGE_BYTES = 5L * 1024L * 1024L
+  const val MAX_IMAGE_BYTES = OfferImageInputs.MAX_IMAGE_BYTES
 
   private const val DIRECTORY = "offer-captures"
 

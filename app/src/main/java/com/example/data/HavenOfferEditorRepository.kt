@@ -56,7 +56,7 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
       while (true) {
         val count = stream.read(chunk)
         if (count < 0) break
-        if (buffer.size() + count > 5 * 1024 * 1024) throw IOException("Choose photos up to 5 MB.")
+        if (buffer.size().toLong() + count > com.example.images.OfferImageInputs.MAX_IMAGE_BYTES) throw IOException("Choose photos up to 5 MB.")
         buffer.write(chunk, 0, count)
       }
       buffer.toByteArray()
