@@ -35,7 +35,7 @@ fun OfferPhotosSection(
 ) {
   val context = LocalContext.current
   // Retain inputs, not just a transient Job: validation restarts safely after recreation.
-  var validationInputs by rememberSaveable(captureKey) { mutableStateOf<ArrayList<String>?>(null) }
+  var validationInputs by rememberSaveable(captureKey) { mutableStateOf<List<String>?>(null) }
   var validationActor by rememberSaveable(captureKey) { mutableStateOf<String?>(null) }
   val checking = validationInputs != null
   val latestImages by rememberUpdatedState(images)
@@ -45,7 +45,7 @@ fun OfferPhotosSection(
   val addChecked: (List<String>) -> Unit = { uris ->
     if (!checking && !busy && uris.isNotEmpty()) {
       validationActor = SessionManager.session.value.personId
-      validationInputs = ArrayList(uris.distinct())
+      validationInputs = uris.distinct()
     }
   }
   LaunchedEffect(validationInputs, captureKey) {

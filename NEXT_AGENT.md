@@ -270,3 +270,10 @@ Whitespace PASS; Android tests/lint NOT RUN locally per budget. Fresh CI and
 remaining review resolution required on owner notification (review target
 2026-11-13). Device/deployment prerequisites remain in docs/testing/offer-capture.md.
 No CI polling, merge, deployment or release.
+
+PR #46 follow-up 2026-11-12: run 43224128373 on 5f46ce6 failed only
+MutableCollectionMutableState lint for saved validation ArrayList. Use a List
+state value, replaced as a whole via distinct(), preserving saveable URI contents
+and recreation recovery without mutable-collection state or suppression.
+Backend #74 merged as 6904b5b; merge is not deployed-endpoint acceptance.
+Fresh mobile CI remains required on owner notification; no polling or release.
