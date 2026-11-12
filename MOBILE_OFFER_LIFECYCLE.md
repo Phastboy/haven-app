@@ -47,6 +47,17 @@ server-side image decoding dependency was added. The production preset's resize
 and metadata-removal settings still require verification: usable preset
 configuration was not available locally.
 
+Android sources are the gallery/file picker and the system camera app through
+`ActivityResultContracts.TakePicture`. Both produce the same ordered local
+`EditorImage` entries and share preview, count, reorder, removal and upload.
+Camera output is written by the system camera into an app-private cache file
+exposed only through the dedicated `${applicationId}.captures` FileProvider
+authority; the app declares no CAMERA or storage permission. Only the capture
+file name survives recreation, and cancelled, empty or failed captures are
+deleted rather than added. The app never appends location coordinates; camera
+images use the same server-side upload and privacy processing as selected
+images.
+
 Android follows `prototype/haven_create_offer` and `prototype/haven_edit_offer`
 for structure, adapted to backend bounds and location selection. Photo edits are
 staged locally until submission. Submission is a sequence of confirmed writes,

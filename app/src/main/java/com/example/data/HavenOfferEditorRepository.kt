@@ -42,6 +42,13 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
   suspend fun search(query: String): List<OfferPlace> = withContext(Dispatchers.IO) {
     places(JSONObject(auth.authenticatedMutation("POST", "/api/v1/me/offer-places/search", JSONObject().put("query", query), expectedPersonId = ownerPersonId)).getJSONArray("items"))
   }
+  /** Validates a reviewed device point and receives the existing signed selection; writes no offer. */
+  suspend fun capturedPlace(point: com.example.location.CapturedLocation): OfferPlace = withContext(Dispatchers.IO) {
+    val json = JSONObject(auth.authenticatedMutation("POST", "/api/v1/me/offer-places/coordinates",
+      JSONObject().put("label", point.publicLabel()).put("latitude", point.latitude).put("longitude", point.longitude),
+      expectedPersonId = ownerPersonId))
+    OfferPlace(json.getString("token"), json.getString("label"))
+  }
   suspend fun upload(id: String, image: EditorImage): EditableOffer = withContext(Dispatchers.IO) {
     val bytes = context.contentResolver.openInputStream(image.url.toUri())?.use { stream ->
       val buffer = java.io.ByteArrayOutputStream()
@@ -49,7 +56,7 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
       while (true) {
         val count = stream.read(chunk)
         if (count < 0) break
-        if (buffer.size() + count > 5 * 1024 * 1024) throw IOException("Choose photos up to 5 MB.")
+        if (buffer.size().toLong() + count > com.example.images.OfferImageInputs.MAX_IMAGE_BYTES) throw IOException("Choose photos up to 5 MB.")
         buffer.write(chunk, 0, count)
       }
       buffer.toByteArray()

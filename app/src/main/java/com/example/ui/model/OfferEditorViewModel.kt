@@ -41,6 +41,7 @@ class OfferEditorViewModel(
   val state = mutable.asStateFlow()
   private var offerId: String? = handle["offer_id"] ?: initialId
   private val creationKey: String = handle.get<String>("creation_key") ?: UUID.randomUUID().toString().also { handle["creation_key"] = it }
+  val captureKey: String get() = creationKey
   init { load() }
 
   fun load() {
@@ -88,6 +89,8 @@ class OfferEditorViewModel(
     mutable.update { transform(it).copy(dirty = true, error = null) }
     retain()
   }
+  suspend fun capturedPlace(point: com.example.location.CapturedLocation): OfferPlace = repository.capturedPlace(point)
+
   fun showError(message: String) { mutable.update { it.copy(error = message) } }
 
   fun addImages(uris: List<String>) {

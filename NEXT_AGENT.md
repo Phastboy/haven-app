@@ -1,3 +1,39 @@
+# Issue #41 camera capture for offer photos — 2026-11-12
+
+Branch `fix/41-camera-capture` off `main` (a1b534c). No release authorized; no
+merge performed.
+
+Owner approval adds camera capture beside the existing gallery/file source for
+create and edit. The editor now offers explicit `Take photo` and `Add images`
+actions in both paths. `OfferPhotosSection` owns both launchers and
+`OfferImagesEditor` is the shared stateless presentation; the screen's image
+block is one call. Confirmed captures enter `OfferEditorViewModel.addImages`, so
+count, size/type validation, preview, reorder, removal, draft retention and the
+existing server-mediated upload are unchanged.
+
+Capture uses `ActivityResultContracts.TakePicture` with a dedicated
+`${applicationId}.captures` FileProvider authority scoped to
+`cache-path offer-captures/`. No CAMERA or storage permission is declared; the
+system camera app owns its permission. Only the capture file name is held in
+`rememberSaveable`, so recreation can rebuild the provider URI and consume the
+result. Cancelled, empty or failed captures delete their file and add nothing;
+overall launch failure reports and leaves the draft intact. Opening the editor
+cleans abandoned captures older than 24 hours while preserving files referenced
+by the retained draft or a pending capture. Captures follow the existing upload
+and server-side image processing; no location metadata is added by the app.
+
+Tests added: `OfferCameraFilesTest` (private storage, authority/path scope,
+confirm/cancel/empty, recreation recovery, cleanup, path traversal, no permissions)
+and `OfferPhotoSourcesRobolectricTest` (both sources, five-photo and busy limits,
+pending state, move/remove callbacks, section wiring, light/dark screenshots).
+Android checks run on GitHub CI only; no local Gradle execution per data budget.
+Physical-device camera evidence (camera app/device/Android/build) remains NOT RUN
+and is recorded separately from CI.
+
+Editor coordination: #43 owns the offer-location block; this change replaces
+only the photo block in `NativeOfferEditorScreen.kt` and leaves the location
+state and UI untouched.
+
 # Issues #30 / #31 profile retention and skeleton shell — 2026-11-11
 
 Branch `fix/30-31-profile-retention-skeleton` off `main` (d64f2be). No release
@@ -138,7 +174,7 @@ no checkbox is completed by deletion. No application code or release is changed.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android feed sends bearer where available, parses nullable saved state and isolates private metadata by account.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android cache round trips retain confirmed saved state; unknown is never treated as confirmed unsaved.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Prototype visual acceptance, production edit acceptance and physical-device testing are recorded.
-- `MOBILE_NATIVE_API_BACKLOG.md`: Production Cloudinary incoming-preset resize/metadata-removal settings are confirmed.
+- `MOBILE_NATIVE_API_BACKLOG.md`: Production Cloudinary incoming-preset resize/metadata-removal settings require verification; the retired backlog listed this as an unfinished acceptance task.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Authenticated production create/upload/recovery and physical-device acceptance are recorded.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android real picker/upload/removal and progress/error/retry states replace profile-photo simulation.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Production upload preset and real delivery are verified separately.
@@ -184,3 +220,79 @@ PR #44 follow-up: run 43004058297 failed unit-test compilation due to an
 incorrect top-level assertDoesNotExist import introduced in b04cb62. Removed
 the import; existing repository tests call the node member without it. Both
 lint tasks passed on that run; tests did not execute. Fresh CI remains required.
+
+## Integrated offer location + camera — 2026-11-12
+
+Owner approves #43 with camera #41/PR #46. Location modules separate pure fix
+validation/precision, Android foreground acquisition, permission/review state,
+lifecycle integration and stateless editor UI. Both Create/Edit reuse them.
+No automatic request/reacquisition: tap, permission, bounded current fix, review,
+explicit add to draft, then existing submit. Manual selection/removal cancel
+pending work. Stop/disposal/account changes invalidate callbacks; process restart
+requires another tap. Selected tokens use existing SavedStateHandle draft recovery.
+New backend POST /api/v1/me/offer-places/coordinates validates/signs the existing
+place model for bearer owner; it does not publish or write an offer. Backend must
+be deployed before device end-to-end acceptance; failure retains prior draft.
+Camera integration fixes duplicate provider class, rejects oversized captures,
+preflights both sources before draft insertion, rejects cross-editor/account
+results, and blocks submit while capture/validation/location review is pending.
+CI 43132409960 originally failed 3 provider tests and junit-version lint; uses
+separate capture provider plus official junit 1.4.0-alpha04. No lint suppression.
+Local static XML/whitespace checks only; no Android Gradle per budget. Regression
+coverage added for location intent/review/failure/cancel/late results/precision,
+provider coexistence and photo limits. Fresh CI and physical-device permission,
+rotation/process restart, camera and public saved-location evidence NOT RUN.
+Acting maintainer/executing agent owns CI/review on owner notification and device
+prerequisite review 2026-11-13; signed build, deployed backend and supported phone
+required. No polling, merge or release. See docs/testing/offer-capture.md.
+
+## PR #46 CI/review correction — 2026-11-12
+
+Backend #74 exact 3697f3f: CI 43206947423, supply-chain 43206947435 and
+build/scan/smoke 43206947300 SUCCESS; deployment skipped for PR, no deployment
+claim. No backend inline findings. Mobile 6242552 run 43206219536 failed five
+provider tests plus lint for espresso/core/runner alpha04 and String.toUri.
+Exact AndroidX core1.19.1 source confirms static FileProvider.sCache by authority;
+Robolectric creates a different cacheDir per method. Reset only test cache state;
+keep independent installed provider component identities and path scopes.
+Aligned remaining test-only AndroidX alpha04 versions and used the KTX URI API.
+Confirmed new reviews: decode an actual bounded <=1024-per-axis preview after
+size/type checks, use a valid JPEG fixture and reject truncated prefix; listen
+to both eligible foreground providers within one bounded request, removing both
+on success/cancel; report same-account photo overflow while rejecting stale
+account results silently. Added real-adapter network/cleanup tests. Also fixed the valid review-summary
+finding: retain pending validation URIs and actor in saved state, restart after
+recreation, preserve those files during cleanup and deduplicate already-retained
+images after interrupted completion. Cancellation never clears pending inputs.
+Temporary checkout disappeared after all earlier work was pushed; restored
+source in persistent ignored .worktrees/haven-app-46, no unpushed work lost.
+Whitespace PASS; Android tests/lint NOT RUN locally per budget. Fresh CI and
+remaining review resolution required on owner notification (review target
+2026-11-13). Device/deployment prerequisites remain in docs/testing/offer-capture.md.
+No CI polling, merge, deployment or release.
+
+PR #46 follow-up 2026-11-12: run 43224128373 on 5f46ce6 failed only
+MutableCollectionMutableState lint for saved validation ArrayList. Use a List
+state value, replaced as a whole via distinct(), preserving saveable URI contents
+and recreation recovery without mutable-collection state or suppression.
+Backend #74 merged as 6904b5b; merge is not deployed-endpoint acceptance.
+Fresh mobile CI remains required on owner notification; no polling or release.
+
+## Owner-directed release preparation — 2026-11-12
+
+Owner explicitly requests backend v0.8.67 and Android v0.0.6 publication, granting
+the timing exception for both. Prior release history: backend feature v0.8.66
+2026-11-09 17:00:44Z, Android feature v0.0.5 2026-11-10 18:36:08Z. No other
+release today at pickup. Android v0.0.6 is versionCode16; workflow identity,
+asset names and tag checks aligned. Preserve package and signer. Concise notes
+in RELEASE_V0.0.6.md; device checks remain docs/testing/offer-capture.md.
+Device capture/TalkBack/privacy acceptance remains NOT RUN and must not be
+reported as passed. Fresh release-head CI/review and delivered APK/update metadata
+identity are required. No local Gradle. Owner-directed publication is not evidence
+of installed-device acceptance or a standing waiver for future releases.
+
+Prepublication rendered evidence review: 43dae3d has 282 passing tests and zero
+lint issues per variant. Dark location screenshot exposed a test wrapper missing
+HavenColors.Canvas (the actual native screen already paints it). Corrected the
+wrapper to match production before accepting refreshed visual evidence. No
+application behavior change; release-head checks remain required.
