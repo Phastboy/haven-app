@@ -174,7 +174,7 @@ no checkbox is completed by deletion. No application code or release is changed.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android feed sends bearer where available, parses nullable saved state and isolates private metadata by account.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android cache round trips retain confirmed saved state; unknown is never treated as confirmed unsaved.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Prototype visual acceptance, production edit acceptance and physical-device testing are recorded.
-- `MOBILE_NATIVE_API_BACKLOG.md`: Production Cloudinary incoming-preset resize/metadata-removal settings are confirmed.
+- `MOBILE_NATIVE_API_BACKLOG.md`: Production Cloudinary incoming-preset resize/metadata-removal settings require verification; the retired backlog listed this as an unfinished acceptance task.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Authenticated production create/upload/recovery and physical-device acceptance are recorded.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Android real picker/upload/removal and progress/error/retry states replace profile-photo simulation.
 - `MOBILE_NATIVE_API_BACKLOG.md`: Production upload preset and real delivery are verified separately.
