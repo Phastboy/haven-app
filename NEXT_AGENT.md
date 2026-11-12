@@ -245,3 +245,28 @@ rotation/process restart, camera and public saved-location evidence NOT RUN.
 Acting maintainer/executing agent owns CI/review on owner notification and device
 prerequisite review 2026-11-13; signed build, deployed backend and supported phone
 required. No polling, merge or release. See docs/testing/offer-capture.md.
+
+## PR #46 CI/review correction — 2026-11-12
+
+Backend #74 exact 3697f3f: CI 43206947423, supply-chain 43206947435 and
+build/scan/smoke 43206947300 SUCCESS; deployment skipped for PR, no deployment
+claim. No backend inline findings. Mobile 6242552 run 43206219536 failed five
+provider tests plus lint for espresso/core/runner alpha04 and String.toUri.
+Exact AndroidX core1.19.1 source confirms static FileProvider.sCache by authority;
+Robolectric creates a different cacheDir per method. Reset only test cache state;
+keep independent installed provider component identities and path scopes.
+Aligned remaining test-only AndroidX alpha04 versions and used the KTX URI API.
+Confirmed new reviews: decode an actual bounded <=1024-per-axis preview after
+size/type checks, use a valid JPEG fixture and reject truncated prefix; listen
+to both eligible foreground providers within one bounded request, removing both
+on success/cancel; report same-account photo overflow while rejecting stale
+account results silently. Added real-adapter network/cleanup tests. Also fixed the valid review-summary
+finding: retain pending validation URIs and actor in saved state, restart after
+recreation, preserve those files during cleanup and deduplicate already-retained
+images after interrupted completion. Cancellation never clears pending inputs.
+Temporary checkout disappeared after all earlier work was pushed; restored
+source in persistent ignored .worktrees/haven-app-46, no unpushed work lost.
+Whitespace PASS; Android tests/lint NOT RUN locally per budget. Fresh CI and
+remaining review resolution required on owner notification (review target
+2026-11-13). Device/deployment prerequisites remain in docs/testing/offer-capture.md.
+No CI polling, merge, deployment or release.

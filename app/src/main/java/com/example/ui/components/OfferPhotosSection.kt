@@ -7,7 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.images.OfferImageInputs
 import com.example.ui.model.SessionManager
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.platform.LocalContext
 import com.example.camera.OfferCameraFiles
 import com.example.camera.rememberOfferCameraCapture
@@ -34,27 +34,43 @@ fun OfferPhotosSection(
   onPendingChanged: (Boolean) -> Unit = {},
 ) {
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
-  var checking by remember { mutableStateOf(false) }
+  // Retain inputs, not just a transient Job: validation restarts safely after recreation.
+  var validationInputs by rememberSaveable(captureKey) { mutableStateOf<ArrayList<String>?>(null) }
+  var validationActor by rememberSaveable(captureKey) { mutableStateOf<String?>(null) }
+  val checking = validationInputs != null
   val latestImages by rememberUpdatedState(images)
   val latestBusy by rememberUpdatedState(busy)
+  val latestAdded by rememberUpdatedState(onImagesAdded)
+  val latestError by rememberUpdatedState(onError)
   val addChecked: (List<String>) -> Unit = { uris ->
-    if (!checking && !busy) {
-      val actor = SessionManager.session.value.personId
-      checking = true
-      scope.launch {
-        try {
-          withContext(Dispatchers.IO) { uris.forEach { OfferImageInputs.validate(context.contentResolver, it) } }
-          if (SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + uris.size <= 5) onImagesAdded(uris)
-          else uris.forEach { OfferCameraFiles.deleteCapture(context, it) }
-        } catch (_: java.io.IOException) {
-          uris.forEach { OfferCameraFiles.deleteCapture(context, it) }
-          if (SessionManager.session.value.personId == actor) onError("Choose JPEG, PNG or WebP photos up to 5 MB. Your existing photos are unchanged.")
-        } catch (_: SecurityException) {
-          if (SessionManager.session.value.personId == actor) onError("Photo access was lost. Choose it again.")
-        } finally { checking = false }
-      }
+    if (!checking && !busy && uris.isNotEmpty()) {
+      validationActor = SessionManager.session.value.personId
+      validationInputs = ArrayList(uris.distinct())
     }
+  }
+  LaunchedEffect(validationInputs, captureKey) {
+    val inputs = validationInputs?.toList() ?: return@LaunchedEffect
+    val actor = validationActor
+    try {
+      withContext(Dispatchers.IO) { inputs.forEach { OfferImageInputs.validate(context.contentResolver, it) } }
+      // A restored callback may already be present in the persisted draft.
+      val additions = inputs.filterNot { uri -> latestImages.any { it.url == uri } }
+      if (SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size <= 5) latestAdded(additions)
+      else {
+        additions.forEach { OfferCameraFiles.deleteCapture(context, it) }
+        if (SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size > 5)
+          latestError("Choose at most five photos in total.")
+      }
+    } catch (cancelled: CancellationException) {
+      // Keep the saved inputs for the replacement composition; do not consume the result.
+      throw cancelled
+    } catch (_: java.io.IOException) {
+      inputs.forEach { OfferCameraFiles.deleteCapture(context, it) }
+      if (SessionManager.session.value.personId == actor) latestError("Choose JPEG, PNG or WebP photos up to 5 MB. Your existing photos are unchanged.")
+    } catch (_: SecurityException) {
+      if (SessionManager.session.value.personId == actor) latestError("Photo access was lost. Choose it again.")
+    }
+    validationInputs = null
   }
   val camera = rememberOfferCameraCapture(onCaptured = { uri -> addChecked(listOf(uri)) }, captureKey = captureKey, onFailure = onError)
   SideEffect { onPendingChanged(camera.pending || checking) }
@@ -77,7 +93,8 @@ fun OfferPhotosSection(
   // touching files still referenced by the retained draft.
   LaunchedEffect(Unit) {
     val keep = images.mapNotNull { OfferCameraFiles.fileName(context, it.url) }.toSet() +
-      listOfNotNull(camera.pendingFileName)
+      listOfNotNull(camera.pendingFileName) +
+      validationInputs.orEmpty().mapNotNull { OfferCameraFiles.fileName(context, it) }
     withContext(Dispatchers.IO) { OfferCameraFiles.cleanUp(context, keep) }
   }
 

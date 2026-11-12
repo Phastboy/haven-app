@@ -1,6 +1,9 @@
 package com.example.camera
 
 import com.example.images.OfferImageInputs
+import android.graphics.Bitmap
+import androidx.core.content.FileProvider
+import org.robolectric.annotation.GraphicsMode
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -25,11 +28,16 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class OfferCameraFilesTest {
   private val context: Context get() = ApplicationProvider.getApplicationContext()
   private val captureDirectory: File get() = File(context.cacheDir, "offer-captures")
 
   @Before fun clearCaptures() {
+    // AndroidX caches roots by authority; each Robolectric method has a new cacheDir.
+    val cacheField = FileProvider::class.java.getDeclaredField("sCache").apply { isAccessible = true }
+    val cache = cacheField.get(null) as MutableMap<*, *>
+    synchronized(cache) { cache.clear() }
     captureDirectory.deleteRecursively()
   }
 
@@ -38,7 +46,11 @@ class OfferCameraFilesTest {
   }
 
   private fun capturedFile(): File =
-    OfferCameraFiles.create(context).also { it.writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())) }
+    OfferCameraFiles.create(context).also { file ->
+      val bitmap = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+      file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+      bitmap.recycle()
+    }
 
   @Test fun capturesStayInsideTheApplicationCache() {
     val file = OfferCameraFiles.create(context)
@@ -146,6 +158,14 @@ class OfferCameraFilesTest {
     try {
       OfferImageInputs.validate(context.contentResolver, OfferCameraFiles.uri(context, file).toString())
       throw AssertionError("invalid photo accepted")
+    } catch (_: java.io.IOException) { }
+  }
+
+  @Test fun truncatedJpegPrefixIsRejected() {
+    val file = capturedFile().apply { writeBytes(byteArrayOf(0xff.toByte(), 0xd8.toByte(), 0xff.toByte())) }
+    try {
+      OfferImageInputs.validate(context.contentResolver, OfferCameraFiles.uri(context, file).toString())
+      throw AssertionError("truncated photo accepted")
     } catch (_: java.io.IOException) { }
   }
 

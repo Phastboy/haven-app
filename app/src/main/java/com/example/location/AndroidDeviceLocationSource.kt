@@ -24,12 +24,13 @@ class AndroidDeviceLocationSource(context: Context) : DeviceLocationSource {
     val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     check(fine || coarse) { "Location access was denied. Search for a place instead." }
     val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    val provider = listOfNotNull(
+    val providers = listOfNotNull(
       LocationManager.GPS_PROVIDER.takeIf { fine }, LocationManager.NETWORK_PROVIDER,
-    ).firstOrNull { manager.isProviderEnabled(it) }
-      ?: error("Location services are unavailable. Turn them on or search for a place.")
+    ).filter { manager.isProviderEnabled(it) }
+    check(providers.isNotEmpty()) { "Location services are unavailable. Turn them on or search for a place." }
     return withTimeoutOrNull(20_000L) {
       suspendCancellableCoroutine { continuation ->
+        val activeProviders = providers.toMutableSet()
         val listener = object : LocationListener {
           override fun onLocationChanged(location: Location) {
             if (!continuation.isActive) return
@@ -40,7 +41,8 @@ class AndroidDeviceLocationSource(context: Context) : DeviceLocationSource {
             continuation.resume(candidate)
           }
           override fun onProviderDisabled(provider: String) {
-            if (continuation.isActive) {
+            activeProviders.remove(provider)
+            if (activeProviders.isEmpty() && continuation.isActive) {
               manager.removeUpdates(this)
               continuation.resumeWithException(IllegalStateException("Location services were turned off. Search for a place instead."))
             }
@@ -50,17 +52,22 @@ class AndroidDeviceLocationSource(context: Context) : DeviceLocationSource {
           override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
         }
         continuation.invokeOnCancellation { manager.removeUpdates(listener) }
-        try {
-          // Check again at the platform boundary: access can be revoked during setup.
-          if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) throw SecurityException("Location permission revoked")
-          manager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
-        } catch (error: SecurityException) {
+        for (provider in providers) {
+          if (!continuation.isActive) break
+          try {
+            // Recheck at each platform boundary; coarse access still permits network fixes.
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+              ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) throw SecurityException("Location permission revoked")
+            manager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+          } catch (_: SecurityException) {
+            activeProviders.remove(provider)
+          } catch (_: IllegalArgumentException) {
+            activeProviders.remove(provider)
+          }
+        }
+        if (activeProviders.isEmpty() && continuation.isActive) {
           manager.removeUpdates(listener)
-          if (continuation.isActive) continuation.resumeWithException(IllegalStateException("Location access was revoked. Search for a place instead.", error))
-        } catch (error: IllegalArgumentException) {
-          manager.removeUpdates(listener)
-          if (continuation.isActive) continuation.resumeWithException(error)
+          continuation.resumeWithException(IllegalStateException("Location access or services became unavailable. Retry or search for a place."))
         }
       }
     } ?: error("No recent location was available in time. Retry or search for a place.")

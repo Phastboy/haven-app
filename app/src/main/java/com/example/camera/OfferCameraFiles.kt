@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import com.example.images.OfferImageInputs
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.core.content.FileProvider
 import java.io.File
 import java.util.UUID
@@ -77,7 +78,7 @@ object OfferCameraFiles {
 
   /** File name of one of this editor's capture URIs, or null for another source. */
   fun fileName(context: Context, uri: String): String? {
-    val parsed = Uri.parse(uri)
+    val parsed = uri.toUri()
     if (parsed.scheme != ContentResolver.SCHEME_CONTENT) return null
     if (parsed.authority != authority(context)) return null
     return parsed.lastPathSegment?.takeIf(::isSafeName)
