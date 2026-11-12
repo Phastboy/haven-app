@@ -1,3 +1,39 @@
+# Issue #41 camera capture for offer photos — 2026-11-12
+
+Branch `fix/41-camera-capture` off `main` (a1b534c). No release authorized; no
+merge performed.
+
+Owner approval adds camera capture beside the existing gallery/file source for
+create and edit. The editor now offers explicit `Take photo` and `Add images`
+actions in both paths. `OfferPhotosSection` owns both launchers and
+`OfferImagesEditor` is the shared stateless presentation; the screen's image
+block is one call. Confirmed captures enter `OfferEditorViewModel.addImages`, so
+count, size/type validation, preview, reorder, removal, draft retention and the
+existing server-mediated upload are unchanged.
+
+Capture uses `ActivityResultContracts.TakePicture` with a dedicated
+`${applicationId}.captures` FileProvider authority scoped to
+`cache-path offer-captures/`. No CAMERA or storage permission is declared; the
+system camera app owns its permission. Only the capture file name is held in
+`rememberSaveable`, so recreation can rebuild the provider URI and consume the
+result. Cancelled, empty or failed captures delete their file and add nothing;
+overall launch failure reports and leaves the draft intact. Opening the editor
+cleans abandoned captures older than 24 hours while preserving files referenced
+by the retained draft or a pending capture. Captures follow the existing upload
+and server-side image processing; no location metadata is added by the app.
+
+Tests added: `OfferCameraFilesTest` (private storage, authority/path scope,
+confirm/cancel/empty, recreation recovery, cleanup, path traversal, no permissions)
+and `OfferPhotoSourcesRobolectricTest` (both sources, five-photo and busy limits,
+pending state, move/remove callbacks, section wiring, light/dark screenshots).
+Android checks run on GitHub CI only; no local Gradle execution per data budget.
+Physical-device camera evidence (camera app/device/Android/build) remains NOT RUN
+and is recorded separately from CI.
+
+Editor coordination: #43 owns the offer-location block; this change replaces
+only the photo block in `NativeOfferEditorScreen.kt` and leaves the location
+state and UI untouched.
+
 # Issues #30 / #31 profile retention and skeleton shell — 2026-11-11
 
 Branch `fix/30-31-profile-retention-skeleton` off `main` (d64f2be). No release
