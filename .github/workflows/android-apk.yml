@@ -128,13 +128,13 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           mkdir -p release-assets
-          apk=release-assets/haven-v0.0.5.apk
+          apk=release-assets/haven-v0.0.6.apk
           cp app/build/outputs/apk/release/app-release.apk "$apk"
           tools="$ANDROID_HOME/build-tools/37.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk" > release-assets/apk-provenance.txt
           grep -qi 'b4d1a5ec0068c63d5549e6223d86d90dc0377dc56bc72d34fa63f938bd2db61e' release-assets/apk-provenance.txt
           "$tools/aapt" dump badging "$apk" > release-assets/manifest.txt
-          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='15' versionName='0.0.5'" release-assets/manifest.txt
+          grep -Fq "package: name='com.aistudio.haven.xvykpt' versionCode='16' versionName='0.0.6'" release-assets/manifest.txt
           if grep -q 'application-debuggable' release-assets/manifest.txt; then
             echo 'Release APK must not be debuggable' >&2
             exit 1
@@ -154,7 +154,7 @@ jobs:
           )) + '\n')
           PYMETA
           cd release-assets
-          sha256sum haven-v0.0.5.apk > SHA256SUMS
+          sha256sum haven-v0.0.6.apk > SHA256SUMS
       - name: Upload release candidate
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/upload-artifact@v7.0.2
@@ -167,5 +167,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test "$GITHUB_REF_NAME" = v0.0.5
-          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.5.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt release-assets/update.json --clobber
+          test "$GITHUB_REF_NAME" = v0.0.6
+          gh release upload "$GITHUB_REF_NAME" release-assets/haven-v0.0.6.apk release-assets/SHA256SUMS release-assets/apk-provenance.txt release-assets/manifest.txt release-assets/update.json --clobber

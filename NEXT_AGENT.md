@@ -277,3 +277,16 @@ state value, replaced as a whole via distinct(), preserving saveable URI content
 and recreation recovery without mutable-collection state or suppression.
 Backend #74 merged as 6904b5b; merge is not deployed-endpoint acceptance.
 Fresh mobile CI remains required on owner notification; no polling or release.
+
+## Owner-directed release preparation — 2026-11-12
+
+Owner explicitly requests backend v0.8.67 and Android v0.0.6 publication, granting
+the timing exception for both. Prior release history: backend feature v0.8.66
+2026-11-09 17:00:44Z, Android feature v0.0.5 2026-11-10 18:36:08Z. No other
+release today at pickup. Android v0.0.6 is versionCode16; workflow identity,
+asset names and tag checks aligned. Preserve package and signer. Concise notes
+in RELEASE_V0.0.6.md; device checks remain docs/testing/offer-capture.md.
+Device capture/TalkBack/privacy acceptance remains NOT RUN and must not be
+reported as passed. Fresh release-head CI/review and delivered APK/update metadata
+identity are required. No local Gradle. Owner-directed publication is not evidence
+of installed-device acceptance or a standing waiver for future releases.
