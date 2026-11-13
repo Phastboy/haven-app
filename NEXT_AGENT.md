@@ -1,3 +1,19 @@
+# Publication review corrections — 2026-11-13
+
+PR #47 review confirmed two defects: newest preceding stable metadata could be
+skipped for an older baseline, and matching retries still used --clobber.
+The newest preceding versioned stable release now must supply progression
+evidence. Complete matching publication verifies existing assets and returns
+without writes. Repairs validate existing digests/identity and upload only
+missing artifacts; no --clobber remains. Ten Python regressions PASS locally,
+including missing-newest-with-older-baseline, complete no-op, missing-evidence
+repair and mismatched existing artifact. Prior exact b93e8d4 Android CI
+43411931944 PASS; fresh exact-head CI/review required after these corrections.
+No local Gradle, merge, tag or release. Acting maintainer/executing agent reviews
+fresh CI on owner notification, target 2026-11-14. Package/version remains the
+already-published 0.0.6/code16; a new publication needs separately verified
+version preparation and all applicable release gates, not reuse of that tag.
+
 # Public Android download metadata — 2026-11-13
 
 Owner-authorized companion to backend fix/web-branding-seo: /download and
