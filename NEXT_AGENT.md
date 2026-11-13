@@ -1,3 +1,54 @@
+# Retry/order review corrections — 2026-11-13
+
+Fresh 9b62533 Android CI 43457165528 PASS. Two new review findings confirmed:
+exclude releases published after the target from its predecessor baseline;
+recover abandoned empty starter uploads rather than permanently blocking retry.
+Predecessor selection now requires publication before target. Recovery is limited
+to expected artifact names, a unique empty starter asset older than one hour
+(twice the workflow job timeout), canonical repository/tag URL, and a fresh
+asset-ID read with unchanged identity/state/size/timestamp before deletion.
+Uploaded, recent, nonempty, duplicated, foreign or changing assets are preserved.
+Thirteen Python regressions PASS, including newer pending release and safe retry
+boundaries. Fresh CI/review is required after push; acting maintainer/executing
+agent owns owner-notified pickup and blocker review on 2026-11-14. No local
+Gradle, merge or publication. Existing 0.0.6/code16 cannot be reused for release.
+
+# Publication review corrections — 2026-11-13
+
+PR #47 review confirmed two defects: newest preceding stable metadata could be
+skipped for an older baseline, and matching retries still used --clobber.
+The newest preceding versioned stable release now must supply progression
+evidence. Complete matching publication verifies existing assets and returns
+without writes. Repairs validate existing digests/identity and upload only
+missing artifacts; no --clobber remains. Ten Python regressions PASS locally,
+including missing-newest-with-older-baseline, complete no-op, missing-evidence
+repair and mismatched existing artifact. Prior exact b93e8d4 Android CI
+43411931944 PASS; fresh exact-head CI/review required after these corrections.
+No local Gradle, merge, tag or release. Acting maintainer/executing agent reviews
+fresh CI on owner notification, target 2026-11-14. Package/version remains the
+already-published 0.0.6/code16; a new publication needs separately verified
+version preparation and all applicable release gates, not reuse of that tag.
+
+# Public Android download metadata — 2026-11-13
+
+Owner-authorized companion to backend fix/web-branding-seo: /download and
+landing promotion consume verified public release assets. Source base b442f38;
+branch fix/release-download-metadata. No release/version bump or signing change.
+
+Metadata derives from actual verified aapt/apksigner outputs. Existing updater
+fields stay compatible, with package/signer/variant/source fields added. Tag
+identity, increasing versionCode and immutable advertised APK bytes are enforced.
+APK/checksum/provenance/manifest upload first; update.json is the final readiness
+marker. Missing progression evidence blocks publication. No cross-repo token or
+web deployment hook; web discovery refreshes at most once per five minutes.
+
+Six stdlib Python tests and twelve workflow Bash syntax checks PASS locally.
+Android build/tests/lint and actual workflow publication remain CI/delivery
+checks; no local Gradle per data budget. Acting maintainer/executing agent owns
+review on owner CI notification, target 2026-11-14; no CI polling. Publication
+still requires cadence, signing, review/CI and installation/update acceptance.
+Older handoffs below remain historical; this PR does not authorize a release.
+
 # Issue #41 camera capture for offer photos — 2026-11-12
 
 Branch `fix/41-camera-capture` off `main` (a1b534c). No release authorized; no
