@@ -54,7 +54,7 @@ class ReleaseMetadataTests(unittest.TestCase):
 
 class PublicationTests(unittest.TestCase):
     def publish(self, fail_upload=False, existing_changed=False, previous_code=16,
-                missing_newest=False, existing_ready=False, repair=False, wrong_asset=False):
+                missing_newest=False, existing_ready=False, repair=False, wrong_asset=False, newer_pending=False):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             apk = root / "app.apk"
@@ -68,6 +68,7 @@ class PublicationTests(unittest.TestCase):
                            published_at="2026-11-14T12:00:00Z", assets=[])
             previous = dict(tag_name="v0.0.6", draft=False, prerelease=False,
                             published_at="2026-11-12T15:10:49Z", assets=[])
+            newer = dict(previous, tag_name="v0.0.8", published_at="2026-11-15T12:00:00Z")
             older = dict(previous, tag_name="v0.0.5", published_at="2026-11-10T12:00:00Z")
             if existing_ready:
                 for name in [current["apkName"], "SHA256SUMS", "apk-provenance.txt", "manifest.txt"]:
@@ -83,7 +84,7 @@ class PublicationTests(unittest.TestCase):
 
             def command(*args):
                 if args[0] == "api":
-                    return json.dumps(release if args[1].endswith("/v0.0.7") else [release, previous, older])
+                    return json.dumps(release if args[1].endswith("/v0.0.7") else [release, previous, older] + ([newer] if newer_pending else []))
                 self.assertEqual(args[:2], ("release", "upload"))
                 calls.append(args)
                 if fail_upload:
@@ -95,6 +96,8 @@ class PublicationTests(unittest.TestCase):
                     return None if missing_newest else dict(versionCode=previous_code)
                 if value["tag_name"] == "v0.0.5":
                     return dict(versionCode=15)
+                if value["tag_name"] == "v0.0.8":
+                    raise AssertionError("Later release must not be the predecessor")
                 if existing_changed:
                     return dict(current, sha256="0" * 64)
                 return current if existing_ready else None
@@ -109,6 +112,9 @@ class PublicationTests(unittest.TestCase):
                 else:
                     publication.main()
             return calls
+
+    def test_newer_pending_release_does_not_block_predecessor(self):
+        self.assertEqual(len(self.publish(newer_pending=True)), 2)
 
     def test_ready_marker_is_last(self):
         calls = self.publish()
@@ -141,6 +147,40 @@ class PublicationTests(unittest.TestCase):
     def test_changed_existing_asset_fails_before_repair(self):
         self.assertEqual(self.publish(existing_ready=True, wrong_asset=True), [])
 
+
+
+class StarterRecoveryTests(unittest.TestCase):
+    def asset(self, **changes):
+        value = dict(id=123, name="update.json", state="starter", size=0,
+                     updated_at="2020-01-01T00:00:00Z",
+                     browser_download_url=f"https://github.com/{publication.REPOSITORY}/releases/download/v0.0.7/update.json")
+        return dict(value, **changes)
+
+    def test_abandoned_empty_marker_is_removed_before_retry(self):
+        asset = self.asset()
+        release = dict(tag_name="v0.0.7", assets=[asset])
+        with patch.object(publication, "gh", side_effect=[json.dumps(asset), ""]) as command:
+            publication.recover_starters(release, ["update.json"])
+        self.assertEqual(release["assets"], [])
+        self.assertEqual(command.call_args.args[:3], ("api", "--method", "DELETE"))
+
+    def test_uploaded_recent_nonempty_and_changed_assets_are_preserved(self):
+        recent = publication.datetime.datetime.now(publication.datetime.timezone.utc).isoformat()
+        for asset in [self.asset(state="uploaded"), self.asset(updated_at=recent), self.asset(size=1)]:
+            release = dict(tag_name="v0.0.7", assets=[asset])
+            with patch.object(publication, "gh") as command:
+                if asset["state"] == "uploaded":
+                    publication.recover_starters(release, ["update.json"])
+                else:
+                    with self.assertRaises(ValueError):
+                        publication.recover_starters(release, ["update.json"])
+                command.assert_not_called()
+            self.assertEqual(release["assets"], [asset])
+        asset = self.asset()
+        with patch.object(publication, "gh", return_value=json.dumps(dict(asset, state="uploaded"))) as command:
+            with self.assertRaises(ValueError):
+                publication.recover_starters(dict(tag_name="v0.0.7", assets=[asset]), ["update.json"])
+            self.assertEqual(command.call_count, 1)
 
 if __name__ == "__main__":
     unittest.main()

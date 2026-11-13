@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish complete verified artifacts before update.json announces readiness."""
 import argparse
+import datetime
 import hashlib
 import importlib.util
 import json
@@ -28,6 +29,30 @@ def asset_for(release, name):
     if len(assets) != 1 or assets[0].get("state") != "uploaded" or assets[0].get("browser_download_url") != expected:
         raise ValueError("Ambiguous, incomplete or foreign release asset")
     return assets[0]
+
+
+def recover_starters(release, names):
+    """Remove only empty uploads unchanged beyond the workflow's 30m timeout."""
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
+    for name in names:
+        matches = [a for a in release["assets"] if a["name"] == name]
+        if len(matches) != 1:
+            continue  # Duplicates remain a validation error, never a cleanup target.
+        asset = matches[0]
+        if asset.get("state") != "starter":
+            continue
+        updated = datetime.datetime.fromisoformat(asset["updated_at"].replace("Z", "+00:00"))
+        if asset.get("size") != 0 or updated >= cutoff:
+            raise ValueError("Starter upload is not confirmed abandoned and empty")
+        endpoint = f"repos/{REPOSITORY}/releases/assets/{int(asset['id'])}"
+        latest = json.loads(gh("api", endpoint))
+        for key in ["id", "name", "state", "size", "updated_at", "browser_download_url"]:
+            if latest.get(key) != asset.get(key):
+                raise ValueError("Starter upload changed during recovery; retry later")
+        if latest.get("browser_download_url") != f"https://github.com/{REPOSITORY}/releases/download/{release['tag_name']}/{name}":
+            raise ValueError("Foreign starter asset")
+        gh("api", "--method", "DELETE", endpoint)
+        release["assets"].remove(asset)
 
 
 def read_asset(release, name, limit):
@@ -97,6 +122,7 @@ def main():
     release = json.loads(gh("api", f"repos/{REPOSITORY}/releases/tags/{args.tag}"))
     if release["draft"] or release["prerelease"]:
         raise ValueError("Public download publication requires a stable published release")
+    recover_starters(release, [current["apkName"], "SHA256SUMS", "apk-provenance.txt", "manifest.txt", "update.json"])
     existing = read_metadata(release)
     if existing:
         for key in ["versionCode", "versionName", "apkName", "sha256", "size"]:
@@ -110,6 +136,7 @@ def main():
         releases = json.loads(gh("api", f"repos/{REPOSITORY}/releases?per_page=100"))
         previous = sorted((r for r in releases if r["tag_name"] != args.tag and
                            not r["draft"] and not r["prerelease"] and r.get("published_at") and
+                           r["published_at"] < release["published_at"] and
                            re.fullmatch(r"v\d+\.\d+\.\d+", r["tag_name"])),
                           key=lambda r: r["published_at"], reverse=True)
         if previous:

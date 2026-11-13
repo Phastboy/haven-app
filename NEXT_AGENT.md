@@ -1,3 +1,18 @@
+# Retry/order review corrections — 2026-11-13
+
+Fresh 9b62533 Android CI 43457165528 PASS. Two new review findings confirmed:
+exclude releases published after the target from its predecessor baseline;
+recover abandoned empty starter uploads rather than permanently blocking retry.
+Predecessor selection now requires publication before target. Recovery is limited
+to expected artifact names, a unique empty starter asset older than one hour
+(twice the workflow job timeout), canonical repository/tag URL, and a fresh
+asset-ID read with unchanged identity/state/size/timestamp before deletion.
+Uploaded, recent, nonempty, duplicated, foreign or changing assets are preserved.
+Thirteen Python regressions PASS, including newer pending release and safe retry
+boundaries. Fresh CI/review is required after push; acting maintainer/executing
+agent owns owner-notified pickup and blocker review on 2026-11-14. No local
+Gradle, merge or publication. Existing 0.0.6/code16 cannot be reused for release.
+
 # Publication review corrections — 2026-11-13
 
 PR #47 review confirmed two defects: newest preceding stable metadata could be
