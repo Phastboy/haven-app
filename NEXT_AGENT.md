@@ -1,3 +1,23 @@
+# Public Android download metadata — 2026-11-13
+
+Owner-authorized companion to backend fix/web-branding-seo: /download and
+landing promotion consume verified public release assets. Source base b442f38;
+branch fix/release-download-metadata. No release/version bump or signing change.
+
+Metadata derives from actual verified aapt/apksigner outputs. Existing updater
+fields stay compatible, with package/signer/variant/source fields added. Tag
+identity, increasing versionCode and immutable advertised APK bytes are enforced.
+APK/checksum/provenance/manifest upload first; update.json is the final readiness
+marker. Missing progression evidence blocks publication. No cross-repo token or
+web deployment hook; web discovery refreshes at most once per five minutes.
+
+Six stdlib Python tests and twelve workflow Bash syntax checks PASS locally.
+Android build/tests/lint and actual workflow publication remain CI/delivery
+checks; no local Gradle per data budget. Acting maintainer/executing agent owns
+review on owner CI notification, target 2026-11-14; no CI polling. Publication
+still requires cadence, signing, review/CI and installation/update acceptance.
+Older handoffs below remain historical; this PR does not authorize a release.
+
 # Issue #41 camera capture for offer photos — 2026-11-12
 
 Branch `fix/41-camera-capture` off `main` (a1b534c). No release authorized; no
