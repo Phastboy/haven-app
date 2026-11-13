@@ -1,0 +1,1 @@
+- Improves APK download publication and makes interrupted publication safer to retry.
