@@ -1,3 +1,17 @@
+# Release CI dependency correction — 2026-11-13
+
+PR #48 head fee73e6 failed run 43463246243: lintDebug and lintRelease reported
+NewerVersionAvailable for test-only Robolectric 4.17, requiring 4.18. Verified
+org.robolectric:robolectric:4.18 via the published Maven Central POM:
+https://repo.maven.apache.org/maven2/org/robolectric/robolectric/4.18/robolectric-4.18.pom
+GitHub release listing still shows 4.18-beta-1; artifact identity is verified
+against Central rather than inferred from that listing. Updated only the catalog
+pin. No lint suppressions, baselines, runtime dependency or signing changes.
+TOML and upstream POM identity assertions, whitespace and 13 publication tests
+PASS locally. Android build/tests/lint remain fresh exact-head CI checks; no
+local Gradle per budget. Acting maintainer/executing agent owns owner-notified
+CI pickup and blocker review on 2026-11-14. No merge, tag or publication.
+
 # Release candidate 0.0.7/code17 — 2026-11-13
 
 Owner requests publication of both merged changes. Release preparation branches
