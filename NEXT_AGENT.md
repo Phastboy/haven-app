@@ -1,3 +1,42 @@
+# Urgent offer creation corrections — 2026-11-14
+
+Owner classifies #49/#50 as critical corrective fixes for today's release, not
+new features subject to the three-day feature preparation wait. Target is
+Android 0.0.71/code18 by 19:00 Africa/Lagos; parent handles review/merge/release.
+Package and release signer unchanged. No tag/publication by this branch.
+
+Backend #85 must deploy first: bearer-authenticated POST
+`/api/v1/me/offer-places/resolve` with `{latitude,longitude}` returns
+`{token,label,place_id}` plus optional `attribution` and fixed Geoapify source_url.
+App uses readable token/label automatically, retains source attribution in the
+draft and displays it near the place; no raw-coordinate confirmation step.
+Old `/coordinates` remains for old app versions. Discovery proximity unchanged.
+Permission intent has a30s fallback; actual capture+resolution share20s; cancel,
+background/navigation/account/editor replacement reject stale results.
+
+Publish explains non-saving blockers near the action and offers cancellation of
+optional location/photo preparation. Saving shows spinner and stage text, errors
+are bottom-visible/live-announced, cancel keeps the draft and idempotency keys.
+Whole-save deadline180s includes auth queue/network/multiple calls. Photo reads
+and preflight have15s bounds; a maximum2 daemon readers contain uncooperative
+providers without an unbounded thread/queue leak. Saturation tells the person to
+keep the draft/retry later or reopen the app. Confirmed public save shows
+Offer published (edits Changes saved) and opens actual offer detail; private
+saves say Private offer saved and open My offers. Existing invalidation retained.
+
+Focused state/functional regressions added for auto-resolution, permission and
+lookup timeouts, cancellation/late results, blocker reasons, immediate feedback,
+validation, partial upload retry, whole-save deadline/queued work, private/edit
+success and a blocking provider ignoring interruption. No local Gradle and no
+heavy screenshot campaign per owner. Full Android build/tests/lint, signer and
+artifact verification require fresh exact-head CI. Physical-device visual/network
+acceptance remains owner review, not asserted by source or virtual tests.
+
+Acting maintainer/executing agent owns triage now and parent review handoff by
+16:00 Lagos; remaining prerequisite review 2026-11-15 if delivery cannot finish.
+Never report a timeout/cancel as proof the backend rejected a write. Retry keeps
+creation key/known offer ID/upload identities to reconcile partial commits.
+
 # Release CI dependency correction — 2026-11-13
 
 PR #48 head fee73e6 failed run 43463246243: lintDebug and lintRelease reported
