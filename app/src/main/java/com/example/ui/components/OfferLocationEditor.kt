@@ -5,7 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -33,7 +33,10 @@ fun OfferLocationEditor(
       Text(place.label, color = HavenColors.TextPrimary)
       place.attribution?.let { Text(it, color = HavenColors.TextSecondary) }
       if (place.sourceUrl == "https://www.geoapify.com/") {
-        TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.geoapify.com/"))) }) { Text("Powered by Geoapify") }
+        TextButton(onClick = {
+          try { context.startActivity(Intent(Intent.ACTION_VIEW, "https://www.geoapify.com/".toUri())) }
+          catch (_: android.content.ActivityNotFoundException) { android.widget.Toast.makeText(context, "No browser is available to open this link.", android.widget.Toast.LENGTH_SHORT).show() }
+        }) { Text("Powered by Geoapify") }
       }
       TextButton(onClick = { onSelect(null) }, enabled = !state.busy) { Text("Remove location") }
     }

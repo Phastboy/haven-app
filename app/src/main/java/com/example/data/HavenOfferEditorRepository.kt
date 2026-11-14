@@ -68,6 +68,7 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
       val buffer = java.io.ByteArrayOutputStream()
       val chunk = ByteArray(8192)
       while (true) {
+        if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException("Photo read cancelled")
         val count = stream.read(chunk)
         if (count < 0) break
         if (buffer.size().toLong() + count > com.example.images.OfferImageInputs.MAX_IMAGE_BYTES) throw IOException("Choose photos up to 5 MB.")
@@ -94,7 +95,7 @@ class HavenOfferEditorRepository(private val auth: HavenAuthClient, private val 
       return EditableOffer(
         json.getString("id"), json.getString("slug"), json.getString("title"), json.getString("description"),
         json.getString("category"), json.getInt("price").toString(), json.getString("currency"),
-        location?.let { OfferPlace(it.getString("token"), it.getString("label")) },
+        location?.let { OfferPlace(it.getString("token"), it.getString("label"), it.optString("attribution").takeIf { text -> text.isNotBlank() }, it.optString("source_url").takeIf { url -> url == "https://www.geoapify.com/" }) },
         List(images.length()) { images.getJSONObject(it).let { image -> EditorImage(id = image.getString("id"), url = image.getString("url")) } },
         json.getBoolean("is_public")
       )
