@@ -643,13 +643,13 @@ fun OffersScreen(
           )
           NativeOfferEditorScreen(editor, editing = currentDestination.id != null,
             onBack = { navStack = navStack.dropLast(1) },
-            onSaved = {
+            onSaved = { slug ->
               myOffersRetry++
               detailRetry++
               viewModel.refresh()
               // Creating or editing an offer changes the profile's owned-offer count.
               profileModel.invalidate()
-              navStack = listOf(OffersDestination.MyOffers)
+              navStack = if (slug != null) listOf(OffersDestination.MyOffers, OffersDestination.OfferDetail(slug)) else listOf(OffersDestination.MyOffers)
             })
           return
         }

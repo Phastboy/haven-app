@@ -13,6 +13,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,18 +33,26 @@ import com.example.ui.theme.HavenColors
 import com.example.ui.theme.InterFontFamily
 
 @Composable
-fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBack: () -> Unit, onSaved: () -> Unit) {
+fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBack: () -> Unit, onSaved: (String?) -> Unit) {
   val state by model.state.collectAsState()
   var confirmLeave by remember { mutableStateOf(false) }
   var locationPending by remember { mutableStateOf(false) }
   var photoPending by remember { mutableStateOf(false) }
+  var cancelLocation by remember { mutableStateOf(0) }
+  var cancelPhotos by remember { mutableStateOf(0) }
+  val context = LocalContext.current
   val leave = {
     if (!state.busy) {
       if (state.dirty) confirmLeave = true else onBack()
     }
   }
   BackHandler(onBack = leave)
-  LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+  LaunchedEffect(state.saved) {
+    if (state.saved) {
+      android.widget.Toast.makeText(context, state.savedMessage ?: "Offer saved", android.widget.Toast.LENGTH_LONG).show()
+      onSaved(state.savedSlug)
+    }
+  }
   Column(Modifier.fillMaxSize().background(HavenColors.Canvas).imePadding().testTag("native_offer_editor")) {
     HavenTopBarContainer {
       Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -51,8 +63,7 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
     if (state.loading || state.options == null) {
       Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (state.loading) CircularProgressIndicator(color = HavenColors.Primary)
-        Text(state.error ?: "Loading offer form…", color = HavenColors.TextSecondary)
-        if (!state.loading) Button(onClick = model::load) { Text("Retry") }
+        Text(if (state.loading) "Loading offer form…" else "The offer form is unavailable. Use Retry below.", color = HavenColors.TextSecondary)
       }
     } else {
       Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -66,6 +77,7 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
             onRemoveImage = { index -> model.change { it.copy(images = it.images.filterIndexed { position, _ -> position != index }) } },
             onError = model::showError,
             onPendingChanged = { photoPending = it },
+            cancelRequest = cancelPhotos,
           )
         }
         EditorField("Title", state.title, "Name what you are offering.", !state.busy, "${state.title.length}/50") { value -> model.change { it.copy(title = value) } }
@@ -80,15 +92,29 @@ fun NativeOfferEditorScreen(model: OfferEditorViewModel, editing: Boolean, onBac
           onSelect = { place -> model.change { it.copy(place = place) } },
           onSearch = model::search, sign = model::capturedPlace,
           onPendingChanged = { locationPending = it },
+          cancelRequest = cancelLocation,
         )
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("offer_editor_error")) }
       }
     }
     Column(Modifier.fillMaxWidth().background(HavenColors.Canvas).havenBottomSafePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      state.progress?.let { Text(it, color = HavenColors.TextSecondary) }
+      state.error?.let { Text(it, color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.testTag("offer_editor_error").semantics { liveRegion = LiveRegionMode.Polite }) }
+      state.progress?.let { Text(it, color = HavenColors.TextSecondary,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+      val blocker = OfferEditorViewModel.submissionBlocker(state, locationPending, photoPending)
+      blocker?.let { Text(it, color = HavenColors.TextSecondary,
+        modifier = Modifier.testTag("offer_editor_blocker").semantics { liveRegion = LiveRegionMode.Polite }) }
+      if (locationPending) TextButton(onClick = { cancelLocation++ }, enabled = !state.busy) { Text("Cancel location lookup") }
+      if (photoPending) TextButton(onClick = { cancelPhotos++ }, enabled = !state.busy) { Text("Cancel photo preparation") }
+      if (state.busy) TextButton(onClick = model::cancelSave) { Text("Stop saving and keep draft") }
+      if (!state.loading && state.options == null) TextButton(onClick = model::load) { Text("Retry loading form") }
       Button(onClick = model::save, enabled = !state.loading && state.options != null && !state.busy && !locationPending && !photoPending,
         colors = ButtonDefaults.buttonColors(containerColor = HavenColors.Primary),
         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("offer_editor_submit")) {
+        if (state.busy) {
+          CircularProgressIndicator(Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+          Spacer(Modifier.width(8.dp))
+        }
         Text(if (state.busy) "Saving…" else if (state.allowPrivateSave && state.images.isEmpty()) "Save private offer" else if (editing) "Save changes" else "Publish offer")
       }
     }

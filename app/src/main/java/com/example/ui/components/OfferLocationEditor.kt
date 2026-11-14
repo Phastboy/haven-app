@@ -3,6 +3,9 @@ package com.example.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -19,30 +22,31 @@ fun OfferLocationEditor(
   captureState: com.example.location.OfferLocationCaptureState,
   onCapture: () -> Unit,
   onCancelCapture: () -> Unit,
-  onAcceptCapture: () -> Unit,
   onSearch: () -> Unit,
   onSelect: (OfferPlace?) -> Unit,
 ) {
+  val context = LocalContext.current
   Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.testTag("offer_location_editor")) {
     Text("Offer location (optional)", color = HavenColors.TextPrimary)
-    Text("The selected place and coordinates are public when you submit this offer. Device access does not change discovery proximity. Search for a less precise place if you prefer.", color = HavenColors.TextSecondary)
+    Text("Your chosen place is shown with your offer. You can change or remove it before publishing, or edit it later. This does not change discovery proximity.", color = HavenColors.TextSecondary)
     state.place?.let { place ->
       Text(place.label, color = HavenColors.TextPrimary)
+      place.attribution?.let { Text(it, color = HavenColors.TextSecondary) }
+      if (place.sourceUrl == "https://www.geoapify.com/") {
+        TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.geoapify.com/"))) }) { Text("Powered by Geoapify") }
+      }
       TextButton(onClick = { onSelect(null) }, enabled = !state.busy) { Text("Remove location") }
     }
     OutlinedButton(onClick = onCapture, enabled = !state.busy && !captureState.pending,
       modifier = Modifier.testTag("offer_capture_location")) {
-      Text(if (captureState.pending) "Getting location…" else if (state.place != null) "Update current location" else "Use my current location")
+      Text(if (captureState.pending) captureState.status ?: "Finding your location…" else if (state.place != null) "Update current location" else "Use my current location")
     }
-    captureState.candidate?.let { candidate ->
-      Text("Review captured location", color = HavenColors.TextPrimary)
-      Text(candidate.publicLabel(), color = HavenColors.TextPrimary)
-      Text("This is a measured point, not a verified address. Review it before adding it to your draft. Nothing is published until you submit.", color = HavenColors.TextSecondary)
-      TextButton(onClick = onAcceptCapture, enabled = !state.busy && !captureState.pending,
-        modifier = Modifier.testTag("offer_accept_location")) { Text("Use this location in draft") }
+    if (captureState.pending) {
+      Text("Finding a readable place. You can continue without waiting.", color = HavenColors.TextSecondary)
+      TextButton(onClick = onCancelCapture, enabled = !state.busy) { Text("Cancel location lookup") }
     }
-    if (captureState.pending || captureState.candidate != null) {
-      TextButton(onClick = onCancelCapture, enabled = !state.busy) { Text("Cancel location capture") }
+    if (captureState.pending || captureState.error != null) {
+      TextButton(onClick = { onCancelCapture(); onSelect(null) }, enabled = !state.busy) { Text("Continue without location") }
     }
     captureState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     OutlinedTextField(value = query, onValueChange = onQueryChange, label = { Text("Search for a place") },

@@ -13,8 +13,8 @@ android {
     applicationId = "com.aistudio.haven.xvykpt"
     minSdk = 24
     targetSdk = 37
-    versionCode = 17
-    versionName = "0.0.7"
+    versionCode = 18
+    versionName = "0.0.71"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
