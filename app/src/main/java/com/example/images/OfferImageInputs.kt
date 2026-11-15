@@ -20,6 +20,7 @@ object OfferImageInputs {
       var total = 0L
       val chunk = ByteArray(8192)
       while (true) {
+        if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException("Photo preparation cancelled")
         val count = stream.read(chunk)
         if (count < 0) break
         total += count

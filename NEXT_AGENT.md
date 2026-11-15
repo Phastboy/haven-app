@@ -1,3 +1,66 @@
+# PR #51 saturation review correction — 2026-11-15
+
+Review thread PRRT_kwDOVYI7l863ef1o confirmed a capacity error was incorrectly
+handled as an invalid image: the generic IOException path deleted captured
+inputs and reported a format error. PhotoReadSaturatedException now identifies
+capacity exhaustion. Pending inputs remain retained, Publish explains that new
+photos are not ready, and Retry photo preparation is an explicit user action.
+There is no automatic retry loop. Cancel preparation discards pending inputs;
+valid captures stay protected from cache cleanup while retained for retry.
+Focused CI regressions cover error classification, discard-callback retention,
+pool saturation, and retry after blocked workers are released. No local Gradle.
+
+Optional attribution/source_url parsing is already present for resolved,
+recent and editable place payloads and persisted draft restoration. Backend
+serializers do not necessarily return these optional fields when reopening an
+older saved offer; parser support is not proof of that server contract. Preserve
+received metadata and coordinate backend attribution delivery separately rather
+than claiming every reopened offer has provider attribution.
+
+Acting maintainer/executing agent owns exact-head CI/review pickup on owner
+notification and unresolved prerequisite review 2026-11-16 Africa/Lagos. Prior
+146da66 CI does not cover this correction. No merge, release or device acceptance
+is performed by this branch.
+
+# Urgent offer creation corrections — 2026-11-14
+
+Owner classifies #49/#50 as critical corrective fixes for today's release, not
+new features subject to the three-day feature preparation wait. Target is
+Android 0.0.71/code18 by 19:00 Africa/Lagos; parent handles review/merge/release.
+Package and release signer unchanged. No tag/publication by this branch.
+
+Backend #85 must deploy first: bearer-authenticated POST
+`/api/v1/me/offer-places/resolve` with `{latitude,longitude}` returns
+`{token,label,place_id}` plus optional `attribution` and fixed Geoapify source_url.
+App uses readable token/label automatically, retains source attribution in the
+draft and displays it near the place; no raw-coordinate confirmation step.
+Old `/coordinates` remains for old app versions. Discovery proximity unchanged.
+Permission intent has a 30s fallback; actual capture+resolution share 20s; cancel,
+background/navigation/account/editor replacement reject stale results.
+
+Publish explains non-saving blockers near the action and offers cancellation of
+optional location/photo preparation. Saving shows spinner and stage text, errors
+are bottom-visible/live-announced, cancel keeps the draft and idempotency keys.
+Whole-save deadline 180s includes auth queue/network/multiple calls. Photo reads
+and preflight have 15s bounds; a maximum 2 daemon readers contain uncooperative
+providers without an unbounded thread/queue leak. Saturation tells the person to
+keep the draft/retry later or reopen the app. Confirmed public save shows
+Offer published (edits Changes saved) and opens actual offer detail; private
+saves say Private offer saved and open My offers. Existing invalidation retained.
+
+Focused state/functional regressions added for auto-resolution, permission and
+lookup timeouts, cancellation/late results, blocker reasons, immediate feedback,
+validation, partial upload retry, whole-save deadline/queued work, private/edit
+success and a blocking provider ignoring interruption. No local Gradle and no
+heavy screenshot campaign per owner. Full Android build/tests/lint, signer and
+artifact verification require fresh exact-head CI. Physical-device visual/network
+acceptance remains owner review, not asserted by source or virtual tests.
+
+Acting maintainer/executing agent owns triage now and parent review handoff by
+16:00 Lagos; remaining prerequisite review 2026-11-15 if delivery cannot finish.
+Never report a timeout/cancel as proof the backend rejected a write. Retry keeps
+creation key/known offer ID/upload identities to reconcile partial commits.
+
 # Release CI dependency correction — 2026-11-13
 
 PR #48 head fee73e6 failed run 43463246243: lintDebug and lintRelease reported

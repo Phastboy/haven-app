@@ -8,6 +8,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.images.OfferImageInputs
 import com.example.ui.model.SessionManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
+import com.example.images.OfferPhotoReads
+import com.example.images.recoverPhotoPreparation
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
 import com.example.camera.OfferCameraFiles
 import com.example.camera.rememberOfferCameraCapture
@@ -32,48 +38,78 @@ fun OfferPhotosSection(
   onError: (message: String) -> Unit,
   captureKey: String = "offer",
   onPendingChanged: (Boolean) -> Unit = {},
+  cancelRequest: Int = 0,
 ) {
   val context = LocalContext.current
   // Retain inputs, not just a transient Job: validation restarts safely after recreation.
   var validationInputs by rememberSaveable(captureKey) { mutableStateOf<List<String>?>(null) }
   var validationActor by rememberSaveable(captureKey) { mutableStateOf<String?>(null) }
-  val checking = validationInputs != null
+  var validationGeneration by rememberSaveable(captureKey) { mutableStateOf(0L) }
+  var preparationNeedsRetry by rememberSaveable(captureKey) { mutableStateOf(false) }
+  val checking = validationInputs != null && !preparationNeedsRetry
   val latestImages by rememberUpdatedState(images)
   val latestBusy by rememberUpdatedState(busy)
   val latestAdded by rememberUpdatedState(onImagesAdded)
   val latestError by rememberUpdatedState(onError)
   val addChecked: (List<String>) -> Unit = { uris ->
-    if (!checking && !busy && uris.isNotEmpty()) {
+    if (validationInputs == null && !busy && uris.isNotEmpty()) {
+      validationGeneration++
       validationActor = SessionManager.session.value.personId
       validationInputs = uris.distinct()
     }
   }
-  LaunchedEffect(validationInputs, captureKey) {
+  LaunchedEffect(validationInputs, validationGeneration, captureKey) {
+    if (preparationNeedsRetry) return@LaunchedEffect
     val inputs = validationInputs?.toList() ?: return@LaunchedEffect
     val actor = validationActor
+    val generation = validationGeneration
     try {
-      withContext(Dispatchers.IO) { inputs.forEach { OfferImageInputs.validate(context.contentResolver, it) } }
+      withTimeout(15_000L) { OfferPhotoReads.run { inputs.forEach { OfferImageInputs.validate(context.contentResolver, it) } } }
       // A restored callback may already be present in the persisted draft.
       val additions = inputs.filterNot { uri -> latestImages.any { it.url == uri } }
-      if (SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size <= 5) latestAdded(additions)
+      if (generation == validationGeneration && SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size <= 5) latestAdded(additions)
       else {
-        additions.forEach { OfferCameraFiles.deleteCapture(context, it) }
-        if (SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size > 5)
+        if (generation == validationGeneration) additions.forEach { OfferCameraFiles.deleteCapture(context, it) }
+        if (generation == validationGeneration && SessionManager.session.value.personId == actor && !latestBusy && latestImages.size + additions.size > 5)
           latestError("Choose at most five photos in total.")
       }
+    } catch (_: TimeoutCancellationException) {
+      if (generation == validationGeneration && SessionManager.session.value.personId == actor) latestError("Preparing photos took too long. Your draft is unchanged; retry or choose a different photo source.")
     } catch (cancelled: CancellationException) {
       // Keep the saved inputs for the replacement composition; do not consume the result.
       throw cancelled
-    } catch (_: java.io.IOException) {
-      inputs.forEach { OfferCameraFiles.deleteCapture(context, it) }
-      if (SessionManager.session.value.personId == actor) latestError("Choose JPEG, PNG or WebP photos up to 5 MB. Your existing photos are unchanged.")
+    } catch (failure: java.io.IOException) {
+      if (generation == validationGeneration && SessionManager.session.value.personId == actor) {
+        preparationNeedsRetry = recoverPhotoPreparation(failure,
+          discardInvalidInputs = { inputs.forEach { OfferCameraFiles.deleteCapture(context, it) } },
+          report = latestError)
+      }
     } catch (_: SecurityException) {
-      if (SessionManager.session.value.personId == actor) latestError("Photo access was lost. Choose it again.")
+      if (generation == validationGeneration && SessionManager.session.value.personId == actor) latestError("Photo access was lost. Choose it again.")
     }
-    validationInputs = null
+    if (generation == validationGeneration && !preparationNeedsRetry) validationInputs = null
   }
   val camera = rememberOfferCameraCapture(onCaptured = { uri -> addChecked(listOf(uri)) }, captureKey = captureKey, onFailure = onError)
-  SideEffect { onPendingChanged(camera.pending || checking) }
+  fun cancelPreparation() {
+    validationGeneration++
+    preparationNeedsRetry = false
+    validationInputs = null
+    validationActor = null
+    camera.cancel()
+  }
+  LaunchedEffect(cancelRequest) { if (cancelRequest > 0) cancelPreparation() }
+  SideEffect { onPendingChanged(camera.pending || validationInputs != null) }
+  if (preparationNeedsRetry) {
+    Text("New photos are kept but are not ready to publish. Retry preparation or cancel to discard these new inputs.")
+    TextButton(onClick = {
+      preparationNeedsRetry = false
+      validationGeneration++
+    }, enabled = !busy) { Text("Retry photo preparation") }
+  }
+  if (camera.pending || validationInputs != null) {
+    if (!preparationNeedsRetry) Text(if (checking) "Preparing photos…" else "Waiting for the camera…")
+    TextButton(onClick = ::cancelPreparation, enabled = !busy) { Text("Cancel photo preparation") }
+  }
   var pickerActor by rememberSaveable { mutableStateOf<String?>(null) }
   var pickerKey by rememberSaveable { mutableStateOf<String?>(null) }
   val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -100,7 +136,7 @@ fun OfferPhotosSection(
 
   OfferImagesEditor(
     images = images,
-    enabled = !busy && !checking,
+    enabled = !busy && validationInputs == null,
     cameraPending = camera.pending,
     onAddImages = {
       pickerActor = SessionManager.session.value.personId

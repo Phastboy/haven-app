@@ -1,0 +1,3 @@
+- Shows a readable place when using your location, without an extra confirmation step.
+- Makes publishing progress, blocked actions and errors clear, with cancellation and safe retry.
+- Opens your offer after confirmed publication and keeps drafts when saving is interrupted.

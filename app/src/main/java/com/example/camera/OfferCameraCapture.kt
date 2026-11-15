@@ -21,6 +21,7 @@ data class OfferCameraCapture(
   /** Name of the in-flight capture file, retained across recreation. */
   val pendingFileName: String?,
   val launch: () -> Unit,
+  val cancel: () -> Unit,
 )
 
 /**
@@ -69,7 +70,14 @@ fun rememberOfferCameraCapture(
     }
   }
 
-  return OfferCameraCapture(pending = pendingName != null, pendingFileName = pendingName, launch = {
+  return OfferCameraCapture(pending = pendingName != null, pendingFileName = pendingName,
+    cancel = {
+      val name = pendingName
+      pendingName = null
+      pendingKey = null
+      pendingActor = null
+      if (name != null) OfferCameraFiles.cancel(context, name)
+    }, launch = {
     if (pendingName == null) {
       try {
         val file = OfferCameraFiles.create(context)

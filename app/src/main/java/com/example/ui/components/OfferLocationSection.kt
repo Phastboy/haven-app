@@ -27,6 +27,7 @@ fun OfferLocationSection(
   onSearch: (String) -> Unit,
   sign: suspend (CapturedLocation) -> OfferPlace,
   onPendingChanged: (Boolean) -> Unit,
+  cancelRequest: Int = 0,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -58,7 +59,8 @@ fun OfferLocationSection(
     onDispose { lifecycle.removeObserver(observer); capture.cancel() }
   }
   LaunchedEffect(state.busy) { if (state.busy) capture.cancel() }
-  SideEffect { onPendingChanged(captureState.pending || captureState.candidate != null) }
+  LaunchedEffect(cancelRequest) { permissionRequest = null; capture.cancel() }
+  SideEffect { onPendingChanged(captureState.pending) }
   OfferLocationEditor(
     state = state, query = query, onQueryChange = { query = it },
     captureState = captureState,
@@ -72,7 +74,6 @@ fun OfferLocationSection(
       }
     },
     onCancelCapture = { permissionRequest = null; capture.cancel() },
-    onAcceptCapture = capture::accept,
     onSearch = { permissionRequest = null; capture.cancel(); onSearch(query) },
     onSelect = { place -> permissionRequest = null; capture.cancel(); onSelect(place) },
   )
