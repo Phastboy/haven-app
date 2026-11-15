@@ -210,7 +210,7 @@ class OfferEditorViewModel(
       state.options == null -> "The offer form could not load. Retry to continue."
       state.busy -> null
       locationPending -> "Finding your location. Cancel the lookup to continue without waiting."
-      photoPending -> "Preparing your photo. Cancel preparation to use the photos already in your draft."
+      photoPending -> "Your new photos are not ready. Retry or cancel photo preparation to continue."
       else -> null
     }
 

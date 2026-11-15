@@ -10,11 +10,22 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+/** Capacity exhaustion is recoverable and is not evidence of an invalid photo. */
+class PhotoReadSaturatedException : IOException(
+  "Photo preparation is busy after stalled reads. Your new photos are kept for retry. Try again when reads finish, or reopen the app."
+)
+
 /** A broken document provider must not hold the editor coroutine indefinitely.
  * At most two blocking reads can remain in flight; cancellation drops late results
  * and interrupts the worker, without creating an unbounded queue or more threads.
  */
 object OfferPhotoReads {
+  private val workers = PhotoReadWorkers()
+  suspend fun <T> run(read: () -> T): T = workers.run(read)
+}
+
+/** Isolated worker ownership also lets tests exercise a fresh saturated pool. */
+internal class PhotoReadWorkers {
   private val workers = ThreadPoolExecutor(0, 2, 30L, TimeUnit.SECONDS, SynchronousQueue<Runnable>(),
     { task -> Thread(task, "haven-photo-read").apply { isDaemon = true } })
 
@@ -30,7 +41,7 @@ object OfferPhotoReads {
     continuation.invokeOnCancellation { task.cancel(true) }
     try { workers.execute(task) }
     catch (_: RejectedExecutionException) {
-      if (continuation.isActive) continuation.resumeWithException(IOException("Photo preparation is unavailable after stalled reads. Keep your draft and try again later, or reopen the app."))
+      if (continuation.isActive) continuation.resumeWithException(PhotoReadSaturatedException())
     }
   }
 }

@@ -1,3 +1,27 @@
+# PR #51 saturation review correction — 2026-11-15
+
+Review thread PRRT_kwDOVYI7l863ef1o confirmed a capacity error was incorrectly
+handled as an invalid image: the generic IOException path deleted captured
+inputs and reported a format error. PhotoReadSaturatedException now identifies
+capacity exhaustion. Pending inputs remain retained, Publish explains that new
+photos are not ready, and Retry photo preparation is an explicit user action.
+There is no automatic retry loop. Cancel preparation discards pending inputs;
+valid captures stay protected from cache cleanup while retained for retry.
+Focused CI regressions cover error classification, discard-callback retention,
+pool saturation, and retry after blocked workers are released. No local Gradle.
+
+Optional attribution/source_url parsing is already present for resolved,
+recent and editable place payloads and persisted draft restoration. Backend
+serializers do not necessarily return these optional fields when reopening an
+older saved offer; parser support is not proof of that server contract. Preserve
+received metadata and coordinate backend attribution delivery separately rather
+than claiming every reopened offer has provider attribution.
+
+Acting maintainer/executing agent owns exact-head CI/review pickup on owner
+notification and unresolved prerequisite review 2026-11-16 Africa/Lagos. Prior
+146da66 CI does not cover this correction. No merge, release or device acceptance
+is performed by this branch.
+
 # Urgent offer creation corrections — 2026-11-14
 
 Owner classifies #49/#50 as critical corrective fixes for today's release, not
@@ -11,14 +35,14 @@ Backend #85 must deploy first: bearer-authenticated POST
 App uses readable token/label automatically, retains source attribution in the
 draft and displays it near the place; no raw-coordinate confirmation step.
 Old `/coordinates` remains for old app versions. Discovery proximity unchanged.
-Permission intent has a30s fallback; actual capture+resolution share20s; cancel,
+Permission intent has a 30s fallback; actual capture+resolution share 20s; cancel,
 background/navigation/account/editor replacement reject stale results.
 
 Publish explains non-saving blockers near the action and offers cancellation of
 optional location/photo preparation. Saving shows spinner and stage text, errors
 are bottom-visible/live-announced, cancel keeps the draft and idempotency keys.
-Whole-save deadline180s includes auth queue/network/multiple calls. Photo reads
-and preflight have15s bounds; a maximum2 daemon readers contain uncooperative
+Whole-save deadline 180s includes auth queue/network/multiple calls. Photo reads
+and preflight have 15s bounds; a maximum 2 daemon readers contain uncooperative
 providers without an unbounded thread/queue leak. Saturation tells the person to
 keep the draft/retry later or reopen the app. Confirmed public save shows
 Offer published (edits Changes saved) and opens actual offer detail; private
